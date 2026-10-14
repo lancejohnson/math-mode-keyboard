@@ -1,0 +1,103 @@
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#0f1115;color:#e8eaf0;font-family:-apple-system,"SF Pro Text",Inter,Helvetica,Arial,sans-serif;overscroll-behavior:none}
+body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;padding-top:env(safe-area-inset-top)}
+button,select,label.chip{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-action:manipulation}
+
+#top{flex:none;border-bottom:1px solid #22262f}
+.bar{display:flex;gap:8px;align-items:center;padding:8px 10px 4px}
+#problem{flex:1;min-width:0;background:#1d2230;border-radius:10px;padding:8px 10px;font-size:15px;font-weight:600;appearance:none}
+.icon{width:38px;height:36px;border-radius:10px;background:#1d2230;font-size:20px}
+.chip{background:#1d2230;color:#c8cfdd;border-radius:16px;padding:7px 11px;font-size:13px;white-space:nowrap;display:inline-flex;align-items:center}
+.chip.on{background:#3b5bdb;color:#fff}
+.tabs{display:flex;gap:6px;padding:4px 10px 8px}
+.tabs button{flex:1;padding:8px 0;border-radius:10px;background:#1a1e28;color:#aab3c5;font-weight:600;font-size:14px}
+.tabs button.on{background:#3b5bdb;color:#fff}
+
+/* question pane */
+#qpane{flex:none;position:relative;background:#f8f9fa;color:#212529;height:30dvh;min-height:90px;display:flex;flex-direction:column}
+#qpane[hidden]{display:none}
+.qtools{display:flex;gap:6px;padding:6px 8px;overflow-x:auto;flex:none}
+.qtools .chip{background:#e9ecef;color:#343a40}
+#qBody{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
+#qBody img{width:100%;display:block}
+#qBody textarea{width:100%;height:100%;border:0;padding:10px;font-size:16px;background:#fff;color:#212529;resize:none}
+#qBody iframe{width:100%;height:100%;border:0;background:#fff}
+.qempty{padding:14px;color:#868e96;font-size:14px}
+#qDivider{flex:none;height:22px;background:#3b5bdb;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:row-resize}
+#qDivider span{width:48px;height:5px;border-radius:3px;background:#dbe4ff}
+
+main{flex:1;min-height:0;position:relative}
+.view{position:absolute;inset:0;display:none;flex-direction:column}
+.view.on{display:flex}
+
+/* steps */
+#view-steps{overflow-y:auto;-webkit-overflow-scrolling:touch}
+#lines{flex:none}
+.line{display:flex;align-items:center;gap:6px;padding:4px 8px 4px 6px;border-bottom:1px solid #1a1d25;min-height:56px;border-left:3px solid transparent}
+.line.active{background:#151b2e;border-left-color:#4c6ef5}
+.line .n{width:20px;text-align:right;color:#5c6577;font-size:12px;flex:none}
+.line math-field{flex:1;min-width:0;font-size:22px;background:transparent;color:#e8eaf0;border:0;outline:0;padding:6px 4px;--caret-color:#74c0fc;--selection-background-color:#3b5bdb66;--placeholder-color:#5c6577;--contains-highlight-background-color:transparent;--primary-color:#74c0fc}
+math-field::part(virtual-keyboard-toggle),math-field::part(menu-toggle){display:none}
+math-field:focus-within{outline:none}
+.line .why{font-size:11px;color:#8ea2ff;background:#1b2140;padding:4px 7px;border-radius:8px;white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis;flex:none}
+.line .why.empty{color:#4d5670;background:transparent;border:1px dashed #2c3346}
+.line .ok{width:22px;text-align:center;font-weight:700;flex:none;font-size:15px}
+.ok.yes{color:#51cf66}.ok.no{color:#ff6b6b}.ok.unk{color:#3a4152}
+.line .more{width:28px;height:32px;border-radius:8px;color:#8b93a5;flex:none;font-size:18px}
+.stepsHelp{font-size:12px;color:#5c6577;padding:12px 14px 30px;line-height:1.5}
+.menu{position:fixed;z-index:50;background:#232838;border-radius:12px;box-shadow:0 8px 30px #000a;overflow:hidden;min-width:190px}
+.menu button{display:block;width:100%;text-align:left;padding:13px 16px;font-size:15px;border-bottom:1px solid #2e3446}
+.menu button:last-child{border:0}
+
+/* toolbars */
+.toolbar{flex:none;display:flex;gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:#1a1d24;border-top:1px solid #2a2f3a;overflow-x:auto}
+.toolbar button{background:#2a2f3c;border-radius:10px;padding:9px 12px;font-size:14px;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.toolbar button.on{background:#3b5bdb}
+.toolbar button i{display:block;width:20px;height:20px;border-radius:50%}
+
+/* ink */
+#inkScroll{flex:1;overflow:hidden;position:relative;touch-action:none;background:#12151b}
+#inkCanvas{display:block;touch-action:none}
+
+/* graph */
+#curves{flex:none;display:flex;flex-direction:column;gap:4px;padding:6px 8px;max-height:30%;overflow-y:auto}
+.curve{display:flex;align-items:center;gap:6px;background:#1a1e28;border-radius:10px;padding:2px 6px;border:1px solid transparent}
+.curve.active{border-color:#4c6ef5}
+.curve .sw{width:12px;height:12px;border-radius:50%;flex:none}
+.curve math-field{flex:1;font-size:19px;background:transparent;color:#e8eaf0;border:0;padding:4px;--caret-color:#74c0fc;--primary-color:#74c0fc}
+.curve .x{color:#8b93a5;width:30px;height:30px;font-size:16px}
+.addCurve{align-self:flex-start}
+#graphWrap{flex:1;position:relative;min-height:0}
+#graphCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+#graphTip{position:absolute;background:#ffd43b;color:#111;font-size:13px;font-weight:600;padding:4px 8px;border-radius:8px;pointer-events:none;transform:translate(-50%,-140%);white-space:nowrap}
+
+/* keyboard */
+#kb{flex:none;background:#1a1d24;border-top:1px solid #2a2f3a;padding:0 3px calc(4px + env(safe-area-inset-bottom));user-select:none;-webkit-user-select:none;touch-action:none}
+#kb[hidden]{display:none}
+.kbbar{display:flex;align-items:center;gap:4px;padding:4px 2px 2px}
+.kbbar button{padding:6px 12px;border-radius:8px;font-size:13px;color:#aab3c5;font-weight:600}
+.kbbar button.on{background:#2f3546;color:#fff}
+.kbbar .sp{flex:1}
+.kgrid{display:grid;grid-template-columns:repeat(var(--cols,5),1fr)}
+.k{position:relative;height:var(--h,54px);padding:3px;touch-action:none}
+.k>span{display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:9px;background:#3a3f4b;font-size:22px;color:#fff;box-shadow:0 1px 0 #0008;transition:background .05s,transform .05s}
+.k.s>span{background:#2b303b;font-size:18px}
+.k.op>span{background:#2f3a5c}
+.k.b>span{background:#3b5bdb;font-size:18px;font-weight:600}
+.k.down>span{background:#6c7487;transform:scale(.97)}
+.k.b.down>span{background:#5c7cfa}
+.k sup{position:absolute;top:6px;right:9px;font-size:10px;color:#8f99ad;pointer-events:none}
+.k .tex{font-family:"Times New Roman",serif;font-style:italic}
+.k.flick>span{background:#4c6ef5}
+.bubble{position:fixed;z-index:60;pointer-events:none;background:#4c6ef5;color:#fff;border-radius:10px;font-size:26px;padding:6px 14px;transform:translate(-50%,-100%);box-shadow:0 4px 14px #000a}
+
+#toast{position:fixed;left:50%;bottom:40%;transform:translateX(-50%);background:#232838;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:80;box-shadow:0 6px 20px #000a}
+#movesPanel{padding:6px 10px;background:#1a2032;border-bottom:1px solid #2b3348}
+#movesPanel[hidden]{display:none}
+.moveIntro{font-size:11px;color:#8e9bb9;padding:2px 0}
+.moveRow{display:flex;align-items:center;gap:6px}
+.moveRow>span{color:#8e9bb9;font-size:14px}
+.moveRow math-field{flex:1;min-width:0;background:#232d48;color:#fff;border:0;border-radius:8px;font-size:22px;--caret-color:#74c0fc;--primary-color:#74c0fc}
+.moveRow button{background:#3b5bdb;width:42px;height:38px;border-radius:8px;font-size:22px}
+/* Keep some working space when the question and oversized pad are both open. */
+body:has(#kb:not([hidden])) #qpane{max-height:max(90px,calc(100dvh - 530px - env(safe-area-inset-bottom)))}
