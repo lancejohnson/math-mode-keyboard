@@ -1,7 +1,7 @@
 import { MathfieldElement } from './vendor/mathlive.min.mjs';
 import { ComputeEngine } from './vendor/compute/compute-engine.js';
-import { evaluate, curveExpression, snapStroke } from './core.js?v=8';
-import { createInkRecognition, unlockRecognition } from './recognition.js?v=8';
+import { evaluate, curveExpression, snapStroke } from './core.js?v=9';
+import { createInkRecognition, unlockRecognition } from './recognition.js?v=9';
 MathfieldElement.fontsDirectory = new URL('./vendor/fonts', import.meta.url).href;
 MathfieldElement.soundsDirectory = null;
 MathfieldElement.keypressSound = null;
@@ -102,8 +102,9 @@ $('#qWeb').onclick=()=>{window.open('https://www.mathacademy.com','_blank','noop
 let divStart=null;$('#qDivider').onpointerdown=e=>{e.preventDefault();$('#qDivider').setPointerCapture(e.pointerId);divStart={y:e.clientY,h:$('#qpane').offsetHeight};};$('#qDivider').onpointermove=e=>{if(!divStart)return;$('#qpane').style.height=Math.max(90,Math.min(innerHeight*.65,divStart.h+e.clientY-divStart.y))+'px';resizeCanvases();};$('#qDivider').onpointerup=()=>divStart=null;$('#qDivider').onpointercancel=()=>divStart=null;
 
 // Ink belongs only to the current line. Earlier work is a separate editable history.
-$('#inkPen').onclick=()=>{const palette=$('#inkPalette');palette.hidden=!palette.hidden;$('#inkPen').setAttribute('aria-expanded',String(!palette.hidden));};
-$$('#inkTools [data-pen]').forEach(b=>b.onclick=()=>{pen=b.dataset.pen;$$('#inkTools [data-pen]').forEach(x=>x.classList.toggle('on',x===b));$('#inkPalette').hidden=true;$('#inkPen').setAttribute('aria-expanded','false');if(pen!=='erase')$('#inkPen i').style.background=pen;});
+$('#inkPen').onclick=()=>{if(pen==='erase')$$('#inkPalette [data-pen]').find(x=>x.dataset.pen===lastPen)?.click();const palette=$('#inkPalette');palette.hidden=!palette.hidden;$('#inkPen').setAttribute('aria-expanded',String(!palette.hidden));};
+let lastPen='#7dd3fc';
+$$('#inkTools [data-pen]').forEach(b=>b.onclick=()=>{pen=b.dataset.pen==='erase'&&pen==='erase'?lastPen:b.dataset.pen;if(pen!=='erase')lastPen=pen;const on=$$('#inkTools [data-pen]').find(x=>x.dataset.pen===pen);$('#inkEraser').setAttribute('aria-pressed',String(pen==='erase'));$$('#inkTools [data-pen]').forEach(x=>x.classList.toggle('on',x===on));drawInk();$('#inkPalette').hidden=true;$('#inkPen').setAttribute('aria-expanded','false');if(pen!=='erase')$('#inkPen i').style.background=pen;});
 const inkHistories=new Map();let lastInkTap=null;
 function inkHistory(){if(!inkHistories.has(problem.id))inkHistories.set(problem.id,[]);return inkHistories.get(problem.id);}
 function rememberInk(){const h=inkHistory();h.push({strokes:structuredClone(problem.strokes),pan:inkPan,lineId:problem.inkLineId,conversions:structuredClone(problem.inkConversions||[])});if(h.length>30)h.shift();}
@@ -113,20 +114,28 @@ $('#inkClear').onclick=()=>{if(confirm('Clear the unconverted handwriting? Recog
 const ic=$('#inkCanvas');
 const recognitionSession=unlockRecognition();
 const inkRecognition=createInkRecognition({getProblem:()=>problem,isDrawing:()=>!!inkStroke||!!inkGesture,sessionReady:recognitionSession,makeField:field,remember:rememberInk,save,redraw:()=>requestAnimationFrame(resizeCanvases),hideKeyboard:()=>{active?.blur();active=null;$('#kb').hidden=true;},toast,toSteps:lines=>{inkRecognition.cancel();problem.lines.push(...lines.map(l=>({id:uid(),latex:l.latex,why:'From handwriting'})));renderLines();switchMode('steps');save();},setPan:pan=>inkPan=pan,getPan:()=>inkPan,getView:()=>({z:inkZoom,x:inkPanX,y:inkPan}),resetView:()=>{inkZoom=1;inkPanX=0;inkPan=0;}});
+// The eraser removes whole strokes it touches (so no hidden marks reach the reader)
+// and, when lifted, any typed symbols it passed over. One Undo step per sweep.
+const ERASE_RADIUS=12;
+function eraseAlong(){const s=inkStroke,r=ERASE_RADIUS/inkZoom,a=s.pts.at(-2)||s.pts.at(-1),b=s.pts.at(-1);
+  const near=([x,y])=>{const dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/(dx*dx+dy*dy||1)));return Math.hypot(x-a[0]-t*dx,y-a[1]-t*dy)<=r;};
+  const hit=problem.strokes.filter(k=>k.pts.some((p,i)=>near(p)||(i&&near([(p[0]+k.pts[i-1][0])/2,(p[1]+k.pts[i-1][1])/2]))));
+  if(!hit.length)return;if(!s.removed){rememberInk();s.removed=true;}problem.strokes=problem.strokes.filter(k=>!hit.includes(k));}
 function releaseInkLayout(){if(pointerMap.size)return;$('#inkPast').style.flex='';$('#inkScroll').style.flex='';}
 const toWorld=(e,r=ic.getBoundingClientRect())=>[(e.clientX-r.left)/inkZoom+inkPanX,(e.clientY-r.top)/inkZoom+inkPan];
 const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
 let fieldTapTimer=null;
 ic.onpointerdown=e=>{e.preventDefault();clearTimeout(fieldTapTimer);if(!pointerMap.size&&!$('#kb').hidden){$('#inkPast').style.flex='0 0 '+$('#inkPast').getBoundingClientRect().height+'px';$('#inkScroll').style.flex='0 0 '+ic.getBoundingClientRect().height+'px';}ic.setPointerCapture(e.pointerId);pointerMap.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pointerMap.size===2){lastInkTap=null;inkStroke=null;const [a,b]=[...pointerMap.values()],r=ic.getBoundingClientRect();inkGesture={d:Math.hypot(a.x-b.x,a.y-b.y)||1,cx:(a.x+b.x)/2-r.left,cy:(a.y+b.y)/2-r.top,z:inkZoom,x:inkPanX,y:inkPan};drawInk();return;}
-  if(pointerMap.size===1){const overField=!!inkRecognition.fieldAt(e.clientX,e.clientY);if(!overField)inkRecognition.beginWriting();lastInkTap=lastInkTap?.problem===problem.id?lastInkTap:null;inkStroke={color:pen,started:performance.now(),client:[e.clientX,e.clientY],overField,pts:[toWorld(e)]};drawInk();}};
+  if(pointerMap.size===1){const overField=!!inkRecognition.fieldAt(e.clientX,e.clientY);if(!overField)inkRecognition.beginWriting();lastInkTap=lastInkTap?.problem===problem.id?lastInkTap:null;if(pen==='erase'){lastInkTap=null;inkRecognition.beginWriting();inkStroke={color:'erase',eraser:true,removed:false,client:[[e.clientX,e.clientY]],pts:[toWorld(e)]};eraseAlong();drawInk();return;}inkStroke={color:pen,started:performance.now(),client:[e.clientX,e.clientY],overField,pts:[toWorld(e)]};drawInk();}};
 ic.onpointermove=e=>{if(!pointerMap.has(e.pointerId))return;e.preventDefault();pointerMap.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(inkGesture&&pointerMap.size>=2){const [a,b]=[...pointerMap.values()],r=ic.getBoundingClientRect(),g=inkGesture,z=clamp(g.z*Math.hypot(a.x-b.x,a.y-b.y)/g.d,1,4),cx=(a.x+b.x)/2-r.left,cy=(a.y+b.y)/2-r.top;
     // The point under the fingers stays under the fingers while zooming.
     inkZoom=z;inkPanX=clamp(g.cx/g.z+g.x-cx/z,0,inkWidth-inkWidth/z);inkPan=clamp(g.cy/g.z+g.y-cy/z,0,Math.max(g.y,inkHeight-inkHeight/z));drawInk();}
-  else if(inkStroke&&pointerMap.size===1){const r=ic.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;const p=toWorld(e,r),last=inkStroke.pts.at(-1);if(Math.hypot(p[0]-last[0],p[1]-last[1])>1/inkZoom){if(inkStroke.overField&&!inkStroke.begun&&Math.hypot(e.clientX-inkStroke.client[0],e.clientY-inkStroke.client[1])>8){inkStroke.begun=true;inkRecognition.beginWriting();}inkStroke.pts.push(p);drawInk();}}};
+  else if(inkStroke&&pointerMap.size===1){const r=ic.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;const p=toWorld(e,r),last=inkStroke.pts.at(-1);if(inkStroke.eraser){inkStroke.pts.push(p);inkStroke.client.push([e.clientX,e.clientY]);eraseAlong();drawInk();return;}if(Math.hypot(p[0]-last[0],p[1]-last[1])>1/inkZoom){if(inkStroke.overField&&!inkStroke.begun&&Math.hypot(e.clientX-inkStroke.client[0],e.clientY-inkStroke.client[1])>8){inkStroke.begun=true;inkRecognition.beginWriting();}inkStroke.pts.push(p);drawInk();}}};
 function inkEnd(e){pointerMap.delete(e.pointerId);if(inkGesture){if(pointerMap.size===0){inkGesture=null;releaseInkLayout();inkRecognition.renderTyped();drawInk();}return;}if(!inkStroke)return;
   const stroke=inkStroke;inkStroke=null;releaseInkLayout();const now=performance.now();
+  if(stroke.eraser){inkRecognition.eraseMath(stroke.client,ERASE_RADIUS,stroke.removed);drawInk();save();return;}
   const tap=now-stroke.started<260&&stroke.pts.every(p=>Math.hypot(p[0]-stroke.pts[0][0],p[1]-stroke.pts[0][1])<10/inkZoom);
   if(tap&&lastInkTap&&now-lastInkTap.time<340&&Math.hypot(stroke.pts[0][0]-lastInkTap.x,stroke.pts[0][1]-lastInkTap.y)<28/inkZoom){if(lastInkTap.pushed)undoInk();lastInkTap=null;inkRecognition.recognize();return;}
   const field=tap&&inkRecognition.fieldAt(...stroke.client);
@@ -149,7 +158,7 @@ function drawInk(){const ctx=ic.getContext('2d'),z=inkZoom;ctx.clearRect(0,0,ink
 // Grid lives below a separate stroke layer, so erase does not remove the grid. It zooms with the ink.
 ctx.strokeStyle='#1c212b';ctx.lineWidth=1;ctx.beginPath();const step=26*z;for(let x=-((inkPanX*z)%step);x<=inkWidth;x+=step){ctx.moveTo(x,0);ctx.lineTo(x,inkHeight);}for(let y=-((inkPan*z)%step);y<=inkHeight;y+=step){ctx.moveTo(0,y);ctx.lineTo(inkWidth,y);}ctx.stroke();
 const layer=document.createElement('canvas');layer.width=ic.width;layer.height=ic.height;const lc=layer.getContext('2d');const dpr=ic.width/inkWidth;lc.setTransform(dpr*z,0,0,dpr*z,-inkPanX*z*dpr,-inkPan*z*dpr);lc.lineCap='round';lc.lineJoin='round';
-for(const s of [...problem.strokes,...(inkStroke?[inkStroke]:[])]){lc.globalCompositeOperation=s.color==='erase'?'destination-out':'source-over';lc.strokeStyle=s.color==='erase'?'#000':s.color;lc.fillStyle=lc.strokeStyle;lc.lineWidth=s.width??(s.color==='erase'?22:2.6);lc.beginPath();s.pts.forEach(([x,y],i)=>i?lc.lineTo(x,y):lc.moveTo(x,y));if(s.pts.length===1){lc.arc(s.pts[0][0],s.pts[0][1],lc.lineWidth/2,0,Math.PI*2);lc.fill();}else lc.stroke();}ctx.drawImage(layer,0,0,inkWidth,inkHeight);ctx.fillStyle='#566075';ctx.font='12px -apple-system, sans-serif';ctx.fillText(z>1?'Pinch out to zoom back · scribble over math to delete it':'Write here · double-tap to convert · pinch to zoom · scribble to delete',12,inkHeight-12);$('#inkZoom').hidden=z<=1.01;$('#inkZoom').textContent=z.toFixed(1)+'× · reset';inkRecognition.pan();}
+for(const s of [...problem.strokes,...(inkStroke&&!inkStroke.eraser?[inkStroke]:[])]){lc.globalCompositeOperation=s.color==='erase'?'destination-out':'source-over';lc.strokeStyle=s.color==='erase'?'#000':s.color;lc.fillStyle=lc.strokeStyle;lc.lineWidth=s.width??(s.color==='erase'?22:2.6);lc.beginPath();s.pts.forEach(([x,y],i)=>i?lc.lineTo(x,y):lc.moveTo(x,y));if(s.pts.length===1){lc.arc(s.pts[0][0],s.pts[0][1],lc.lineWidth/2,0,Math.PI*2);lc.fill();}else lc.stroke();}ctx.drawImage(layer,0,0,inkWidth,inkHeight);if(inkStroke?.eraser){const [x,y]=inkStroke.pts.at(-1);ctx.strokeStyle='#f783ac';ctx.lineWidth=2;ctx.beginPath();ctx.arc((x-inkPanX)*z,(y-inkPan)*z,ERASE_RADIUS,0,Math.PI*2);ctx.stroke();}ctx.fillStyle='#566075';ctx.font='12px -apple-system, sans-serif';ctx.fillText(pen==='erase'?'Eraser: rub over ink or typed math · tap Eraser again for the pen':z>1?'Pinch out to zoom back · scribble over math to delete it':'Write here · double-tap to convert · pinch to zoom · scribble to delete',12,inkHeight-12);$('#inkZoom').hidden=z<=1.01;$('#inkZoom').textContent=z.toFixed(1)+'× · reset';inkRecognition.pan();}
 
 // Graph: real plotting from parsed math, pinch/drag, point inspection, snapped shapes.
 function renderCurves(){const host=$('#curves');host.replaceChildren();problem.curves.forEach(c=>{const row=document.createElement('div');row.className='curve';const sw=document.createElement('span');sw.className='sw';sw.style.background=c.color;const f=field(c.latex,v=>{c.latex=v;drawGraph();});f.addEventListener('focus',()=>{$$('.curve').forEach(x=>x.classList.toggle('active',x===row));});const x=document.createElement('button');x.className='x';x.textContent='×';x.onclick=()=>{problem.curves.splice(problem.curves.indexOf(c),1);if(active===f){active=null;$('#kb').hidden=true;}renderCurves();drawGraph();save();};row.append(sw,f,x);host.append(row);});const add=document.createElement('button');add.className='chip addCurve';add.textContent='+ curve';add.onclick=addCurve;host.append(add);}

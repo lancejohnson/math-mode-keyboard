@@ -19,7 +19,7 @@ Work is stored in the current browser's local storage. **Convert sends only a ti
 
 Ink mode has one writing line at the bottom. Write it, double-tap or press Convert, and keep writing to extend the same equation. **New line ↑** converts anything unfinished and moves the line up into *Previous lines* immediately, without waiting for recognition. Previous lines stay editable and keep their original ink.
 
-Editing by hand, on the writing line: **pinch** to zoom (up to 4×; the pill at the top right resets); **tap** typed math to put the caret there and use the keypad; **scribble** (a zigzag) over symbols to delete them, or over unconverted ink to remove it; **write starting inside** an expression to insert at that spot (otherwise new ink is appended). **✎** on a previous line makes it the writing line again. Undo reverses each of these.
+Editing by hand, on the writing line: **pinch** to zoom (up to 4×; the pill at the top right resets); **tap** typed math to put the caret there and use the keypad; **scribble** (a zigzag) over symbols to delete them, or over unconverted ink to remove it; **write starting inside** an expression to insert at that spot (otherwise new ink is appended). The pink **Eraser** button (tap again for the pen) removes any handwritten stroke it touches and, when you lift your finger, any typed symbols it rubbed over. **✎** on a previous line makes it the writing line again. Undo reverses each of these.
 
 The fast reader thickens thin phone strokes to the pen width it was trained on (about 3 px at 36 px character height). Without that, normal-size handwriting misread badly (a 6 became i). `tests/fixtures/phone-*.png` are those thin-stroke cases.
 

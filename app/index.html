@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f1115">
 <title>Math Mode</title>
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 <header id="top">
@@ -58,7 +58,7 @@
         <button data-pen="#fcc2d7" aria-label="Pink pen"><i style="background:#fcc2d7"></i></button>
         <button data-pen="#e8eaf0" aria-label="White pen"><i style="background:#e8eaf0"></i></button>
       </div>
-      <button data-pen="erase">⌫ erase</button>
+      <button data-pen="erase" id="inkEraser" aria-label="Eraser" aria-pressed="false"><i></i><span>Eraser</span></button>
       <button id="inkClear">Clear</button>
     </div>
   </section>
@@ -79,6 +79,6 @@
 <div id="kb" hidden></div>
 <div id="toast" hidden></div>
 
-<script type="module" src="app.js?v=8"></script>
+<script type="module" src="app.js?v=9"></script>
 </body>
 </html>

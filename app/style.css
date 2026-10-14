@@ -105,10 +105,13 @@ body:has(#kb:not([hidden])) #qpane{max-height:max(90px,calc(100dvh - 530px - env
 /* Undo and conversion stay visible beside compact pen controls. */
 #inkTools{position:relative;overflow:visible;gap:4px;padding:7px 6px calc(7px + env(safe-area-inset-bottom))}
 #inkTools button{min-height:46px;padding:8px 9px;font-size:13px;flex:none}
-#inkUndo{background:#3b5bdb!important;font-weight:700;min-width:80px}
+#inkUndo{background:#3b5bdb!important;font-weight:700;min-width:72px}
 #inkTools [data-pen]:not([data-pen="erase"]){padding:8px 6px}
-#inkTools [data-pen="erase"]{font-size:0;width:34px;padding:8px 6px}
-#inkTools [data-pen="erase"]::after{content:'⌫';font-size:20px}
+/* Eraser: a drawn eraser block, clearly lit while it is the active tool. */
+#inkEraser{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:46px;padding:6px 3px!important;font-size:10px!important;color:#c9d2e3}
+#inkEraser i{display:block;width:22px;height:12px;border-radius:3px;background:linear-gradient(90deg,#f783ac 0 62%,#e9ecef 62%);transform:rotate(-20deg)}
+#inkEraser.on{background:#f783ac!important;color:#1a1d24;font-weight:700;box-shadow:0 0 0 2px #fff inset}
+#inkEraser.on i{background:linear-gradient(90deg,#fff 0 62%,#1a1d24 62%)}
 #inkClear{margin-left:auto;padding:8px 6px!important}
 
 /* Editable math lives on the same grid and shares its world coordinates. */

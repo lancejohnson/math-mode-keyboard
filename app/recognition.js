@@ -70,6 +70,20 @@ export function createInkRecognition({getProblem,makeField,remember,save,redraw,
     }
     return false;
   }
+  // Eraser over typed math: delete the smallest symbols the path touched.
+  function eraseMath(path,radius,remembered){
+    for(const {group,field} of live()){
+      const r=field.getBoundingClientRect();if(!path.some(([x,y])=>x>=r.left-radius&&x<=r.right+radius&&y>=r.top-radius&&y<=r.bottom+radius))continue;
+      const list=atoms(field),touched=list.filter(a=>path.some(([x,y])=>x>=a.b.left-radius/2&&x<=a.b.right+radius/2&&y>=a.b.top-radius/2&&y<=a.b.bottom+radius/2));
+      const leaves=touched.filter(a=>!list.some(o=>o!==a&&o.b.width<a.b.width&&o.b.left>=a.b.left-1&&o.b.right<=a.b.right+1&&o.b.top>=a.b.top-1&&o.b.bottom<=a.b.bottom+1));
+      if(!leaves.length)continue;
+      if(!remembered){remember();remembered=true;}
+      // Delete from the end so earlier offsets stay valid.
+      for(const k of leaves.map(a=>a.k).sort((a,b)=>b-a)){field.selection={ranges:[[k-1,k]]};field.executeCommand('deleteBackward');}
+      group.lines[0].latex=field.value;
+    }
+    renderTyped();redraw();save();
+  }
   function editLine(lineId){
     const p=getProblem();if(lineId===lineState(p))return;hideKeyboard();
     if(p.strokes.length)recognize();
@@ -227,5 +241,5 @@ export function createInkRecognition({getProblem,makeField,remember,save,redraw,
   }
   sessionReady.then(()=>renderTyped());
   button.onclick=recognize;document.querySelector('#inkNewLine').onclick=newLine;
-  return {recognize,newLine,cancel,renderTyped,pan,beginWriting,scratch,fieldAt,focusAt,editLine};
+  return {recognize,newLine,cancel,renderTyped,pan,beginWriting,scratch,fieldAt,focusAt,editLine,eraseMath};
 }

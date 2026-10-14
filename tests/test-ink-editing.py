@@ -58,13 +58,29 @@ def run_edit_checks(page):
     out=ROOT/'.artifacts/live';out.mkdir(parents=True,exist_ok=True);page.screenshot(path=str(out/'ink-zoomed.png'))
     zoom.click();page.wait_for_timeout(150);assert zoom.is_hidden() and abs(field().bounding_box()['width']-small)<2
     undo()
+    # Eraser: removes whole strokes it touches (no hidden marks) and typed symbols it rubs over.
+    eraser=page.get_by_role('button',name='Eraser',exact=True);r=canvas.bounding_box()
+    write(60,200);write(200,200);n=strokes();eraser.click();assert eraser.get_attribute('aria-pressed')=='true'
+    stroke([(r['x']+70,r['y']+195),(r['x']+80,r['y']+230),(r['x']+75,r['y']+215)])
+    st=page.evaluate('()=>JSON.parse(localStorage.getItem("mathmode-v1")).problems.find(p=>p.id===document.querySelector("#problem").value).strokes')
+    assert len(st)==n-1 and not any(k['color']=='erase' for k in st) and st[-1]['pts'][0][0]>150,st
+    page.screenshot(path=str(out/'ink-eraser.png'))
+    before=value();box=field().bounding_box();ex=box['x']+box['width']-6;y=box['y']+box['height']/2
+    stroke([(ex,y-4),(ex+1,y+4),(ex,y)]);after=value()
+    assert after==before[:-1],(before,after)
+    undo();assert value()==before and strokes()==n-1,value()
+    undo();assert strokes()==n
+    eraser.click();assert eraser.get_attribute('aria-pressed')=='false'
+    write(300,260);assert strokes()==n+1
+    for _ in range(3):undo()
+    assert strokes()==0,strokes()
     # ✎ on a previous line makes it the writing line again without restoring ink.
     page.get_by_role('button',name='New line ↑',exact=True).click();page.wait_for_timeout(200)
     assert page.locator('#inkTyped math-field:visible').count()==0
     page.get_by_role('button',name='Edit line 1 by hand',exact=True).click();page.wait_for_timeout(200)
     assert page.locator('#inkLineLabel').inner_text()=='Current line 1' and value()==v+'+1' and strokes()==0
     page.screenshot(path=str(out/'ink-editing.png'))
-    print('PASS: tap typed math to edit, scribble deletes symbols or ink, writing inside inserts, double-tap still converts, pinch zoom keeps world-scale ink, ✎ reopens previous lines; Undo restores. Mocked OCR; Chromium, not iOS.')
+    print('PASS: tap typed math to edit, scribble deletes symbols or ink, writing inside inserts, double-tap still converts, pinch zoom keeps world-scale ink, eraser removes whole strokes and typed symbols, ✎ reopens previous lines; Undo restores. Mocked OCR; Chromium, not iOS.')
 if __name__=='__main__':
     class Quiet(http.server.SimpleHTTPRequestHandler):
         def log_message(self,*args):pass
