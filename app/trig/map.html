@@ -27,7 +27,7 @@
 <p class="dim">Arrows show what each topic builds on. Topics still unlock in list order on the unit page. Progress is stored on this device.</p>
 <script type="module">
 import { UNIT1, KINDS, layers, topicState, STATE_TEXT } from './map.js?v=1';
-import { loadFacts } from './facts.js?v=2';
+import { loadFacts } from './facts.js?v=3';
 const $ = s => document.querySelector(s);
 const U = UNIT1, T = U.topics;
 let prog = {}; try { prog = JSON.parse(localStorage.getItem(U.storeKey)) || {}; } catch { }

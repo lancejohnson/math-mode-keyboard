@@ -18,7 +18,9 @@ OUT = ROOT / '.artifacts' / 'live'
 ARGS = argparse.Namespace(only=None, topics=None, slow=False, part=None)
 STATE = {'phase': 'start', 'topic': None}
 FAST_PLAY = """(W => { W.play = function (t, extra = {}) { cancelAnimationFrame(this.anim); this.set({ ...extra, cur: t, curLabel: extra.curLabel }); }; })(Object.getPrototypeOf(u1.wheel));
-if (!window.__fastTimers) { window.__fastTimers = 1; const st = window.setTimeout; window.setTimeout = (f, ms, ...a) => st(f, ms === 650 ? 0 : ms, ...a); }"""
+if (!window.__fastTimers) { window.__fastTimers = 1; const st = window.setTimeout; window.setTimeout = (f, ms, ...a) => st(f, ms === 650 ? 0 : ms, ...a); }
+if (!window.warp) { const n = Date.now; let off = 0; window.warp = ms => { off += ms; }; Date.now = () => n() + off; }"""
+# ^ warp: a fake wall clock, so the fact drill's minute-long gaps pass without waiting.
 # ^ also skips the 650 ms auto-advance after a fast right quick fact (about 10 s of waiting per run).
 
 
@@ -42,6 +44,7 @@ def type_pad(page, s):
 
 
 def answer(page, right, shots):
+    page.evaluate('window.warp && warp(20000)')  # 20 s per question on the wall clock
     q = page.evaluate('({type:u1.q().type,t:u1.q().t,ans:u1.q().ans,answer:u1.q().answer})')
     if q['type'] == 'drag':
         drag_to(page, q['t'] if right else q['t'] + math.pi / 2)
@@ -62,6 +65,9 @@ def answer(page, right, shots):
 def nxt(page):
     """Go to the next question: tap Next, or wait for the auto-advance after a fast right quick fact."""
     if page.locator('#done').is_visible(): return
+    if page.evaluate('!!u1.q()?.copy'):  # fact drill, after a miss: tap the right answer to go on
+        assert page.locator('#choices .choice:enabled').count() == 1
+        page.locator('#choices .choice').nth(page.evaluate('u1.q().answer')).click(); return
     if page.locator('#next').is_visible(): page.click('#next')
     else: page.wait_for_function('!u1.q().done')
 
@@ -115,12 +121,17 @@ def run(page):
             answer(page, right, shots)
             if not right: wrongs += 1
             nxt(page)
-        assert page.evaluate('u1.right()') == page.evaluate(f'u1.topics[{ti}].goal || 4')
+        assert page.evaluate('u1.right()') == page.evaluate(f'u1.topics[{ti}].dose ? u1.drill().facts.size : u1.topics[{ti}].goal || 4'), page.inner_text('#doneText')
+        if page.evaluate(f'!!u1.topics[{ti}].dose'):
+            page.locator('#topicView').screenshot(path=str(OUT / 'trig1v2-byheart-done.png'))
+            assert 'automatic' in page.inner_text('#doneText') and page.evaluate('Object.values(u1.facts()).filter(c => c.cold).length') >= 8
         page.click('#nextTopic') if ti < n - 1 else None
     STATE['topic'] = None
     if ARGS.topics and ARGS.topics < n: return
     assert {'choice', 'pad', 'fact'} <= shots, shots  # wrong drag is covered in specific()
     page.reload(); assert page.locator('.topic.done').count() == n and 'Unit complete' in page.inner_text('#unitStatus')
+    # Facts that went cold in the drill come back a day later: make it tomorrow (age every saved fact by two days).
+    page.evaluate("() => { const k = 'trig-facts-v1', f = JSON.parse(localStorage.getItem(k)); for (const c of Object.values(f)) c.due -= 2 * 864e5; localStorage.setItem(k, JSON.stringify(f)); }"); page.reload()
     # Quick facts review on the topic list: learned angles that are due, timed, back to the list when done.
     assert page.locator('#quickFacts').is_visible() and 'due' in page.inner_text('#quickFacts'), page.inner_text('#quickFacts')
     page.screenshot(path=str(OUT / 'trig1v2-quickfacts-list.png'))

@@ -135,15 +135,18 @@ export function status(st) {
   if (!last.ok) return 'shaky';
   const lastN = h.slice(-NEED);
   if (lastN.length === NEED && lastN.every(a => a.ok && a.s <= FAST)) return 'automatic';
+  if (st.cold && last.s <= FAST) return 'automatic'; // went cold in the fact drill (drill.js)
   return 'slow';
 }
 
-export function record(st = {}, ok, secs, now = Date.now()) {
-  const hist = [...(st.hist || []), { ok, s: Math.round(secs * 10) / 10 }].slice(-6);
+// secs = time to answer; start = time to the first touch on an answer (logged, not yet used).
+export function record(st = {}, ok, secs, now = Date.now(), start) {
+  const a = { ok, s: Math.round(secs * 10) / 10 }; if (start != null) a.s0 = Math.round(start * 10) / 10;
+  const hist = [...(st.hist || []), a].slice(-6);
   let box = st.box || 0;
   if (ok && secs <= FAST) box = Math.min(box + 1, INTERVALS.length - 1);
   else if (!ok) box = 0;
-  const next = { hist, box, seen: now, due: now + (ok && secs <= FAST ? INTERVALS[box] : 0) };
+  const next = { hist, box, seen: now, ...(ok && st.cold ? { cold: st.cold } : {}), due: now + (ok && secs <= FAST ? INTERVALS[box] : 0) };
   // Not automatic yet: keep the gap short so it comes back in the next round.
   if (status(next) !== 'automatic') next.due = Math.min(next.due, now + 10 * MIN);
   return next;
@@ -153,34 +156,4 @@ export function deckSummary(deck, state) {
   const n = { new: 0, shaky: 0, slow: 0, automatic: 0 };
   for (const c of deck.cards) n[status(state[c.id])]++;
   return n;
-}
-
-// The next round: shaky cards first, then slow ones, then automatic cards that are due, then a few new
-// cards, then (if still short) the automatic cards seen longest ago. If that's still short of `size`,
-// the cards being learned come round a second time, so a new fact is seen twice in its first round.
-export function buildRound(deck, state, { now = Date.now(), size = 10, maxNew = 5, rnd = Math.random } = {}) {
-  const by = s => deck.cards.filter(c => status(state[c.id]) === s);
-  const due = c => (state[c.id]?.due ?? 0) <= now;
-  const oldest = (a, b) => (state[a.id]?.seen ?? 0) - (state[b.id]?.seen ?? 0);
-  const shuffle = a => a.map(v => [rnd(), v]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
-  const fresh = deck.cards.filter(c => !state[c.id]?.hist?.length); // new cards in deck order
-  let pick = [...by('shaky').sort(oldest), ...by('slow').sort(oldest), ...by('automatic').filter(due).sort(oldest), ...fresh.slice(0, maxNew)];
-  const ids = new Set(pick.map(c => c.id));
-  for (const c of by('automatic').sort(oldest)) if (pick.length < size && !ids.has(c.id)) { pick.push(c); ids.add(c.id); }
-  pick = shuffle(pick.slice(0, size));
-  const learning = pick.filter(c => status(state[c.id]) !== 'automatic');
-  if (pick.length < size && learning.length) {
-    let again = shuffle(learning).slice(0, size - pick.length);
-    if (again.length > 1 && again[0].id === pick[pick.length - 1].id) again.push(again.shift());
-    pick = pick.concat(again);
-  }
-  return pick;
-}
-
-// After a wrong answer, the card comes back a few cards later in the same round (once).
-export function requeue(round, at, card, gap = 3) {
-  const r = [...round];
-  if (r.slice(at + 1).some(c => c.id === card.id)) return r;
-  r.splice(Math.min(r.length, at + 1 + gap), 0, card);
-  return r;
 }

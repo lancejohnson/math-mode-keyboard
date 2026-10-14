@@ -21,7 +21,7 @@ test-trig-specific:
 trig-unit1:
 	$(call PASS,tests/test-trig-unit1.py) uv run -q --with playwright python tests/test-trig-unit1.py $(ARGS)
 trig-facts-unit:
-	$(call PASS,app/trig/facts.test.js) node --test app/trig/facts.test.js
+	$(call PASS,app/trig/facts.test.js app/trig/drill.js app/trig/drill.test.js) node --test app/trig/facts.test.js app/trig/drill.test.js
 trig-facts:
 	$(call PASS,tests/test-trig-facts.py) uv run -q --with playwright python tests/test-trig-facts.py
 trig-map:

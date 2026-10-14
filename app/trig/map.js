@@ -3,7 +3,7 @@
 //   concept   → understand and explain why (timing model level "Explain & sketch")
 //   procedure → carry out the method reliably (level "Fluent")
 //   automatic → instant recall, under 3 seconds (level "Automatic")
-import { angleIds, status } from './facts.js?v=2';
+import { angleIds, status } from './facts.js?v=3';
 
 export const KINDS = {
   concept: { label: 'Concept', goal: 'Explain why, and sketch it', level: 'Explain & sketch' },

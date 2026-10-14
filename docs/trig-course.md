@@ -33,6 +33,31 @@ are original.
 angles lists them (`facts:` in the unit page, cards in `app/trig/facts.js`); a "by heart" topic
 drills them timed (only answers under 3 s count); afterwards they return as quick facts in later
 practice and as a short spaced review on the unit's topic list. `facts.html` shows all decks.
+
+**How new facts are dosed** (`app/trig/drill.js`, used by the "by heart" topic with `dose: true` and
+by every deck on `facts.html`):
+
+- At most **3 facts** are being learned at once. A fact is what you remember, so 60° = π/3 is one fact
+  asked both ways. The next fact joins when one has settled.
+- A fact you've never seen is **shown first** (untimed, with its picture). A fact already met in a lesson is
+  asked straight away.
+- A **miss** shows the answer, and you tap it to go on. It comes back after **at least 2 other questions and
+  10 seconds**, ahead of anything new.
+- Each fast right answer (under 3 s) **widens the gap**: 2 → 4 → 8 questions, and 10 → 30 → 60 seconds;
+  both must pass. A right but slow answer repeats the same gap.
+- **Cold (automatic)** = 3 fast right answers in a row at those gaps, the last at least a minute after the one
+  before. A fact met in a lesson that is fast at first sight needs 2. The first review is then **a day later**
+  (box 2 in `facts.js`), and the spacing grows from there.
+- Gaps are filled with facts you already know, never a brand-new one; if there is nothing else, a waiting
+  card is asked early, and an early answer doesn't move it on.
+- **4 or more of the last 10 answers wrong**: no new fact joins until that clears. A card missed 3 times
+  shrinks the set to 2 until it is cold.
+- A sitting stops taking new facts after 120 questions in the unit, or 60 on `facts.html`. Progress is saved.
+- Every answer stores the time to answer (`s`) and the time to the first touch on an answer (`s0`), for
+  later use.
+
+Simulated learners (`app/trig/drill.test.js`): a learner who is always right and fast gets all 16 angles cold
+in about 5–6 minutes. Weaker learners stop at the question cap with their progress saved.
 4. **The unit circle.** cos θ and sin θ as the x and y of a point going round
    (model: drag the point); quadrants and signs; reference angles; exact values everywhere;
    sin² + cos² = 1 as the Pythagorean theorem on the circle.

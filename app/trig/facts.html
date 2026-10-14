@@ -39,7 +39,7 @@ details.aid summary{color:var(--blue);cursor:pointer}
   <header>
     <small>Facts to know by heart</small>
     <h1>Make them automatic</h1>
-    <p class="dim">Some trig facts you shouldn't have to work out each time. Each card counts as <b style="color:var(--green)">automatic</b> once you get it right in under 3 seconds three times in a row. Automatic cards come back less and less often; a miss brings a card back right away.</p>
+    <p class="dim">Some trig facts you shouldn't have to work out each time. You learn three at a time. Each one comes back a little later every time you get it right in under 3 seconds; after three in a row (the last a minute or more later) it's <b style="color:var(--green)">automatic</b> and the next fact joins. A miss comes back after a few other questions. Automatic facts come back tomorrow, then further apart.</p>
   </header>
   <section id="decks"></section>
   <p class="dim"><button class="link" id="reset">Clear my fact progress</button></p>
@@ -62,15 +62,16 @@ details.aid summary{color:var(--blue);cursor:pointer}
 <div id="done" hidden>
   <nav class="crumb"><button class="link" id="home2">← All decks</button></nav>
   <section>
-    <h2>Round done</h2>
+    <h2>Sitting done</h2>
     <p id="doneText"></p>
     <div class="mix" id="doneMix"></div><div class="legend" id="doneLegend"></div>
-    <div class="row"><button class="act" id="again">Another round</button><button class="act alt" id="home3">All decks</button></div>
+    <div class="row"><button class="act" id="again">Keep going</button><button class="act alt" id="home3">All decks</button></div>
   </section>
 </div>
 
 <script type="module">
-import { DECKS, CARDS, FAST, KEY, radOf, promptFor, choicesFor, choiceText, status, record, buildRound, requeue, deckSummary } from './facts.js?v=2';
+import { DECKS, CARDS, FAST, KEY, radOf, promptFor, choicesFor, choiceText, status, record, deckSummary } from './facts.js?v=3';
+import { startDrill, nextCard, answerCard, shown, coldRecord, drillSummary } from './drill.js?v=1';
 const $ = s => document.querySelector(s);
 let state = {}; try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { } };
@@ -79,6 +80,8 @@ const NAME = { automatic: 'automatic', slow: 'right but slow', shaky: 'missed la
 const mix = n => { const tot = Object.values(n).reduce((a, b) => a + b, 0); return ['automatic', 'slow', 'shaky', 'new'].map(k => `<i style="width:${100 * n[k] / tot}%;background:${COL[k]}"></i>`).join(''); };
 const legend = n => ['automatic', 'slow', 'shaky', 'new'].filter(k => n[k]).map(k => `<span style="--c:${COL[k]}">${n[k]} ${NAME[k]}</span>`).join('');
 const show = id => ['home', 'drill', 'done'].forEach(v => $('#' + v).hidden = v !== id);
+const isAngle = c => c.pool === 'rad' || c.pool === 'deg';
+const factText = c => isAngle(c) ? `${c.t}° = ${radOf(c.t)}` : `${promptFor(c, false).replace(/<\/?b>/g, '')} = ${choiceText(c, c.answer)}`;
 
 function home() {
   show('home');
@@ -88,47 +91,63 @@ function home() {
 $('#decks').onclick = e => { const b = e.target.closest('.deck'); if (b) start(+b.dataset.i); };
 $('#reset').onclick = () => { if (confirm('Clear progress on all fact decks?')) { state = {}; save(); home(); } };
 
-let deck, round, at, card, choices, t0, timer, answered, log;
+// One sitting = a dosed drill (drill.js): at most 3 facts being learned at once, misses come back after a short gap.
+let deck, dr, nx, card, choices, t0, touch, timer, answered, copy;
 function start(i) {
-  deck = DECKS[i]; round = buildRound(deck, state); at = 0; log = [];
+  deck = DECKS[i]; dr = startDrill(deck.cards, state, { maxQ: 60 });
   $('#deckName').textContent = deck.title; $('#aidText').innerHTML = deck.aid;
   // Open the memory aid while most of the deck is still new.
   $('#aid').open = deckSummary(deck, state).new > deck.cards.length / 2;
   show('drill'); ask();
 }
+function progress() {
+  const sm = drillSummary(dr);
+  $('#roundPos').textContent = `${sm.cold} of ${sm.total} automatic · ${sm.learning} learning`;
+  $('#roundBar').innerHTML = [...dr.facts.keys()].map(f => `<i class="${dr.cold.includes(f) || dr.facts.get(f).every(id => status(state[id]) === 'automatic') ? 'ok' : dr.set.includes(f) ? 'now' : ''}"></i>`).join('');
+}
 function ask() {
-  card = round[at]; answered = false;
-  const useRad = card.pool !== 'rad' && card.pool !== 'deg' && Math.random() < .5;
-  $('#prompt').innerHTML = (card.pool === 'rad' || card.pool === 'deg' ? '<small>Convert</small>' : '<small>Exact value</small>') + promptFor(card, useRad);
+  nx = nextCard(dr, Date.now()); if (!nx) return done();
+  card = CARDS[nx.id]; answered = false; copy = false; touch = null; progress();
+  $('#result').innerHTML = ''; $('#next').hidden = true; cancelAnimationFrame(timer);
+  if (nx.kind === 'intro') { // a never-seen fact: show it (both ways), untimed
+    answered = true; $('#clock').style.width = '0';
+    $('#prompt').innerHTML = `<small>New fact</small>${factText(card)}`; $('#choices').innerHTML = '';
+    $('#result').innerHTML = `<canvas id="mini" width="300" height="300"></canvas><p>${card.why}</p><p class="dim">It comes back in a few questions. Until then, other facts.</p>`;
+    mini($('#mini'), card); $('#next').textContent = 'Got it →'; $('#next').hidden = false; return;
+  }
+  const useRad = !isAngle(card) && Math.random() < .5;
+  $('#prompt').innerHTML = (nx.kind === 'review' ? '<small>Review</small>' : isAngle(card) ? '<small>Convert</small>' : '<small>Exact value</small>') + promptFor(card, useRad);
   choices = choicesFor(card);
   $('#choices').innerHTML = choices.map((c, j) => `<button class="choice" data-j="${j}">${choiceText(card, c)}</button>`).join('');
-  $('#result').innerHTML = ''; $('#next').hidden = true;
-  $('#roundPos').textContent = `${at + 1} of ${round.length}`;
-  $('#roundBar').innerHTML = round.map((_, k) => `<i class="${k < at ? (log[k] ? 'ok' : 'no') : k === at ? 'now' : ''}"></i>`).join('');
-  t0 = performance.now(); cancelAnimationFrame(timer);
+  t0 = performance.now();
   const tick = () => { const s = (performance.now() - t0) / 1000; const c = $('#clock'); c.style.width = Math.min(100, 100 * s / FAST) + '%'; c.style.background = s <= FAST ? 'var(--green)' : 'var(--amber)'; if (!answered) timer = requestAnimationFrame(tick); };
   tick();
 }
-$('#choices').onclick = e => { const b = e.target.closest('.choice'); if (b && !answered) answer(choices[+b.dataset.j]); };
+$('#choices').addEventListener('pointerdown', () => { if (!answered && touch == null) touch = performance.now(); });
+$('#choices').onclick = e => {
+  const b = e.target.closest('.choice'); if (!b) return; const c = choices[+b.dataset.j];
+  if (copy) { if (c === card.answer) ask(); return; } // after a miss: tap the right answer to go on
+  if (!answered) answer(c);
+};
 
 function answer(c) {
-  answered = true; const secs = (performance.now() - t0) / 1000, ok = c === card.answer;
-  const before = status(state[card.id]);
-  state[card.id] = record(state[card.id], ok, secs); save(); log[at] = ok;
-  const now = status(state[card.id]);
-  $('#choices').querySelectorAll('.choice').forEach((b, j) => { b.disabled = true; if (choices[j] === card.answer) b.classList.add('right'); else if (choices[j] === c) b.classList.add('wrong'); });
-  const s = secs.toFixed(1) + ' s';
+  answered = true; const secs = (performance.now() - t0) / 1000, ok = c === card.answer, now = Date.now();
+  state[card.id] = record(state[card.id], ok, secs, now, touch != null ? (touch - t0) / 1000 : null);
+  const out = answerCard(dr, nx, ok, secs, now);
+  if (out.cold) for (const id of dr.facts.get(out.cold)) state[id] = coldRecord(state[id], now);
+  save(); progress();
+  $('#choices').querySelectorAll('.choice').forEach((b, j) => { b.disabled = !ok && choices[j] !== card.answer ? true : ok; if (choices[j] === card.answer) b.classList.add('right'); else if (choices[j] === c) b.classList.add('wrong'); });
+  const s = secs.toFixed(1) + ' s', held = out.held ? '<p class="dim">Several misses just now, so no new facts join until these settle.</p>' : '';
   if (ok && secs <= FAST) {
-    $('#result').innerHTML = `<p class="big ok">✓ ${s}${now === 'automatic' && before !== 'automatic' ? ' · now automatic' : ''}</p>`;
-    setTimeout(next, 650);
+    $('#result').innerHTML = `<p class="big ok">✓ ${s}${out.cold ? ` · ${factText(card)} is automatic now` : ''}</p>` + held;
+    const was = nx; setTimeout(() => { if (nx === was) ask(); }, 650);
   } else {
-    if (!ok) round = requeue(round, at, card);
-    $('#result').innerHTML = `<canvas id="mini" width="300" height="300"></canvas><p class="big ${ok ? '' : 'no'}" style="${ok ? 'color:var(--amber)' : ''}">${ok ? `Right, in ${s}. Aim for under ${FAST} s.` : `It's ${choiceText(card, card.answer)}.${round.length > log.length + 1 ? ' It will come back in a moment.' : ''}`}</p><p>${card.why}</p>`;
-    mini($('#mini'), card); $('#next').hidden = false;
+    copy = !ok;
+    $('#result').innerHTML = `<canvas id="mini" width="300" height="300"></canvas><p class="big ${ok ? '' : 'no'}" style="${ok ? 'color:var(--amber)' : ''}">${ok ? `Right, in ${s}. Aim for under ${FAST} s; it comes round again soon.` : `It's ${choiceText(card, card.answer)}. Tap it to go on. It comes back in a few questions.`}</p><p>${card.why}</p>` + held;
+    mini($('#mini'), card); $('#next').textContent = 'Next →'; $('#next').hidden = !ok;
   }
 }
-const next = () => { at++; at < round.length ? ask() : done(); };
-$('#next').onclick = next;
+$('#next').onclick = () => { if (nx?.kind === 'intro') shown(dr, nx.id, Date.now()); ask(); };
 
 // Small picture after a slow or wrong answer: the angle, and for value cards the point (cos θ, sin θ).
 function mini(cv, c) {
@@ -151,14 +170,14 @@ function mini(cv, c) {
 }
 
 function done() {
-  show('done'); const right = log.filter(Boolean).length, n = deckSummary(deck, state);
-  $('#doneText').innerHTML = `${right} of ${log.length} right. <b>${n.automatic} of ${deck.cards.length}</b> cards in this deck are automatic.` + (n.shaky + n.slow ? ' Another round will start with the ones that need work.' : n.new ? ' Another round adds new cards.' : ' The whole deck is automatic. Come back tomorrow to keep it that way.');
+  show('done'); const sm = drillSummary(dr), n = deckSummary(deck, state), news = dr.cold.length;
+  $('#doneText').innerHTML = `${sm.right} of ${sm.asked} right. ${news ? `<b>${news}</b> fact${news > 1 ? 's' : ''} became automatic this time. ` : ''}<b>${sm.cold} of ${sm.total}</b> in this deck are automatic.` + (sm.cold < sm.total ? ' Another sitting picks up where this one stopped.' : ' The whole deck is automatic. Come back tomorrow to keep it that way.');
   $('#doneMix').innerHTML = mix(n); $('#doneLegend').innerHTML = legend(n);
 }
 $('#again').onclick = () => start(DECKS.indexOf(deck));
 $('#quit').onclick = $('#home2').onclick = $('#home3').onclick = home;
 
-window.facts = { state: () => state, card: () => card, round: () => round, at: () => at, choices: () => choices, answered: () => answered, DECKS, CARDS };
+window.facts = { state: () => state, card: () => card, kind: () => nx?.kind, drill: () => dr, choices: () => choices, answered: () => answered, copy: () => copy, DECKS, CARDS };
 home();
 </script>
 </body>
