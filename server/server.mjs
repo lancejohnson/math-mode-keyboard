@@ -9,7 +9,7 @@ const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'../app');
 const MAX_BODY=2900000;
 const equal=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.woff2':'font/woff2','.txt':'text/plain; charset=utf-8'};
-export function createServer({token,recognize,root=ROOT,secureCookies=true,perHour=120}={}){
+export function createServer({token,recognize,root=ROOT,secureCookies=true,perHour=600}={}){
   if(!token||!recognize)throw new Error('Recognition server needs private configuration');
   let active=0,budget=[];const attempts=new Map();
   const sign=s=>createHmac('sha256',token).update(s).digest('hex');
@@ -22,7 +22,7 @@ export function createServer({token,recognize,root=ROOT,secureCookies=true,perHo
       const url=new URL(req.url,'http://localhost');
       if(url.pathname.startsWith('/api/')){
         if(req.headers.origin){let origin;try{origin=new URL(req.headers.origin).host;}catch{}if(origin!==req.headers.host)return json(res,403,{error:'Origin not allowed'});}
-        if(req.method==='GET'&&url.pathname==='/api/status')return json(res,200,{recognition:true,authorized:authorized(req)});
+        if(req.method==='GET'&&url.pathname==='/api/status')return json(res,200,{recognition:true,authorized:authorized(req),provider:recognize.provider||'Anthropic'});
         if(req.method==='POST'&&url.pathname==='/api/session'){
           const ip=req.socket.remoteAddress;const now=Date.now();const count=attempts.get(ip)||{count:0,time:now};if(now-count.time>60000){count.count=0;count.time=now;}if(++count.count>30)return json(res,429,{error:'Too many attempts'});attempts.set(ip,count);
           const data=await body(req);if(!equal(data.invite,token))return json(res,401,{error:'Private recognition link required'});
@@ -36,10 +36,10 @@ export function createServer({token,recognize,root=ROOT,secureCookies=true,perHo
           const now=Date.now();budget=budget.filter(t=>now-t<3600000);
           if(active>=2)return json(res,429,{error:'Recognition is busy. Your ink is safe; try again shortly.'});
           if(budget.length>=perHour)return json(res,429,{error:'Recognition limit reached. Your ink is safe; try again later.'});
-          if(budget.filter(t=>now-t<60000).length>=10)return json(res,429,{error:'Please pause between conversions.'});
+          if(budget.filter(t=>now-t<60000).length>=30)return json(res,429,{error:'Please pause between conversions.'});
           budget.push(now);active++;
-          const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),60000);res.on('close',()=>{if(!res.writableEnded)controller.abort();});
-          try{const result=await recognize(data.image,controller.signal);return json(res,200,result);}catch{return json(res,503,{error:'Recognition could not finish. Your ink is untouched; please try again.'});}finally{clearTimeout(timeout);active--;}
+          const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),30000);res.on('close',()=>{if(!res.writableEnded)controller.abort();});
+          try{const result=await recognize(data.image,controller.signal);return json(res,200,result);}catch{return json(res,503,{error:'Recognition could not finish. Your original ink is saved; please try again.'});}finally{clearTimeout(timeout);active--;}
         }
         return json(res,404,{error:'Not found'});
       }

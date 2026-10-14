@@ -102,7 +102,7 @@ math-field:focus-within{outline:none}
 /* Keep some working space when the question and oversized pad are both open. */
 body:has(#kb:not([hidden])) #qpane{max-height:max(90px,calc(100dvh - 530px - env(safe-area-inset-bottom)))}
 
-/* Undo and shrink stay visible beside compact pen controls. */
+/* Undo and conversion stay visible beside compact pen controls. */
 #inkTools{overflow:visible;gap:5px;padding:7px 6px calc(7px + env(safe-area-inset-bottom))}
 #inkTools button{min-height:46px;padding:8px 9px;font-size:13px;flex:none}
 #inkUndo{background:#3b5bdb!important;font-weight:700;min-width:80px}
@@ -111,24 +111,21 @@ body:has(#kb:not([hidden])) #qpane{max-height:max(90px,calc(100dvh - 530px - env
 #inkTools [data-pen="erase"]::after{content:'⌫';font-size:20px}
 #inkClear{margin-left:auto;padding:8px 6px!important}
 
-/* Recognized math and review are genuine editable MathLive fields, never resized ink. */
-#inkTyped,#inkReview{flex:none;max-height:38%;overflow-y:auto;background:#151b29;border-bottom:1px solid #303a53;padding:8px 12px}
-#inkTyped[hidden],#inkReview[hidden]{display:none}
-#inkReview{max-height:60%;background:#192237}
+/* Compact left-aligned output; no review pane or permanent action buttons. */
+#inkTyped{flex:none;max-height:28%;overflow-y:auto;background:#12151b;border-bottom:1px solid #303a53;padding:2px 10px}
+#inkTyped[hidden]{display:none}
 #inkScroll{min-height:60px}
-#view-ink math-field{display:block;width:100%;font-size:24px;background:transparent;border:0;color:#e8eaf0;padding:7px 0;--caret-color:#74c0fc;--primary-color:#74c0fc;--selection-background-color:#3b5bdb66}
-.inkGroup{border-bottom:1px solid #2a354b;padding:4px 0 8px}
+#view-ink math-field{display:block;width:100%;font-size:22px;background:transparent;border:0;color:#e8eaf0;padding:3px 0;--caret-color:#74c0fc;--primary-color:#74c0fc;--selection-background-color:#3b5bdb66}
+.inkGroup{display:grid;grid-template-columns:minmax(0,1fr) 32px;align-items:center;min-height:48px;border-bottom:1px solid #202738;padding:2px 0}
 .inkGroup:last-child{border:0}
-.inkGroupActions,.readingChoices,.reviewActions{display:flex;gap:8px;margin-top:6px}
-.inkGroupActions button,.readingChoices button,.reviewActions button{border-radius:9px;background:#2b3854;padding:9px 12px;font-size:13px;min-height:40px}
-.reviewActions{position:sticky;bottom:-8px;background:#192237;padding:8px 0}
-.reviewActions button{flex:1;min-height:44px}
-.reviewActions button:last-child,.readingChoices button.on{background:#3b5bdb;font-weight:600}
+.inkGroupMath{min-width:0;text-align:left}
+.inkStatus{font-size:13px;color:#8f9bb3;padding:8px 0;display:block}
+.inkMore{width:32px;min-height:44px;color:#8996b0;font-size:21px}
+.inkGroup.uncertain .inkMore{color:#ffd43b}
+.inkGroupActions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;padding:4px 0 8px}
+.inkGroupActions[hidden]{display:none}
+.inkGroupActions button{border-radius:9px;background:#2b3854;padding:9px 12px;font-size:13px;min-height:40px}
+.inkWarning{font-size:12px;color:#ffd43b;width:100%;line-height:1.4}
 button:disabled{opacity:.5;cursor:default}
-.reviewHeading{font-size:16px;font-weight:700;margin-bottom:5px}
-.reviewNote{font-size:12px;color:#b2bfd6;line-height:1.4;margin-bottom:8px}
-.reviewWarning{font-size:12px;color:#ffd43b;margin:5px 0;line-height:1.4}
-.recognitionSource{display:block;max-height:95px;width:100%;object-fit:contain;background:#fff;border-radius:8px;margin:5px 0}
 #inkPrivacy{flex:none;font-size:10px;line-height:1.3;padding:5px 10px;color:#8f9bb3;background:#1a1d24}
 #inkConvert{min-width:70px;padding:8px 6px!important}
-body:has(#inkReview:not([hidden])) #inkTyped{display:none}

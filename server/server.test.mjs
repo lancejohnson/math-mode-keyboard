@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from './server.mjs';
-import {parseTranscription,validateImage,combineReadings} from './recognizer.mjs';
+import {parseTranscription,validateImage,createRecognizer} from './recognizer.mjs';
 const image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jFOsAAAAASUVORK5CYII=';
-const recognized={lines:[{latex:'x^{2}+2x=3',uncertain:false}],warnings:[],alternatives:[],checked:true,agreement:true};
+const recognized={lines:[{latex:'x^{2}+2x=3',uncertain:false}],warnings:[],model:'claude-sonnet-5-5'};
 test('strict transcription parser preserves wrong math, multi-line fractions and uncertainty',()=>{
  assert.deepEqual(parseTranscription(JSON.stringify({lines:[{latex:'2+2=5'},{latex:'\\frac{x}{2}=3',uncertain:true}],warnings:['Check denominator']})),{lines:[{latex:'2+2=5',uncertain:false},{latex:'\\frac{x}{2}=3',uncertain:true}],warnings:['Check denominator']});
  assert.throws(()=>parseTranscription('{"lines":[{"latex":"\\\\htmlClass{evil}{x}"}]}'));
@@ -12,11 +12,13 @@ test('strict transcription parser preserves wrong math, multi-line fractions and
  assert.ok(validateImage(image));assert.throws(()=>validateImage('data:image/png;base64,abcd'));
  const huge=Buffer.from(image.split(',')[1],'base64');huge.writeUInt32BE(99999,16);assert.throws(()=>validateImage('data:image/png;base64,'+huge.toString('base64')));
 });
-test('independent disagreement is exposed, not silently decided by solving',()=>{
- const a={lines:[{latex:'x=1',uncertain:false}],warnings:[],model:'a'},b={lines:[{latex:'x=l',uncertain:true}],warnings:['Ambiguous l'],model:'b'};
- const both=combineReadings([{status:'fulfilled',value:a},{status:'fulfilled',value:b}]);assert.equal(both.agreement,false);assert.equal(both.alternatives.length,1);assert.deepEqual(both.lines,a.lines);
- assert.equal(combineReadings([{status:'fulfilled',value:a},{status:'rejected'}]).checked,false);
- assert.throws(()=>combineReadings([{status:'rejected'},{status:'rejected'}]));
+test('one fast transcription call, no second reader or reasoning wait',async()=>{
+ const calls=[],model={id:'fast-reader',provider:'anthropic',input:['text','image']};
+ const runtime={getModel:()=>model,completeSimple:async(...args)=>{calls.push(args);return {stopReason:'stop',content:[{type:'text',text:'{"lines":[{"latex":"2+2=5"}],"warnings":[]}'}]};}};
+ const recognize=await createRecognizer({runtime,modelRef:'anthropic/fast-reader'});
+ const result=await recognize(image,AbortSignal.timeout(1000));
+ assert.equal(calls.length,1);assert.equal(result.lines[0].latex,'2+2=5');assert.equal(result.model,'fast-reader');assert.equal(recognize.provider,'Anthropic');
+ assert.equal('reasoning' in calls[0][2],false);assert.equal(calls[0][1].messages[0].content.length,1);
 });
 async function setup(t,recognize=async()=>recognized,perHour=120){const server=createServer({token:'a'.repeat(48),recognize,secureCookies:false,perHour});await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>new Promise(r=>server.close(r)));const url='http://127.0.0.1:'+server.address().port;const session=await fetch(url+'/api/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({invite:'a'.repeat(48)})});const cookie=session.headers.get('set-cookie').split(';')[0];return {url,cookie};}
 const headers=cookie=>({'Content-Type':'application/json','X-Math-Mode':'1',Cookie:cookie});

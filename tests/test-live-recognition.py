@@ -2,7 +2,7 @@
 Run from repository root: uv run --with playwright python tests/test-live-recognition.py
 Reads the private invite locally; never prints it. Requires running production service.
 """
-import os,json,pathlib,re
+import os,json,pathlib,re,time
 from playwright.sync_api import sync_playwright
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 url=os.environ.get('MATH_MODE_TEST_URL') or pathlib.Path('/tmp/math-mode-url').read_text().strip()
@@ -27,29 +27,36 @@ with sync_playwright() as p:
             page.add_init_script("{let s=JSON.parse(localStorage.getItem('mathmode-v1'));s.problems[0].strokes="+json.dumps(strokes)+";s.problems[0].inkConversions=[];s.tab='ink';localStorage.setItem('mathmode-v1',JSON.stringify(s));}")
             page.reload(wait_until='domcontentloaded',timeout=60000)
             page.locator('#view-ink.on #inkCanvas').wait_for(timeout=30000)
-            with page.expect_response(lambda r:r.url.endswith('/api/recognize'),timeout=70000) as response:
+            started=time.perf_counter()
+            with page.expect_response(lambda r:r.url.endswith('/api/recognize'),timeout=40000) as response:
                 page.get_by_role('button',name='Convert',exact=True).click()
+                # The canvas is freed immediately; write a new mark while recognition runs.
+                r=page.locator('#inkCanvas').bounding_box()
+                page.mouse.move(45,r['y']+35);page.mouse.down();page.mouse.move(125,r['y']+75,steps=10);page.mouse.up()
+            elapsed=time.perf_counter()-started
             result=response.value.json()
-            assert response.value.ok and result['checked'],(name,result)
-            candidates=[result['lines']]+[a['lines'] for a in result['alternatives']]
-            assert any(len(lines)==1 and normalize(lines[0]['latex'])==expected[name] for lines in candidates),(name,result)
-            page.get_by_role('button',name='Use this math',exact=True).wait_for()
-            assert page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1")).problems[0].strokes')==strokes
-            out=ROOT/'.artifacts/live';out.mkdir(parents=True,exist_ok=True)
-            page.screenshot(path=str(out/f'recognition-{name}-review.png'))
-            page.get_by_role('button',name='Use this math',exact=True).click()
+            assert response.value.ok and result['model']=='claude-sonnet-5-5',(name,result)
+            assert len(result['lines'])==1 and normalize(result['lines'][0]['latex'])==expected[name],(name,result)
+            page.locator('#inkTyped math-field').wait_for()
             page.wait_for_timeout(250)
             saved=page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1")).problems[0]')
-            assert saved['strokes']==[] and saved['inkConversions'][0]['strokes']==strokes
+            assert len(saved['strokes'])==1 and saved['inkConversions'][0]['strokes']==strokes
+            assert saved['inkConversions'][0]['status']=='ready'
+            assert page.get_by_role('button',name='Use this math',exact=True).count()==0
             assert page.locator('#inkTyped math-field').count()==1
-            page.screenshot(path=str(out/f'recognition-{name}-typed.png'))
+            assert page.locator('#inkTyped math-field').bounding_box()['x']<=14
+            assert page.locator('.inkGroupActions').is_hidden()
+            out=ROOT/'.artifacts/live';out.mkdir(parents=True,exist_ok=True)
+            page.screenshot(path=str(out/f'auto-recognition-{name}.png'))
+            # Undo the new mark, then the conversion; the original vectors are exact.
+            page.get_by_role('button',name='Undo handwriting').click()
             page.get_by_role('button',name='Undo handwriting').click()
             page.wait_for_timeout(250)
             assert page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1")).problems[0].strokes')==strokes
             assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
-            print(f'PASS real independent readers: {name}; agreement={result["agreement"]}; editable typesetting and exact ink recovery')
+            print(f'PASS real automatic conversion: {name}; {elapsed:.2f}s public round trip; uninterrupted writing and exact ink recovery')
         assert not errors,errors
-        print('PASS private invite exchange and URL removal; real-model recognition through public service. Chromium, not iOS.')
+        print('PASS private invite exchange and URL removal; fast single-model recognition through public service. Chromium, not iOS.')
     except Exception as exc:
         print('Live test error:',str(exc).replace(token,'[private invite]').replace(url,'[live app]'))
         print('Browser errors:',errors)
