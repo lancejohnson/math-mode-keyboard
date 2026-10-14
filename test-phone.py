@@ -33,7 +33,16 @@ try:
     page.get_by_role('button',name='1',exact=True).click()
     page.get_by_role('button',name='↵ step',exact=True).click()
     assert page.locator('#lines math-field').count()==2
-    assert page.locator('#lines math-field').nth(1).evaluate('f=>f.value')==f.evaluate('f=>f.value')
+    assert page.locator('#lines math-field').nth(1).evaluate('f=>f.value')==''
+    second=page.locator('#lines math-field').nth(1)
+    second.evaluate("f=>{f.value='x+2';f.dispatchEvent(new Event('input',{bubbles:true}));f.focus();}")
+    page.wait_for_timeout(300)
+    ret=page.get_by_role('button',name='↵ step',exact=True).bounding_box()
+    rx,ry=ret['x']+ret['width']/2,ret['y']+ret['height']/2
+    page.mouse.move(rx,ry);page.mouse.down();page.wait_for_timeout(420)
+    page.mouse.move(rx,ry-55,steps=6);page.mouse.up()
+    assert page.locator('#lines math-field').count()==3
+    assert page.locator('#lines math-field').last.evaluate('f=>f.value')=='x+2'
     # Variant switch and target dimensions.
     page.wait_for_timeout(350)
     targets=page.locator('#kb .k').all()
@@ -42,6 +51,14 @@ try:
         r=t.bounding_box();assert r['width']>=90 and r['height']>=58,r
     page.get_by_role('button',name='4 wide',exact=True).click()
     assert page.get_by_role('button',name='5 compact',exact=True).is_visible()
+    assert page.get_by_role('button',name='÷',exact=True).count()==0
+    nine=page.get_by_role('button',name='9',exact=True).bounding_box()
+    xkey=page.get_by_role('button',name='x',exact=True).bounding_box()
+    assert abs(nine['y']-xkey['y'])<1 and abs(xkey['x']-nine['x']-nine['width'])<1
+    page.get_by_role('button',name='x',exact=True).click()
+    assert 'x' in page.locator('#lines math-field').last.evaluate('f=>f.value')
+    page.get_by_role('button',name='↵',exact=True).click()
+    assert page.locator('#lines math-field').last.evaluate('f=>f.value')==''
     page.get_by_role('button',name='5 compact',exact=True).click()
     # Math Academy question drawer text persists.
     page.get_by_role('button',name='📌 Question').click()
@@ -72,6 +89,33 @@ try:
     page.mouse.move(50,200);page.mouse.down();page.mouse.move(150,260,steps=15);page.mouse.up()
     page.wait_for_timeout(200)
     assert len(page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]['strokes'])==1
+    original=page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]['strokes']
+    page.mouse.dblclick(290,400,delay=90)
+    page.wait_for_timeout(200)
+    compact=page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]['strokes']
+    assert len(compact)==1 and compact[0]['packed']
+    assert compact[0]['pts']!=original[0]['pts']
+    undo=page.get_by_role('button',name='Undo handwriting').bounding_box()
+    assert undo['width']>=70 and undo['height']>=44
+    page.mouse.move(50,300);page.mouse.down();page.mouse.move(220,350,steps=15);page.mouse.up()
+    page.get_by_role('button',name='Shrink ↓',exact=True).click()
+    page.wait_for_timeout(200)
+    stacked=page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]['strokes']
+    assert len(stacked)==2 and stacked[0]['pts']==compact[0]['pts']
+    assert min(p[1] for p in stacked[1]['pts'])>max(p[1] for p in stacked[0]['pts'])
+    page.get_by_role('button',name='Undo handwriting').click()
+    page.wait_for_timeout(200)
+    restored=page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]['strokes']
+    assert len(restored)==2 and not restored[1].get('packed')
+    page.get_by_role('button',name='Undo handwriting').click()
+    page.get_by_role('button',name='Undo handwriting').click()
+    page.wait_for_timeout(200)
+    assert page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]['strokes']==original
+    for width,height in [(375,667),(390,844)]:
+      page.set_viewport_size({'width':width,'height':height})
+      assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+      assert page.get_by_role('button',name='Undo handwriting').is_visible()
+    page.set_viewport_size({'width':390,'height':844})
     page.get_by_role('button',name='Steps',exact=True).click()
     page.wait_for_timeout(200)
     before=page.locator('#lines math-field').count()
@@ -90,7 +134,7 @@ try:
     page.screenshot(path=str(out/'compact-pad.png'))
     assert not errors,errors
     b.close()
-    print('PASS: number pad, fraction navigation, copied steps, both-side operations, graph/shape, ink, local persistence, 3 phone sizes; no browser JS errors.')
+    print('PASS: number pad, fraction navigation, blank/hold-slide-copy steps, both-side operations, graph/shape, double-tap ink shrinking/undo, local persistence, 3 phone sizes; no browser JS errors.')
 finally:
  server.shutdown();server.server_close();thread.join()
  print('Stopped the temporary test HTTP server.')

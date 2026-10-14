@@ -65,3 +65,19 @@ export function snapStroke(pts) {
   if(clean.length===2&&!closed){const [a,b]=clean;if(Math.abs(a[0]-b[0])<16)b[0]=a[0];if(Math.abs(a[1]-b[1])<16)b[1]=a[1];}
   return {pts:clean,closed:closed&&clean.length>=3};
 }
+
+// Shrink only the fresh handwriting, preserving earlier compact rows and vector quality.
+export function compactInkStrokes(strokes, width) {
+  const fresh=strokes.filter(s=>!s.packed);
+  const ink=fresh.filter(s=>s.color!=='erase');
+  if(!ink.length)return null;
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity,bottom=0;
+  for(const s of ink)for(const [x,y] of s.pts){minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
+  for(const s of strokes.filter(s=>s.packed&&s.color!=='erase'))for(const [,y] of s.pts)bottom=Math.max(bottom,y);
+  const top=bottom?bottom+22:20;
+  const scale=Math.min(.4,48/Math.max(1,maxY-minY),Math.max(1,width-32)/Math.max(1,maxX-minX));
+  // Keep original eraser masks over the archived rows; also transform their fresh-row masks.
+  const archived=strokes.filter(s=>s.packed||s.color==='erase').map(s=>s.packed?s:{...s,packed:true});
+  const compact=fresh.map(s=>({...s,packed:true,width:Math.max(s.color==='erase'?1:1.2,(s.width??(s.color==='erase'?22:2.6))*scale),pts:s.pts.map(([x,y])=>[16+(x-minX)*scale,top+(y-minY)*scale])}));
+  return {strokes:[...archived,...compact],bottom:top+(maxY-minY)*scale};
+}

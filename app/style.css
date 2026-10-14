@@ -101,3 +101,12 @@ math-field:focus-within{outline:none}
 .moveRow button{background:#3b5bdb;width:42px;height:38px;border-radius:8px;font-size:22px}
 /* Keep some working space when the question and oversized pad are both open. */
 body:has(#kb:not([hidden])) #qpane{max-height:max(90px,calc(100dvh - 530px - env(safe-area-inset-bottom)))}
+
+/* Undo and shrink stay visible beside compact pen controls. */
+#inkTools{overflow:visible;gap:5px;padding:7px 6px calc(7px + env(safe-area-inset-bottom))}
+#inkTools button{min-height:46px;padding:8px 9px;font-size:13px;flex:none}
+#inkUndo{background:#3b5bdb!important;font-weight:700;min-width:80px}
+#inkTools [data-pen]:not([data-pen="erase"]){padding:8px 6px}
+#inkTools [data-pen="erase"]{font-size:0;width:34px;padding:8px 6px}
+#inkTools [data-pen="erase"]::after{content:'⌫';font-size:20px}
+#inkClear{margin-left:auto;padding:8px 6px!important}

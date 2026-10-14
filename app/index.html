@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f1115">
 <title>Math Mode</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 <header id="top">
@@ -40,17 +40,18 @@
   <section id="view-steps" class="view on">
     <div id="movesPanel" hidden><div class="moveIntro">Apply to both sides of the selected equation</div><div class="moveRow"><span>by</span><math-field id="operand" aria-label="Operation value">3</math-field><button data-op="Add">＋</button><button data-op="Subtract">−</button><button data-op="Multiply">×</button><button data-op="Divide">÷</button></div><div class="moveIntro">Numeric nonzero values only. A new simplified step is added.</div></div>
     <div id="lines"></div>
-    <div class="stepsHelp">↵ copies the current line down. Flick x/y up for a power. → moves out of a fraction or exponent. No automatic checking in this prototype.</div>
+    <div class="stepsHelp">↵ starts a blank line. Hold ↵ and slide up to copy the current line. Flick x/y up for a power. → moves out of a fraction or exponent. No automatic checking in this prototype.</div>
   </section>
 
   <section id="view-ink" class="view">
     <div id="inkScroll"><canvas id="inkCanvas"></canvas></div>
     <div class="toolbar" id="inkTools">
-      <button data-pen="#7dd3fc" class="on"><i style="background:#7dd3fc"></i></button>
-      <button data-pen="#fcc2d7"><i style="background:#fcc2d7"></i></button>
-      <button data-pen="#e8eaf0"><i style="background:#e8eaf0"></i></button>
+      <button id="inkUndo" aria-label="Undo handwriting">↶ Undo</button>
+      <button id="inkCompact">Shrink ↓</button>
+      <button data-pen="#7dd3fc" class="on" aria-label="Blue pen"><i style="background:#7dd3fc"></i></button>
+      <button data-pen="#fcc2d7" aria-label="Pink pen"><i style="background:#fcc2d7"></i></button>
+      <button data-pen="#e8eaf0" aria-label="White pen"><i style="background:#e8eaf0"></i></button>
       <button data-pen="erase">⌫ erase</button>
-      <button id="inkUndo">↶</button>
       <button id="inkClear">Clear</button>
     </div>
   </section>
@@ -71,6 +72,6 @@
 <div id="kb" hidden></div>
 <div id="toast" hidden></div>
 
-<script type="module" src="app.js"></script>
+<script type="module" src="app.js?v=2"></script>
 </body>
 </html>
