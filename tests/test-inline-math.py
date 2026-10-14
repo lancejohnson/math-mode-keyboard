@@ -52,7 +52,7 @@ try:
     saved=page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1")).problems[0]')
     assert saved['inkConversions'][1]['joined'] and saved['inkConversions'][1]['strokes']==addition
     # Tap the whole equation, edit with the custom math pad, then return to pen input.
-    math.click()
+    box=math.bounding_box();page.mouse.click(box['x']+box['width']-3,box['y']+box['height']/2);page.wait_for_timeout(250)  # Taps reach typed math through the writing canvas.
     math.evaluate("f=>f.executeCommand('moveToMathfieldEnd')")
     page.get_by_role('button',name='+',exact=True).click();page.get_by_role('button',name='1',exact=True).click()
     assert math.evaluate(r"f=>f.value.replace(/\s+/g,'')")=='x+3+1'

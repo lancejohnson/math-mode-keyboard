@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f1115">
 <title>Math Mode</title>
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 <header id="top">
@@ -46,7 +46,7 @@
   <section id="view-ink" class="view">
     <div id="inkPast"><span class="inkPastLabel">Previous lines</span><div id="inkCompleted" aria-label="Completed math lines"></div></div>
     <div id="inkLineLabel">Current line 1</div>
-    <div id="inkScroll"><canvas id="inkCanvas"></canvas><div id="inkTyped" hidden></div></div>
+    <div id="inkScroll"><canvas id="inkCanvas"></canvas><div id="inkTyped" hidden></div><button id="inkZoom" hidden>1.0× · reset</button></div>
     <p id="inkPrivacy">Only cropped handwriting is sent for recognition.</p>
     <div class="toolbar" id="inkTools">
       <button id="inkUndo" aria-label="Undo handwriting">↶ Undo</button>
@@ -79,6 +79,6 @@
 <div id="kb" hidden></div>
 <div id="toast" hidden></div>
 
-<script type="module" src="app.js?v=7"></script>
+<script type="module" src="app.js?v=8"></script>
 </body>
 </html>

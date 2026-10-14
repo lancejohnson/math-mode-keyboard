@@ -1,7 +1,7 @@
 import { MathfieldElement } from './vendor/mathlive.min.mjs';
 import { ComputeEngine } from './vendor/compute/compute-engine.js';
-import { evaluate, curveExpression, snapStroke } from './core.js?v=7';
-import { createInkRecognition, unlockRecognition } from './recognition.js?v=7';
+import { evaluate, curveExpression, snapStroke } from './core.js?v=8';
+import { createInkRecognition, unlockRecognition } from './recognition.js?v=8';
 MathfieldElement.fontsDirectory = new URL('./vendor/fonts', import.meta.url).href;
 MathfieldElement.soundsDirectory = null;
 MathfieldElement.keypressSound = null;
@@ -16,7 +16,7 @@ try { state = JSON.parse(localStorage.getItem('mathmode-v1')); } catch {}
 const makeProblem = (title, latex='') => ({id:uid(), title, lines:[{id:uid(),latex,why:''}], strokes:[], curves:[{id:uid(),latex:'y=x^2-4',color:colors[0]}],shapes:[], qText:'', qImage:null});
 if (!state?.problems?.length) state = {problems:[makeProblem('Algebra warm-up','\\frac{2x+3}{x-1}=5')],current:null,layout:'big',tab:'steps'};
 let problem = state.problems.find(p=>p.id===state.current) || state.problems[0];
-let mode = state.tab || 'steps', active=null, activeLine=null, saveTimer, toastTimer, pen='#7dd3fc', inkPan=0;
+let mode = state.tab || 'steps', active=null, activeLine=null, saveTimer, toastTimer, pen='#7dd3fc', inkPan=0, inkPanX=0, inkZoom=1;
 let inkWidth=390,inkHeight=400, inkStroke=null, inkGesture=null;
 let graph={scale:32,cx:0,cy:0,axes:true,mode:'move',gesture:null,stroke:null,points:new Map()};
 let qOpen=false, pointerMap=new Map(), keysPage='numbers';
@@ -25,7 +25,7 @@ function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{state.current=
 function flush(){clearTimeout(saveTimer);state.current=problem.id;state.tab=mode;try{localStorage.setItem('mathmode-v1',JSON.stringify(state));}catch{}}
 window.addEventListener('pagehide',flush);
 function updateProblems(){const select=$('#problem');select.replaceChildren();for(const p of state.problems){const o=document.createElement('option');o.value=p.id;o.textContent=p.title;select.append(o);}select.value=problem.id;}
-$('#problem').onchange=e=>{flush();problem=state.problems.find(p=>p.id===e.target.value);active=null;activeLine=null;inkPan=0;inkRecognition.cancel();inkRecognition.renderTyped();renderLines();renderCurves();renderQ();resizeCanvases();save();};
+$('#problem').onchange=e=>{flush();problem=state.problems.find(p=>p.id===e.target.value);active=null;activeLine=null;inkPan=0;inkPanX=0;inkZoom=1;inkRecognition.cancel();inkRecognition.renderTyped();renderLines();renderCurves();renderQ();resizeCanvases();save();};
 $('#newProblem').onclick=()=>{const title=prompt('Name this problem','Problem '+(state.problems.length+1));if(!title?.trim())return;problem=makeProblem(title.trim());state.problems.push(problem);updateProblems();inkRecognition.cancel();inkRecognition.renderTyped();renderLines();renderCurves();renderQ();resizeCanvases();save();if(mode==='steps'||mode==='moves')focusLine(0);};
 function field(latex, callback){const f=new MathfieldElement();f.mathVirtualKeyboardPolicy='manual';f.smartFence=true;f.smartMode=false;f.popoverPolicy='off';f.value=latex;f.setAttribute('aria-label','Math expression');f.addEventListener('input',()=>{callback(f.value);save();});f.addEventListener('focus',()=>{active=f;$('#kb').hidden=false;if(!$('#kb .k.down'))renderKB();});return f;}
 
@@ -107,23 +107,49 @@ $$('#inkTools [data-pen]').forEach(b=>b.onclick=()=>{pen=b.dataset.pen;$$('#inkT
 const inkHistories=new Map();let lastInkTap=null;
 function inkHistory(){if(!inkHistories.has(problem.id))inkHistories.set(problem.id,[]);return inkHistories.get(problem.id);}
 function rememberInk(){const h=inkHistory();h.push({strokes:structuredClone(problem.strokes),pan:inkPan,lineId:problem.inkLineId,conversions:structuredClone(problem.inkConversions||[])});if(h.length>30)h.shift();}
-function undoInk(){inkRecognition.cancel();const old=inkHistory().pop();if(old){problem.strokes=old.strokes;inkPan=old.pan;problem.inkLineId=old.lineId;problem.inkConversions=old.conversions.map(g=>{const current=problem.inkConversions?.find(c=>c.id===g.id);return current?.lines?.length?{...g,status:current.status,lines:structuredClone(current.lines),joined:current.joined,position:structuredClone(current.position),reader:current.reader,warnings:structuredClone(current.warnings||[])}:g;});}else if(problem.strokes.length)problem.strokes.pop();else if(problem.inkConversions?.length){const group=problem.inkConversions.pop();problem.strokes=group.strokes;problem.inkLineId=group.lineId;}lastInkTap=null;inkRecognition.renderTyped();resizeCanvases();drawInk();save();}
+function undoInk(){inkRecognition.cancel();const old=inkHistory().pop();if(old){problem.strokes=old.strokes;inkPan=old.pan;problem.inkLineId=old.lineId;problem.inkConversions=old.conversions.map(g=>{const current=problem.inkConversions?.find(c=>c.id===g.id);return g.status==='pending'&&current?.lines?.length?{...g,status:current.status,lines:structuredClone(current.lines),joined:current.joined,position:structuredClone(current.position),reader:current.reader,warnings:structuredClone(current.warnings||[])}:g;});}else if(problem.strokes.length)problem.strokes.pop();else if(problem.inkConversions?.length){const group=problem.inkConversions.pop();problem.strokes=group.strokes;problem.inkLineId=group.lineId;}lastInkTap=null;inkRecognition.renderTyped();resizeCanvases();drawInk();save();}
 $('#inkUndo').onclick=undoInk;
 $('#inkClear').onclick=()=>{if(confirm('Clear the unconverted handwriting? Recognized math is kept.')){inkRecognition.cancel();rememberInk();problem.strokes=[];inkPan=0;lastInkTap=null;drawInk();save();}};
 const ic=$('#inkCanvas');
 const recognitionSession=unlockRecognition();
-const inkRecognition=createInkRecognition({getProblem:()=>problem,isDrawing:()=>!!inkStroke||!!inkGesture,sessionReady:recognitionSession,makeField:field,remember:rememberInk,save,redraw:()=>requestAnimationFrame(resizeCanvases),hideKeyboard:()=>{active?.blur();active=null;$('#kb').hidden=true;},toast,toSteps:lines=>{inkRecognition.cancel();problem.lines.push(...lines.map(l=>({id:uid(),latex:l.latex,why:'From handwriting'})));renderLines();switchMode('steps');save();},setPan:pan=>inkPan=pan,getPan:()=>inkPan});
+const inkRecognition=createInkRecognition({getProblem:()=>problem,isDrawing:()=>!!inkStroke||!!inkGesture,sessionReady:recognitionSession,makeField:field,remember:rememberInk,save,redraw:()=>requestAnimationFrame(resizeCanvases),hideKeyboard:()=>{active?.blur();active=null;$('#kb').hidden=true;},toast,toSteps:lines=>{inkRecognition.cancel();problem.lines.push(...lines.map(l=>({id:uid(),latex:l.latex,why:'From handwriting'})));renderLines();switchMode('steps');save();},setPan:pan=>inkPan=pan,getPan:()=>inkPan,getView:()=>({z:inkZoom,x:inkPanX,y:inkPan}),resetView:()=>{inkZoom=1;inkPanX=0;inkPan=0;}});
 function releaseInkLayout(){if(pointerMap.size)return;$('#inkPast').style.flex='';$('#inkScroll').style.flex='';}
-ic.onpointerdown=e=>{e.preventDefault();if(!pointerMap.size){if(!$('#kb').hidden){$('#inkPast').style.flex='0 0 '+$('#inkPast').getBoundingClientRect().height+'px';$('#inkScroll').style.flex='0 0 '+ic.getBoundingClientRect().height+'px';}inkRecognition.beginWriting();}ic.setPointerCapture(e.pointerId);pointerMap.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointerMap.size===2){lastInkTap=null;inkStroke=null;inkGesture={start:[...pointerMap.values()].reduce((s,p)=>s+p.y,0)/2,pan:inkPan};drawInk();return;}if(pointerMap.size===1){const r=ic.getBoundingClientRect();lastInkTap=lastInkTap?.problem===problem.id?lastInkTap:null;inkStroke={color:pen,started:performance.now(),pts:[[e.clientX-r.left,e.clientY-r.top+inkPan]]};drawInk();}};
-ic.onpointermove=e=>{if(!pointerMap.has(e.pointerId))return;e.preventDefault();pointerMap.set(e.pointerId,{x:e.clientX,y:e.clientY});if(inkGesture&&pointerMap.size>=2){drawInk();}else if(inkStroke&&pointerMap.size===1){const r=ic.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;const p=[e.clientX-r.left,e.clientY-r.top+inkPan];if(Math.hypot(p[0]-inkStroke.pts.at(-1)[0],p[1]-inkStroke.pts.at(-1)[1])>1){inkStroke.pts.push(p);drawInk();}}};
-function inkEnd(e){pointerMap.delete(e.pointerId);if(inkGesture){if(pointerMap.size===0){inkGesture=null;releaseInkLayout();inkRecognition.renderTyped();}return;}if(inkStroke){const stroke=inkStroke;inkStroke=null;releaseInkLayout();const tap=performance.now()-stroke.started<260&&stroke.pts.every(p=>Math.hypot(p[0]-stroke.pts[0][0],p[1]-stroke.pts[0][1])<10);if(tap&&lastInkTap&&performance.now()-lastInkTap.time<340&&Math.hypot(stroke.pts[0][0]-lastInkTap.x,stroke.pts[0][1]-lastInkTap.y)<28){undoInk();inkRecognition.recognize();return;}rememberInk();problem.strokes.push(stroke);inkRecognition.renderTyped();lastInkTap=tap?{problem:problem.id,time:performance.now(),x:stroke.pts[0][0],y:stroke.pts[0][1]}:null;drawInk();save();}}
+const toWorld=(e,r=ic.getBoundingClientRect())=>[(e.clientX-r.left)/inkZoom+inkPanX,(e.clientY-r.top)/inkZoom+inkPan];
+const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
+let fieldTapTimer=null;
+ic.onpointerdown=e=>{e.preventDefault();clearTimeout(fieldTapTimer);if(!pointerMap.size&&!$('#kb').hidden){$('#inkPast').style.flex='0 0 '+$('#inkPast').getBoundingClientRect().height+'px';$('#inkScroll').style.flex='0 0 '+ic.getBoundingClientRect().height+'px';}ic.setPointerCapture(e.pointerId);pointerMap.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointerMap.size===2){lastInkTap=null;inkStroke=null;const [a,b]=[...pointerMap.values()],r=ic.getBoundingClientRect();inkGesture={d:Math.hypot(a.x-b.x,a.y-b.y)||1,cx:(a.x+b.x)/2-r.left,cy:(a.y+b.y)/2-r.top,z:inkZoom,x:inkPanX,y:inkPan};drawInk();return;}
+  if(pointerMap.size===1){const overField=!!inkRecognition.fieldAt(e.clientX,e.clientY);if(!overField)inkRecognition.beginWriting();lastInkTap=lastInkTap?.problem===problem.id?lastInkTap:null;inkStroke={color:pen,started:performance.now(),client:[e.clientX,e.clientY],overField,pts:[toWorld(e)]};drawInk();}};
+ic.onpointermove=e=>{if(!pointerMap.has(e.pointerId))return;e.preventDefault();pointerMap.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(inkGesture&&pointerMap.size>=2){const [a,b]=[...pointerMap.values()],r=ic.getBoundingClientRect(),g=inkGesture,z=clamp(g.z*Math.hypot(a.x-b.x,a.y-b.y)/g.d,1,4),cx=(a.x+b.x)/2-r.left,cy=(a.y+b.y)/2-r.top;
+    // The point under the fingers stays under the fingers while zooming.
+    inkZoom=z;inkPanX=clamp(g.cx/g.z+g.x-cx/z,0,inkWidth-inkWidth/z);inkPan=clamp(g.cy/g.z+g.y-cy/z,0,Math.max(g.y,inkHeight-inkHeight/z));drawInk();}
+  else if(inkStroke&&pointerMap.size===1){const r=ic.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;const p=toWorld(e,r),last=inkStroke.pts.at(-1);if(Math.hypot(p[0]-last[0],p[1]-last[1])>1/inkZoom){if(inkStroke.overField&&!inkStroke.begun&&Math.hypot(e.clientX-inkStroke.client[0],e.clientY-inkStroke.client[1])>8){inkStroke.begun=true;inkRecognition.beginWriting();}inkStroke.pts.push(p);drawInk();}}};
+function inkEnd(e){pointerMap.delete(e.pointerId);if(inkGesture){if(pointerMap.size===0){inkGesture=null;releaseInkLayout();inkRecognition.renderTyped();drawInk();}return;}if(!inkStroke)return;
+  const stroke=inkStroke;inkStroke=null;releaseInkLayout();const now=performance.now();
+  const tap=now-stroke.started<260&&stroke.pts.every(p=>Math.hypot(p[0]-stroke.pts[0][0],p[1]-stroke.pts[0][1])<10/inkZoom);
+  if(tap&&lastInkTap&&now-lastInkTap.time<340&&Math.hypot(stroke.pts[0][0]-lastInkTap.x,stroke.pts[0][1]-lastInkTap.y)<28/inkZoom){if(lastInkTap.pushed)undoInk();lastInkTap=null;inkRecognition.recognize();return;}
+  const field=tap&&inkRecognition.fieldAt(...stroke.client);
+  if(field){
+    // Tapping typed math edits it with the keypad. With unconverted ink, wait
+    // briefly so a double-tap still means Convert.
+    lastInkTap={problem:problem.id,time:now,x:stroke.pts[0][0],y:stroke.pts[0][1],pushed:false};drawInk();
+    if(problem.strokes.length)fieldTapTimer=setTimeout(()=>inkRecognition.focusAt(field,...stroke.client),300);else inkRecognition.focusAt(field,...stroke.client);return;}
+  if(stroke.overField&&!stroke.begun)inkRecognition.beginWriting();
+  delete stroke.client;delete stroke.overField;delete stroke.begun;
+  if(!tap&&inkRecognition.scratch(stroke)){lastInkTap=null;drawInk();return;}
+  rememberInk();problem.strokes.push(stroke);inkRecognition.renderTyped();lastInkTap=tap?{problem:problem.id,time:now,x:stroke.pts[0][0],y:stroke.pts[0][1],pushed:true}:null;drawInk();save();}
 ic.onpointerup=inkEnd;ic.onpointercancel=e=>{pointerMap.clear();inkGesture=null;inkStroke=null;releaseInkLayout();inkRecognition.renderTyped();drawInk();};
+// A focused MathLive field takes pointer events inside its shadow root despite
+// pointer-events:none on the host; on the writing line they belong to the canvas.
+$('#inkTyped').addEventListener('pointerdown',e=>{if(!e.target.closest?.('math-field'))return;e.stopPropagation();ic.onpointerdown(e);},true);
+$('#inkZoom').onclick=()=>{inkZoom=1;inkPanX=0;inkPan=0;drawInk();};
 ic.addEventListener('wheel',e=>e.preventDefault(),{passive:false});
-function drawInk(){const ctx=ic.getContext('2d');ctx.clearRect(0,0,inkWidth,inkHeight);ctx.fillStyle='#12151b';ctx.fillRect(0,0,inkWidth,inkHeight);
-// Grid lives below a separate stroke layer, so erase does not remove the grid.
-ctx.strokeStyle='#1c212b';ctx.lineWidth=1;ctx.beginPath();for(let x=0;x<=inkWidth;x+=26){ctx.moveTo(x,0);ctx.lineTo(x,inkHeight);}for(let y=-(inkPan%26);y<=inkHeight;y+=26){ctx.moveTo(0,y);ctx.lineTo(inkWidth,y);}ctx.stroke();
-const layer=document.createElement('canvas');layer.width=ic.width;layer.height=ic.height;const lc=layer.getContext('2d');const dpr=ic.width/inkWidth;lc.scale(dpr,dpr);lc.lineCap='round';lc.lineJoin='round';
-for(const s of [...problem.strokes,...(inkStroke?[inkStroke]:[])]){lc.globalCompositeOperation=s.color==='erase'?'destination-out':'source-over';lc.strokeStyle=s.color==='erase'?'#000':s.color;lc.fillStyle=lc.strokeStyle;lc.lineWidth=s.width??(s.color==='erase'?22:2.6);lc.beginPath();s.pts.forEach(([x,y],i)=>i?lc.lineTo(x,y-inkPan):lc.moveTo(x,y-inkPan));if(s.pts.length===1){lc.arc(s.pts[0][0],s.pts[0][1]-inkPan,lc.lineWidth/2,0,Math.PI*2);lc.fill();}else lc.stroke();}ctx.drawImage(layer,0,0,inkWidth,inkHeight);ctx.fillStyle='#566075';ctx.font='12px -apple-system, sans-serif';ctx.fillText('Write here · double-tap to convert · New line moves it above',12,inkHeight-12);inkRecognition.pan();}
+function drawInk(){const ctx=ic.getContext('2d'),z=inkZoom;ctx.clearRect(0,0,inkWidth,inkHeight);ctx.fillStyle='#12151b';ctx.fillRect(0,0,inkWidth,inkHeight);
+// Grid lives below a separate stroke layer, so erase does not remove the grid. It zooms with the ink.
+ctx.strokeStyle='#1c212b';ctx.lineWidth=1;ctx.beginPath();const step=26*z;for(let x=-((inkPanX*z)%step);x<=inkWidth;x+=step){ctx.moveTo(x,0);ctx.lineTo(x,inkHeight);}for(let y=-((inkPan*z)%step);y<=inkHeight;y+=step){ctx.moveTo(0,y);ctx.lineTo(inkWidth,y);}ctx.stroke();
+const layer=document.createElement('canvas');layer.width=ic.width;layer.height=ic.height;const lc=layer.getContext('2d');const dpr=ic.width/inkWidth;lc.setTransform(dpr*z,0,0,dpr*z,-inkPanX*z*dpr,-inkPan*z*dpr);lc.lineCap='round';lc.lineJoin='round';
+for(const s of [...problem.strokes,...(inkStroke?[inkStroke]:[])]){lc.globalCompositeOperation=s.color==='erase'?'destination-out':'source-over';lc.strokeStyle=s.color==='erase'?'#000':s.color;lc.fillStyle=lc.strokeStyle;lc.lineWidth=s.width??(s.color==='erase'?22:2.6);lc.beginPath();s.pts.forEach(([x,y],i)=>i?lc.lineTo(x,y):lc.moveTo(x,y));if(s.pts.length===1){lc.arc(s.pts[0][0],s.pts[0][1],lc.lineWidth/2,0,Math.PI*2);lc.fill();}else lc.stroke();}ctx.drawImage(layer,0,0,inkWidth,inkHeight);ctx.fillStyle='#566075';ctx.font='12px -apple-system, sans-serif';ctx.fillText(z>1?'Pinch out to zoom back · scribble over math to delete it':'Write here · double-tap to convert · pinch to zoom · scribble to delete',12,inkHeight-12);$('#inkZoom').hidden=z<=1.01;$('#inkZoom').textContent=z.toFixed(1)+'× · reset';inkRecognition.pan();}
 
 // Graph: real plotting from parsed math, pinch/drag, point inspection, snapped shapes.
 function renderCurves(){const host=$('#curves');host.replaceChildren();problem.curves.forEach(c=>{const row=document.createElement('div');row.className='curve';const sw=document.createElement('span');sw.className='sw';sw.style.background=c.color;const f=field(c.latex,v=>{c.latex=v;drawGraph();});f.addEventListener('focus',()=>{$$('.curve').forEach(x=>x.classList.toggle('active',x===row));});const x=document.createElement('button');x.className='x';x.textContent='×';x.onclick=()=>{problem.curves.splice(problem.curves.indexOf(c),1);if(active===f){active=null;$('#kb').hidden=true;}renderCurves();drawGraph();save();};row.append(sw,f,x);host.append(row);});const add=document.createElement('button');add.className='chip addCurve';add.textContent='+ curve';add.onclick=addCurve;host.append(add);}
