@@ -32,7 +32,7 @@ with sync_playwright() as p:
                 page.get_by_role('button',name='Convert',exact=True).click()
                 # The canvas is freed immediately; write a new mark while recognition runs.
                 r=page.locator('#inkCanvas').bounding_box()
-                page.mouse.move(45,r['y']+35);page.mouse.down();page.mouse.move(125,r['y']+75,steps=10);page.mouse.up()
+                page.mouse.move(225,r['y']+35);page.mouse.down();page.mouse.move(310,r['y']+75,steps=10);page.mouse.up()
             elapsed=time.perf_counter()-started
             result=response.value.json()
             assert response.value.ok and result['model']=='claude-sonnet-5-5',(name,result)
@@ -55,6 +55,25 @@ with sync_playwright() as p:
             assert page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1")).problems[0].strokes')==strokes
             assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
             print(f'PASS real automatic conversion: {name}; {elapsed:.2f}s public round trip; uninterrupted writing and exact ink recovery')
+        # Real handwritten continuation joins an existing equation on the grid.
+        page.get_by_role('button',name='Convert',exact=True).click()
+        math=page.locator('#inkTyped math-field:visible');math.wait_for()
+        assert normalize(math.evaluate('f=>f.value'))=='2+2=5'
+        rect=math.bounding_box();x,y=rect['x']+rect['width']+20,rect['y']+3
+        canvas_before=page.locator('#inkCanvas').bounding_box()
+        for points in [[(x,y+15),(x+28,y+15)],[(x+14,y),(x+14,y+30)],[(x+42,y),(x+64,y),(x+68,y+8),(x+58,y+15),(x+44,y+15),(x+62,y+15),(x+70,y+24),(x+62,y+33),(x+42,y+33)]]:
+            page.mouse.move(*points[0]);page.mouse.down()
+            for point in points[1:]:page.mouse.move(*point)
+            page.mouse.up()
+        with page.expect_response(lambda r:r.url.endswith('/api/recognize'),timeout=40000) as response:
+            page.get_by_role('button',name='Convert',exact=True).click()
+        addition=response.value.json()
+        assert response.value.ok and normalize(addition['lines'][0]['latex'])=='+3',addition
+        page.wait_for_function("document.querySelector('#inkTyped math-field')?.value.replace(/\\s+/g,'')==='2+2=5+3'")
+        assert math.count()==1 and math.bounding_box()['y']==rect['y']
+        assert page.locator('#inkCanvas').bounding_box()==canvas_before
+        page.screenshot(path=str(ROOT/'.artifacts/live/inline-real-continuation.png'))
+        print('PASS real same-grid handwritten +3 continuation; one editable equation, no canvas movement, incorrect arithmetic preserved')
         assert not errors,errors
         print('PASS private invite exchange and URL removal; fast single-model recognition through public service. Chromium, not iOS.')
     except Exception as exc:

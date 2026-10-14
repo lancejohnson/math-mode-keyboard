@@ -16,10 +16,11 @@ export async function unlockRecognition(){
     note.textContent=status.authorized?'Convert sends only your ink to '+(status.provider||'the recognition provider')+'. No confirmation needed.':'Conversion needs your private recognition link. Drawing stays local.';
   }catch{note.textContent='Recognition unavailable here. Your ink is safe on this device.';}
 }
-// Batches leave the writing surface immediately, but their original vectors stay saved.
+// Small editable expressions share the ink grid; original vectors stay saved.
 // Responses can only update their own still-present group: never the next handwriting.
-export function createInkRecognition({getProblem,makeField,remember,save,redraw,hideKeyboard,toast,toSteps,setPan,isDrawing=()=>false,sessionReady=Promise.resolve()}){
+export function createInkRecognition({getProblem,makeField,remember,save,redraw,hideKeyboard,toast,toSteps,setPan,getPan=()=>0,isDrawing=()=>false,sessionReady=Promise.resolve()}){
   const typed=document.querySelector('#inkTyped'),button=document.querySelector('#inkConvert');
+  const surface=document.querySelector('#inkScroll');
   const jobs=new Map(),results=new Map();let running=0;
   const signature=g=>JSON.stringify([g.status,g.lines,g.error,g.warnings]);
   const find=(p,id)=>p.inkConversions?.find(g=>g.id===id);
@@ -33,25 +34,49 @@ export function createInkRecognition({getProblem,makeField,remember,save,redraw,
     if(p.strokes.length){let end=-Infinity,start=Infinity;for(const s of p.strokes)for(const pt of s.pts)end=Math.max(end,pt[1]);for(const s of source)for(const pt of s.pts)start=Math.min(start,pt[1]);source=source.map(s=>({...s,pts:s.pts.map(([x,y])=>[x,y+end-start+24])}));}
     p.strokes.push(...source);p.inkConversions=p.inkConversions.filter(g=>g.id!==id);setPan(0);reconcile();renderTyped();redraw();save();
   }
+  function pan(){for(const node of typed.children)node.style.transform=`translateY(${-getPan()}px)`;}
+  function beginWriting(){hideKeyboard();if(typed.contains(document.activeElement))document.activeElement.blur();for(const menu of typed.querySelectorAll('.inkGroupActions'))menu.hidden=true;renderTyped();}
+  function resolveJoins(groups){
+    // Keep a focused parent stable; join after editing/drawing ends, against its latest value.
+    for(const g of groups){
+      if(g.status!=='ready'||!g.appendTo||g.joined)continue;
+      const parent=groups.find(p=>p.id===g.appendTo.groupId);
+      if(parent?.status==='pending')continue;
+      if(parent?.status==='ready'&&parent.lines.length===1&&g.lines.length===1){
+        const node=[...typed.children].find(n=>n.dataset.groupId===parent.id);
+        if(node?.contains(document.activeElement)||[...typed.children].find(n=>n.dataset.groupId===g.id)?.contains(document.activeElement))continue;
+        // The newest batch owns the combined field; the prior expression and
+        // each batch's vectors stay intact for Undo/Restore ink. No model sees the parent.
+        g.lines[0].latex=parent.lines[0].latex+' '+g.lines[0].latex;
+        g.position={...parent.position};g.joined=true;
+      }else{delete g.appendTo;g.position.x=12;g.position.y=Math.max(g.position.y,(parent?.position?.y||0)+72);}
+    }
+  }
   function renderTyped(){
     reconcile();const p=getProblem(),groups=p.inkConversions||[];
     for(const g of groups)if(g.status==='pending'&&!jobs.has(g.id))enqueue(p,g);
-    // Avoid moving the canvas origin during a finger stroke or two-finger gesture.
     if(isDrawing())return;
-    const nodes=new Map([...typed.children].map(node=>[node.dataset.groupId,node]));let newestChanged=false;
+    let legacyY=12;for(const g of groups){g.position??={x:12,y:legacyY};g.status??='ready';legacyY=g.position.y+Math.max(56,(g.lines?.length||1)*56);}
+    resolveJoins(groups);
+    const hidden=new Set(groups.filter(g=>g.joined).map(g=>g.appendTo.groupId));
+    const nodes=new Map([...typed.children].map(node=>[node.dataset.groupId,node]));
     for(const node of [...typed.children])if(!groups.some(g=>g.id===node.dataset.groupId))node.remove();
     for(const group of groups){
       let wrap=nodes.get(group.id);if(!wrap){wrap=document.createElement('div');wrap.className='inkGroup';wrap.dataset.groupId=group.id;typed.append(wrap);}
-      const index=groups.indexOf(group);if(typed.children[index]!==wrap)typed.insertBefore(wrap,typed.children[index]||null);
+      wrap.hidden=hidden.has(group.id);wrap.style.left=group.position.x+'px';wrap.style.top=group.position.y+'px';
+      if(wrap.hidden){wrap.replaceChildren();delete wrap.dataset.signature;continue;}
       if(wrap.dataset.signature===signature(group))continue;
-      if(group===groups.at(-1))newestChanged=true;
-      wrap.classList.toggle('uncertain',!!group.warnings?.length);
+      wrap.classList.toggle('uncertain',!!group.warnings?.length);wrap.classList.toggle('failed',group.status==='failed');wrap.classList.toggle('pending',group.status==='pending');
       wrap.replaceChildren();const math=document.createElement('div');math.className='inkGroupMath';
       if(group.status==='pending'||group.status==='failed'){
         const status=document.createElement('span');status.className='inkStatus';status.textContent=group.status==='pending'?'Reading…':'Couldn’t read — ink saved';math.append(status);
       }else for(const line of group.lines){
         const f=makeField(line.latex,v=>{const current=find(getProblem(),group.id);const row=current?.lines.find(l=>l.id===line.id);if(row){row.latex=v;wrap.dataset.signature=signature(current);}});f.setAttribute('aria-label','Recognized math');
-        f.addEventListener('focus',()=>requestAnimationFrame(()=>{if(f.isConnected)f.scrollIntoView({block:'nearest'});}));math.append(f);
+        f.addEventListener('focus',()=>requestAnimationFrame(()=>{
+          if(!f.isConnected)return;const r=f.getBoundingClientRect(),view=surface.getBoundingClientRect();
+          if(r.bottom>view.bottom-12)setPan(Math.max(0,getPan()+r.bottom-view.bottom+12));
+          else if(r.top<view.top+8)setPan(Math.max(0,getPan()+r.top-view.top-8));pan();redraw();
+        }));math.append(f);
       }
       const more=document.createElement('button');more.className='inkMore';more.textContent='⋯';more.setAttribute('aria-label','Recognized math actions');more.setAttribute('aria-expanded','false');
       const actions=document.createElement('div');actions.className='inkGroupActions';actions.hidden=true;
@@ -66,7 +91,22 @@ export function createInkRecognition({getProblem,makeField,remember,save,redraw,
       }
       wrap.append(math,more,actions);wrap.dataset.signature=signature(group);
     }
-    typed.hidden=!groups.length;if(newestChanged&&!typed.contains(document.activeElement))typed.scrollTop=typed.scrollHeight;
+    typed.hidden=!groups.length;pan();
+  }
+  function placement(strokes){
+    let left=Infinity,top=Infinity,bottom=-Infinity;for(const s of strokes)if(s.color!=='erase')for(const [x,y] of s.pts){left=Math.min(left,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
+    const view=surface.getBoundingClientRect();let target=null,closest=Infinity;
+    for(const node of typed.children){
+      if(node.hidden)continue;const g=find(getProblem(),node.dataset.groupId);if(!g||g.status==='failed'||g.lines.length>1)continue;
+      const r=(node.querySelector('math-field')||node).getBoundingClientRect(),y=r.top-view.top+getPan(),height=r.height||36,right=r.right-view.left;
+      const distance=Math.abs((top+bottom)/2-(y+height/2));
+      if(left>=right-8&&top<=y+height+48&&bottom>=y-24&&distance<80&&distance<closest){target={groupId:g.id};closest=distance;}
+    }
+    if(target){const parent=find(getProblem(),target.groupId),node=[...typed.children].find(n=>n.dataset.groupId===parent.id);return {position:{x:Math.min(surface.clientWidth-80,node.getBoundingClientRect().right-view.left+8),y:parent.position.y},appendTo:target};}
+    let y=Math.max(12,top);
+    // Moving to the left must not land on a different existing expression.
+    for(const node of [...typed.children].filter(n=>!n.hidden).sort((a,b)=>parseFloat(a.style.top)-parseFloat(b.style.top))){const g=find(getProblem(),node.dataset.groupId),h=node.getBoundingClientRect().height||48;if(y<g.position.y+h+8&&y+48>g.position.y)y=g.position.y+h+12;}
+    return {position:{x:12,y}};
   }
   function enqueue(problem,group){
     const job={problem,id:group.id,controller:new AbortController(),started:false};jobs.set(group.id,job);pump();
@@ -90,7 +130,8 @@ export function createInkRecognition({getProblem,makeField,remember,save,redraw,
     }catch(err){
       const group=find(job.problem,job.id);
       if(jobs.get(job.id)===job&&group?.status==='pending'){
-        const update={status:'failed',lines:[],error:err.name==='AbortError'?'Recognition timed out. Original ink saved.':err.message};results.set(job.id,update);Object.assign(group,update);
+        const update={status:'failed',lines:[],error:err.name==='AbortError'?'Recognition timed out. Original ink saved.':err.message};if(group.appendTo)update.position={x:12,y:(find(job.problem,group.appendTo.groupId)?.position?.y||group.position.y)+72};
+        results.set(job.id,update);Object.assign(group,update);
         if(getProblem().id===job.problem.id)toast('Couldn’t convert — original ink is saved. Undo or ⋯ restores it.');
       }
     }finally{
@@ -100,9 +141,9 @@ export function createInkRecognition({getProblem,makeField,remember,save,redraw,
   }
   function recognize(){
     if(isDrawing())return;const problem=getProblem();try{inkImage(problem.strokes);}catch(err){toast(err.message);return;}
-    remember();const group={id:crypto.randomUUID(),status:'pending',lines:[],strokes:structuredClone(problem.strokes)};
-    problem.inkConversions??=[];problem.inkConversions.push(group);problem.strokes=[];setPan(0);hideKeyboard();renderTyped();redraw();save();
+    remember();const group={id:crypto.randomUUID(),status:'pending',lines:[],strokes:structuredClone(problem.strokes),...placement(problem.strokes)};
+    problem.inkConversions??=[];problem.inkConversions.push(group);problem.strokes=[];hideKeyboard();renderTyped();redraw();save();
   }
   button.onclick=recognize;
-  return {recognize,cancel,renderTyped};
+  return {recognize,cancel,renderTyped,pan,beginWriting};
 }

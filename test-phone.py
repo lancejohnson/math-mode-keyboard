@@ -92,9 +92,13 @@ try:
     def ink_state():return page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]
     def draw():
       r=page.locator('#inkCanvas').bounding_box()
-      page.mouse.move(45,r['y']+30);page.mouse.down();page.mouse.move(140,r['y']+85,steps=12);page.mouse.up()
+      occupied=page.locator('.inkGroup:not([hidden])').evaluate_all('(nodes)=>Math.max(0,...nodes.map(n=>n.getBoundingClientRect().bottom))')
+      y=max(r['y']+30,occupied+24)
+      page.mouse.move(45,y);page.mouse.down();page.mouse.move(140,y+45,steps=12);page.mouse.up()
       page.wait_for_timeout(180)
     def restore_last():
+      field=page.locator('#inkTyped math-field:visible').last
+      if field.count():field.focus()
       page.get_by_role('button',name='Recognized math actions',exact=True).last.click()
       page.get_by_role('button',name='↶ Restore ink',exact=True).click()
       page.wait_for_timeout(200)

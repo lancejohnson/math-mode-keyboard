@@ -111,18 +111,20 @@ body:has(#kb:not([hidden])) #qpane{max-height:max(90px,calc(100dvh - 530px - env
 #inkTools [data-pen="erase"]::after{content:'⌫';font-size:20px}
 #inkClear{margin-left:auto;padding:8px 6px!important}
 
-/* Compact left-aligned output; no review pane or permanent action buttons. */
-#inkTyped{flex:none;max-height:28%;overflow-y:auto;background:#12151b;border-bottom:1px solid #303a53;padding:2px 10px}
+/* Editable math lives on the same grid and shares its world coordinates. */
+#inkTyped{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 #inkTyped[hidden]{display:none}
 #inkScroll{min-height:60px}
-#view-ink math-field{display:block;width:100%;font-size:22px;background:transparent;border:0;color:#e8eaf0;padding:3px 0;--caret-color:#74c0fc;--primary-color:#74c0fc;--selection-background-color:#3b5bdb66}
-.inkGroup{display:grid;grid-template-columns:minmax(0,1fr) 32px;align-items:center;min-height:48px;border-bottom:1px solid #202738;padding:2px 0}
-.inkGroup:last-child{border:0}
+#view-ink math-field{display:block;width:max-content;max-width:100%;min-height:36px;font-size:20px;background:transparent;border:0;color:#e8eaf0;padding:2px 0;pointer-events:auto;--caret-color:#74c0fc;--primary-color:#74c0fc;--selection-background-color:#3b5bdb66}
+#view-ink math-field:focus-within{background:#172239ee;border-radius:6px;box-shadow:0 0 0 1px #4263eb}
+.inkGroup{position:absolute;max-width:calc(100% - 24px);width:max-content;pointer-events:none}
+.inkGroup[hidden]{display:none}
 .inkGroupMath{min-width:0;text-align:left}
-.inkStatus{font-size:13px;color:#8f9bb3;padding:8px 0;display:block}
-.inkMore{width:32px;min-height:44px;color:#8996b0;font-size:21px}
+.inkStatus{font-size:12px;color:#8f9bb3;padding:8px 0;display:block}
+.inkMore{position:absolute;left:100%;top:0;width:32px;min-height:40px;color:#8996b0;font-size:21px;pointer-events:auto;display:none}
+.inkGroup:focus-within .inkMore,.inkGroup.failed .inkMore{display:block}
 .inkGroup.uncertain .inkMore{color:#ffd43b}
-.inkGroupActions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;padding:4px 0 8px}
+.inkGroupActions{position:absolute;left:0;top:100%;z-index:3;display:flex;flex-wrap:wrap;gap:8px;padding:8px;width:250px;max-width:calc(100vw - 32px);background:#202938;border:1px solid #4263eb;border-radius:10px;pointer-events:auto}
 .inkGroupActions[hidden]{display:none}
 .inkGroupActions button{border-radius:9px;background:#2b3854;padding:9px 12px;font-size:13px;min-height:40px}
 .inkWarning{font-size:12px;color:#ffd43b;width:100%;line-height:1.4}
