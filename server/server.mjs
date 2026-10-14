@@ -10,7 +10,7 @@ import {createLocalRecognizer} from './local-recognizer.mjs';
 const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'../app');
 const MAX_BODY=2900000;
 const equal=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.woff2':'font/woff2','.txt':'text/plain; charset=utf-8'};
+const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.webmanifest':'application/manifest+json','.woff2':'font/woff2','.txt':'text/plain; charset=utf-8'};
 export function createServer({token,recognize,careful,root=ROOT,secureCookies=true,perHour=600,traceDir=process.env.MATH_MODE_TRACE_DIR||resolve(homedir(),'.local/share/math-mode/traces')}={}){
   if(!token||!recognize)throw new Error('Recognition server needs private configuration');
   let active=0,budget=[],traces=[];const attempts=new Map();

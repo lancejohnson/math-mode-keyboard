@@ -58,3 +58,10 @@ test('wheel drag traces are appended as JSON lines, with size and shape limits',
  assert.equal((await post({trace:Array(3000).fill(0)})).status,400);assert.equal((await post({trace:Array(9000).fill(12345678)})).status,413);
  const lines=(await readFile(dir+'/wheel.jsonl','utf8')).trim().split('\n');assert.equal(lines.length,1);assert.equal(JSON.parse(lines[0]).topic,'thirty');
 });
+test('home screen app: manifest and icons are served with the right types',async t=>{
+ const server=createServer({token:'a'.repeat(48),recognize:async()=>recognized,secureCookies:false});await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>new Promise(r=>server.close(r)));
+ const url='http://127.0.0.1:'+server.address().port;const m=await fetch(url+'/manifest.webmanifest');
+ assert.equal(m.headers.get('content-type'),'application/manifest+json');const man=await m.json();assert.equal(man.display,'standalone');
+ for(const i of man.icons){const r=await fetch(url+i.src);assert.equal(r.status,200,i.src);}
+ for(const page of ['/','/trig/','/trig/unit1.html','/trig/map.html','/trig/facts.html','/lesson/','/model/']){const h=await (await fetch(url+page)).text();assert.match(h,/rel="manifest"/,page);assert.match(h,/apple-touch-icon/,page);}
+});
