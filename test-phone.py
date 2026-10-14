@@ -84,139 +84,9 @@ try:
     page.wait_for_timeout(200)
     saved=page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')
     assert len(saved['problems'][0]['shapes'])==1
-    # Automatic conversion: explicit model fixtures, no confirmation, continue drawing.
-    recognition_calls=[]
-    def fixture(route):
-      recognition_calls.append(json.loads(route.request.post_data))
-      route.fulfill(json={'lines':[{'latex':'x^{2}+2x=3','uncertain':False}],'warnings':[],'model':'fast-reader'})
-    def ink_state():return page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]
-    def draw():
-      r=page.locator('#inkCanvas').bounding_box()
-      occupied=page.locator('.inkGroup:not([hidden])').evaluate_all('(nodes)=>Math.max(0,...nodes.map(n=>n.getBoundingClientRect().bottom))')
-      y=max(r['y']+30,occupied+24)
-      page.mouse.move(45,y);page.mouse.down();page.mouse.move(140,y+45,steps=12);page.mouse.up()
-      page.wait_for_timeout(180)
-    def restore_last():
-      field=page.locator('#inkTyped math-field:visible').last
-      if field.count():field.focus()
-      page.get_by_role('button',name='Recognized math actions',exact=True).last.click()
-      page.get_by_role('button',name='↶ Restore ink',exact=True).click()
-      page.wait_for_timeout(200)
-    page.route('**/api/recognize',fixture)
-    page.get_by_role('button',name='Ink',exact=True).click()
-    draw();original=ink_state()['strokes'];assert len(original)==1
-    page.mouse.dblclick(290,400,delay=90)
-    page.locator('#inkTyped math-field').wait_for()
-    page.wait_for_timeout(200)
-    assert len(recognition_calls)==1 and set(recognition_calls[0])=={'image'}
-    assert recognition_calls[0]['image'].startswith('data:image/png;base64,')
-    assert page.locator('#inkReview').count()==0
-    assert page.get_by_role('button',name='Use this math',exact=True).count()==0
-    assert ink_state()['strokes']==[] and ink_state()['inkConversions'][0]['strokes']==original
-    assert page.locator('.inkGroupActions').first.is_hidden()
-    assert page.locator('#inkTyped math-field').bounding_box()['x']<=14
-    before=page.locator('#lines math-field').count()
-    typed=page.locator('#inkTyped math-field').first
-    typed.evaluate("f=>{f.value='x=4';f.dispatchEvent(new Event('input',{bubbles:true}));f.focus();}")
-    page.wait_for_timeout(200)
-    page.get_by_role('button',name='↵ step',exact=True).click()
-    assert page.locator('#lines math-field').count()==before
-    page.get_by_role('button',name='Undo handwriting').click()
-    page.wait_for_timeout(200)
-    assert ink_state()['strokes']==original and ink_state()['inkConversions']==[]
-    undo=page.get_by_role('button',name='Undo handwriting').bounding_box()
-    assert undo['width']>=70 and undo['height']>=44
-    # Editable math persists, with recovery tucked into the row menu.
-    page.get_by_role('button',name='Convert',exact=True).click()
-    page.locator('#inkTyped math-field').wait_for()
-    page.locator('#inkTyped math-field').evaluate("f=>{f.value='x=l';f.dispatchEvent(new Event('input',{bubbles:true}));f.focus();f.executeCommand('moveToMathfieldEnd');}")
-    page.wait_for_timeout(150)
-    page.get_by_role('button',name='+',exact=True).click()
-    page.get_by_role('button',name='1',exact=True).click()
-    page.reload(wait_until='networkidle')
-    assert page.locator('#inkTyped math-field').evaluate('f=>f.value')=='x=l+1'
-    restore_last();assert ink_state()['strokes']==original
-    page.unroute('**/api/recognize',fixture)
-    def failed(route):route.fulfill(status=503,json={'error':'Recognition failed. Original ink saved.'})
-    page.route('**/api/recognize',failed)
-    page.get_by_role('button',name='Convert',exact=True).click()
-    page.wait_for_function("document.querySelector('.inkStatus')?.textContent.startsWith('Couldn’t')")
-    page.wait_for_timeout(200)
-    assert ink_state()['inkConversions'][0]['strokes']==original
-    restore_last();assert ink_state()['strokes']==original
-    page.unroute('**/api/recognize',failed)
-    # Deferred requests expose concurrency, pen-down layout stability and late-response races.
-    page.evaluate("""()=>{window.realFetch=window.fetch;window.pendingReads=[];window.fetch=(url,...args)=>url==='/api/recognize'?new Promise(resolve=>window.pendingReads.push((latex='x=9')=>resolve(new Response(JSON.stringify({lines:[{latex,uncertain:false}],warnings:[],model:'fast-reader'}),{headers:{'Content-Type':'application/json'}})))):window.realFetch(url,...args);}""")
-    page.get_by_role('button',name='Convert',exact=True).click()
-    page.wait_for_function('window.pendingReads.length===1')
-    page.wait_for_timeout(180)
-    assert ink_state()['strokes']==[] and page.get_by_role('button',name='Convert',exact=True).is_enabled()
-    draw();assert len(ink_state()['strokes'])==1  # Can write before the recognition returns.
-    r=page.locator('#inkCanvas').bounding_box()
-    page.mouse.move(180,r['y']+30);page.mouse.down();page.mouse.move(250,r['y']+75,steps=10)
-    page.evaluate('window.pendingReads[0]()');page.wait_for_timeout(100)
-    assert page.locator('#inkTyped math-field').count()==0  # No reflow while finger is down.
-    assert page.locator('#inkCanvas').bounding_box()['y']==r['y']
-    page.mouse.up();page.locator('#inkTyped math-field').wait_for();page.wait_for_timeout(200)
-    assert len(ink_state()['strokes'])==2 and ink_state()['inkConversions'][0]['strokes']==original
-    page.get_by_role('button',name='Undo handwriting').click()
-    page.get_by_role('button',name='Undo handwriting').click()
-    page.wait_for_timeout(200)
-    assert ink_state()['strokes']==[]
-    assert page.locator('#inkTyped math-field').evaluate('f=>f.value')=='x=9'
-    assert page.evaluate('window.pendingReads.length')==1  # Undo reconciles stale pending snapshots.
-    page.get_by_role('button',name='Undo handwriting').click();page.wait_for_timeout(200)
-    assert ink_state()['strokes']==original
-    page.get_by_role('button',name='Convert',exact=True).click()
-    page.wait_for_function('window.pendingReads.length===2')
-    page.get_by_role('button',name='Undo handwriting').click()
-    page.get_by_role('button',name='Convert',exact=True).click()
-    page.wait_for_function('window.pendingReads.length===3')
-    page.evaluate("window.pendingReads[1]('x=77')");page.wait_for_timeout(100)
-    assert page.locator('#inkTyped math-field').count()==0
-    page.evaluate("window.pendingReads[2]('x=88')");page.locator('#inkTyped math-field').wait_for()
-    assert page.locator('#inkTyped math-field').evaluate('f=>f.value')=='x=88'
-    # A later batch must not steal focus or overwrite edits to an earlier math row.
-    draw();page.get_by_role('button',name='Convert',exact=True).click()
-    page.wait_for_function('window.pendingReads.length===4')
-    first=page.locator('#inkTyped math-field').first
-    first.evaluate("f=>{f.value='x=42';f.dispatchEvent(new Event('input',{bubbles:true}));f.focus();}")
-    page.evaluate("window.pendingReads[3]('y=2')");page.wait_for_timeout(200)
-    assert page.locator('#inkTyped math-field').count()==2
-    assert first.evaluate('f=>document.activeElement===f && f.value==="x=42"')
-    page.get_by_role('button',name='Undo handwriting').click();page.wait_for_timeout(200)
-    assert page.locator('#inkTyped math-field').first.evaluate('f=>f.value')=='x=42'
-    page.evaluate('window.fetch=window.realFetch')
-    # Persisted pending batches resume after refresh, without resending finished rows.
-    saved_source=ink_state()['strokes']
-    page.evaluate("window.fetch=(url,...args)=>url==='/api/recognize'?new Promise(()=>{}):window.realFetch(url,...args)")
-    page.get_by_role('button',name='Convert',exact=True).click();page.wait_for_timeout(200)
-    pending_id=ink_state()['inkConversions'][-1]['id']
-    page.route('**/api/recognize',fixture)
-    page.reload(wait_until='networkidle')
-    page.wait_for_function("document.querySelectorAll('#inkTyped math-field').length===2")
-    page.wait_for_timeout(200)
-    resumed=ink_state()['inkConversions'][-1]
-    assert resumed['id']==pending_id and resumed['status']=='ready' and resumed['strokes']==saved_source
-    assert page.locator('#inkTyped math-field').first.evaluate('f=>f.value')=='x=42'
-    # A background batch remains attached to its original problem after a switch.
-    original_problem=page.locator('#problem').input_value()
-    page.evaluate("""()=>{window.realFetch=window.fetch;window.pendingReads=[];window.fetch=(url,...args)=>url==='/api/recognize'?new Promise(resolve=>window.pendingReads.push(()=>resolve(new Response(JSON.stringify({lines:[{latex:'x=123',uncertain:false}],warnings:[],model:'fast-reader'}),{headers:{'Content-Type':'application/json'}})))):window.realFetch(url,...args);}""")
-    draw();page.get_by_role('button',name='Convert',exact=True).click()
-    page.wait_for_function('window.pendingReads.length===1')
-    page.once('dialog',lambda d:d.accept('Background isolation'))
-    page.locator('#newProblem').click()
-    page.evaluate('window.pendingReads[0]()');page.wait_for_timeout(200)
-    assert page.locator('#inkTyped math-field').count()==0
-    assert ink_state()['inkConversions'][-1]['lines'][0]['latex']=='x=123'
-    page.locator('#problem').select_option(original_problem)
-    assert page.locator('#inkTyped math-field').last.evaluate('f=>f.value')=='x=123'
-    page.evaluate('window.fetch=window.realFetch')
-    for width,height in [(375,667),(390,844)]:
-      page.set_viewport_size({'width':width,'height':height})
-      assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
-      assert page.get_by_role('button',name='Undo handwriting').is_visible()
-    page.set_viewport_size({'width':390,'height':844})
+    # Full current-line recognition/state suite shares this phone session.
+    import runpy
+    runpy.run_path(str(ROOT/'tests/test-current-line.py'))['run_ink_checks'](page)
     page.get_by_role('button',name='Steps',exact=True).click()
     page.wait_for_timeout(200)
     before=page.locator('#lines math-field').count()
@@ -235,7 +105,7 @@ try:
     page.screenshot(path=str(out/'compact-pad.png'))
     assert not errors,errors
     b.close()
-    print('PASS: number pad, fraction navigation, blank/hold-slide-copy steps, both-side operations, graph/shape, automatic recognition, uninterrupted drawing, editing/undo/recovery/races (mocked model), local persistence, 3 phone sizes; no browser JS errors.')
+    print('PASS: number pad, fraction navigation, blank/hold-slide-copy steps, both-side operations, graph/shape, current-line writing and automatic recognition, completed-line reference, nonblocking New line, editing/undo/recovery/races (mocked OCR), local persistence, 3 phone sizes; no browser JS errors.')
 finally:
  server.shutdown();server.server_close();thread.join()
  print('Stopped the temporary test HTTP server.')

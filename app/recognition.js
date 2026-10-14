@@ -13,16 +13,25 @@ export async function unlockRecognition(){
   try{
     if(match){history.replaceState(null,'',location.pathname+location.search);const r=await fetch('/api/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({invite:match[1]}),signal:AbortSignal.timeout(8000)});if(!r.ok)throw new Error();}
     const r=await fetch('/api/status',{signal:AbortSignal.timeout(8000)}),status=await r.json();
-    note.textContent=status.authorized?'Convert sends only your ink to '+(status.provider||'the recognition provider')+'. No confirmation needed.':'Conversion needs your private recognition link. Drawing stays local.';
+    note.dataset.careful=status.careful?(status.carefulProvider||'Anthropic'):'';
+    note.textContent=status.authorized?'Cropped ink → '+(status.provider||'the recognition provider')+'. No confirmation.':'Conversion needs your private recognition link. Drawing stays local.';
   }catch{note.textContent='Recognition unavailable here. Your ink is safe on this device.';}
 }
 // Small editable expressions share the ink grid; original vectors stay saved.
 // Responses can only update their own still-present group: never the next handwriting.
 export function createInkRecognition({getProblem,makeField,remember,save,redraw,hideKeyboard,toast,toSteps,setPan,getPan=()=>0,isDrawing=()=>false,sessionReady=Promise.resolve()}){
   const typed=document.querySelector('#inkTyped'),button=document.querySelector('#inkConvert');
-  const surface=document.querySelector('#inkScroll');
+  const surface=document.querySelector('#inkScroll'),completed=document.querySelector('#inkCompleted');
+  const allNodes=()=>[...typed.children,...completed.children];
   const jobs=new Map(),results=new Map();let running=0;
-  const signature=g=>JSON.stringify([g.status,g.lines,g.error,g.warnings]);
+  function lineState(p){
+    const groups=p.inkConversions||[];
+    // Preserve legacy batches and parent chains; only the latest legacy line is active.
+    for(const g of groups)g.lineId??=find(p,g.appendTo?.groupId)?.lineId||g.id;
+    p.inkLineId??=groups.at(-1)?.lineId||crypto.randomUUID();
+    return p.inkLineId;
+  }
+  const signature=g=>JSON.stringify([g.status,g.lines,g.error,g.warnings,document.querySelector('#inkPrivacy').dataset.careful]);
   const find=(p,id)=>p.inkConversions?.find(g=>g.id===id);
   function reconcile(){
     for(const [id,job] of jobs)if(!find(job.problem,id)||find(job.problem,id).status!=='pending'){job.controller.abort();jobs.delete(id);}
@@ -30,12 +39,14 @@ export function createInkRecognition({getProblem,makeField,remember,save,redraw,
   }
   function cancel(){hideKeyboard();reconcile();}
   function restore(id){
-    const p=getProblem(),group=find(p,id);if(!group)return;hideKeyboard();remember();let source=structuredClone(group.strokes);
+    const p=getProblem(),group=find(p,id);if(!group)return;hideKeyboard();
+    if(group.lineId!==lineState(p)&&p.strokes.length)recognize();
+    remember();p.inkLineId=group.lineId;let source=structuredClone(group.strokes);
     if(p.strokes.length){let end=-Infinity,start=Infinity;for(const s of p.strokes)for(const pt of s.pts)end=Math.max(end,pt[1]);for(const s of source)for(const pt of s.pts)start=Math.min(start,pt[1]);source=source.map(s=>({...s,pts:s.pts.map(([x,y])=>[x,y+end-start+24])}));}
     p.strokes.push(...source);p.inkConversions=p.inkConversions.filter(g=>g.id!==id);setPan(0);reconcile();renderTyped();redraw();save();
   }
-  function pan(){for(const node of typed.children)node.style.transform=`translateY(${-getPan()}px)`;}
-  function beginWriting(){hideKeyboard();if(typed.contains(document.activeElement))document.activeElement.blur();for(const menu of typed.querySelectorAll('.inkGroupActions'))menu.hidden=true;renderTyped();}
+  function pan(){for(const node of typed.children)node.style.transform=`translateY(${-getPan()}px)`;for(const node of completed.children)node.style.transform='';}
+  function beginWriting(){hideKeyboard();for(const node of allNodes())for(const menu of node.querySelectorAll('.inkGroupActions'))menu.hidden=true;renderTyped();}
   function resolveJoins(groups){
     // Keep a focused parent stable; join after editing/drawing ends, against its latest value.
     for(const g of groups){
@@ -43,8 +54,8 @@ export function createInkRecognition({getProblem,makeField,remember,save,redraw,
       const parent=groups.find(p=>p.id===g.appendTo.groupId);
       if(parent?.status==='pending')continue;
       if(parent?.status==='ready'&&parent.lines.length===1&&g.lines.length===1){
-        const node=[...typed.children].find(n=>n.dataset.groupId===parent.id);
-        if(node?.contains(document.activeElement)||[...typed.children].find(n=>n.dataset.groupId===g.id)?.contains(document.activeElement))continue;
+        const node=allNodes().find(n=>n.dataset.groupId===parent.id);
+        if(node?.contains(document.activeElement)||allNodes().find(n=>n.dataset.groupId===g.id)?.contains(document.activeElement))continue;
         // The newest batch owns the combined field; the prior expression and
         // each batch's vectors stay intact for Undo/Restore ink. No model sees the parent.
         g.lines[0].latex=parent.lines[0].latex+' '+g.lines[0].latex;
@@ -53,16 +64,21 @@ export function createInkRecognition({getProblem,makeField,remember,save,redraw,
     }
   }
   function renderTyped(){
-    reconcile();const p=getProblem(),groups=p.inkConversions||[];
+    reconcile();const p=getProblem(),groups=p.inkConversions||[],lineId=lineState(p);
     for(const g of groups)if(g.status==='pending'&&!jobs.has(g.id))enqueue(p,g);
     if(isDrawing())return;
+    const follow=completed.scrollHeight-completed.clientHeight-completed.scrollTop<30;
     let legacyY=12;for(const g of groups){g.position??={x:12,y:legacyY};g.status??='ready';legacyY=g.position.y+Math.max(56,(g.lines?.length||1)*56);}
     resolveJoins(groups);
     const hidden=new Set(groups.filter(g=>g.joined).map(g=>g.appendTo.groupId));
-    const nodes=new Map([...typed.children].map(node=>[node.dataset.groupId,node]));
-    for(const node of [...typed.children])if(!groups.some(g=>g.id===node.dataset.groupId))node.remove();
+    const nodes=new Map(allNodes().map(node=>[node.dataset.groupId,node]));
+    for(const node of allNodes())if(!groups.some(g=>g.id===node.dataset.groupId))node.remove();
+    const lineIds=[...new Set(groups.map(g=>g.lineId))];
+    document.querySelector('#inkLineLabel').textContent='Current line '+(lineIds.indexOf(lineId)>=0?lineIds.indexOf(lineId)+1:lineIds.length+1);
     for(const group of groups){
-      let wrap=nodes.get(group.id);if(!wrap){wrap=document.createElement('div');wrap.className='inkGroup';wrap.dataset.groupId=group.id;typed.append(wrap);}
+      let wrap=nodes.get(group.id);if(!wrap){wrap=document.createElement('div');wrap.className='inkGroup';wrap.dataset.groupId=group.id;}
+      const host=group.lineId===lineId?typed:completed;if(wrap.parentElement!==host)host.append(wrap);
+      wrap.dataset.lineNumber=lineIds.indexOf(group.lineId)+1;
       wrap.hidden=hidden.has(group.id);wrap.style.left=group.position.x+'px';wrap.style.top=group.position.y+'px';
       if(wrap.hidden){wrap.replaceChildren();delete wrap.dataset.signature;continue;}
       if(wrap.dataset.signature===signature(group))continue;
@@ -73,7 +89,7 @@ export function createInkRecognition({getProblem,makeField,remember,save,redraw,
       }else for(const line of group.lines){
         const f=makeField(line.latex,v=>{const current=find(getProblem(),group.id);const row=current?.lines.find(l=>l.id===line.id);if(row){row.latex=v;wrap.dataset.signature=signature(current);}});f.setAttribute('aria-label','Recognized math');
         f.addEventListener('focus',()=>requestAnimationFrame(()=>{
-          if(!f.isConnected)return;const r=f.getBoundingClientRect(),view=surface.getBoundingClientRect();
+          if(!f.isConnected)return;if(completed.contains(f)){f.scrollIntoView({block:'nearest'});return;}const r=f.getBoundingClientRect(),view=surface.getBoundingClientRect();
           if(r.bottom>view.bottom-12)setPan(Math.max(0,getPan()+r.bottom-view.bottom+12));
           else if(r.top<view.top+8)setPan(Math.max(0,getPan()+r.top-view.top-8));pan();redraw();
         }));math.append(f);
@@ -86,12 +102,15 @@ export function createInkRecognition({getProblem,makeField,remember,save,redraw,
         const retry=document.createElement('button');retry.textContent='Retry';retry.onclick=()=>{const g=find(getProblem(),group.id);if(!g)return;g.status='pending';delete g.error;results.delete(g.id);renderTyped();save();};actions.append(retry);
         const error=document.createElement('p');error.className='inkWarning';error.textContent=group.error||'Tap Restore ink or Retry.';actions.append(error);
       }else if(group.status!=='pending'){
+        const provider=document.querySelector('#inkPrivacy').dataset.careful;
+        if(provider){const careful=document.createElement('button');careful.textContent='Slower AI read ('+provider+')';careful.onclick=()=>{const g=find(getProblem(),group.id);if(!g)return;remember();g.reader='careful';g.status='pending';g.lines=[];delete g.joined;results.delete(g.id);renderTyped();save();};actions.append(careful);}
         const steps=document.createElement('button');steps.textContent='→ Steps';steps.onclick=()=>{const g=find(getProblem(),group.id);if(g)toSteps(g.lines);};actions.append(steps);
         for(const warning of group.warnings||[]){const note=document.createElement('p');note.className='inkWarning';note.textContent=warning;actions.append(note);}
       }
       wrap.append(math,more,actions);wrap.dataset.signature=signature(group);
     }
-    typed.hidden=!groups.length;pan();
+    typed.hidden=!groups.some(g=>g.lineId===lineId);pan();
+    if(follow&&!completed.contains(document.activeElement))completed.scrollTop=completed.scrollHeight;
   }
   function placement(strokes){
     let left=Infinity,top=Infinity,bottom=-Infinity;for(const s of strokes)if(s.color!=='erase')for(const [x,y] of s.pts){left=Math.min(left,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
@@ -102,11 +121,15 @@ export function createInkRecognition({getProblem,makeField,remember,save,redraw,
       const distance=Math.abs((top+bottom)/2-(y+height/2));
       if(left>=right-8&&top<=y+height+48&&bottom>=y-24&&distance<80&&distance<closest){target={groupId:g.id};closest=distance;}
     }
-    if(target){const parent=find(getProblem(),target.groupId),node=[...typed.children].find(n=>n.dataset.groupId===parent.id);return {position:{x:Math.min(surface.clientWidth-80,node.getBoundingClientRect().right-view.left+8),y:parent.position.y},appendTo:target};}
+    // There is only one writing line. New ink continues its equation; New line
+    // is the explicit boundary, including while either reading is pending.
+    const current=[...(getProblem().inkConversions||[])].reverse().find(g=>g.lineId===lineState(getProblem())&&g.status!=='failed'&&g.lines.length<=1);
+    if(current)target={groupId:current.id};
+    if(target){const parent=find(getProblem(),target.groupId),node=[...typed.children].find(n=>n.dataset.groupId===parent.id);return {position:{x:Math.min(surface.clientWidth-80,(node?.getBoundingClientRect().right||view.left+80)-view.left+8),y:parent.position.y},appendTo:target};}
     let y=Math.max(12,top);
     // Moving to the left must not land on a different existing expression.
     for(const node of [...typed.children].filter(n=>!n.hidden).sort((a,b)=>parseFloat(a.style.top)-parseFloat(b.style.top))){const g=find(getProblem(),node.dataset.groupId),h=node.getBoundingClientRect().height||48;if(y<g.position.y+h+8&&y+48>g.position.y)y=g.position.y+h+12;}
-    return {position:{x:12,y}};
+    return {position:{x:12,y:Math.min(32,y)}};
   }
   function enqueue(problem,group){
     const job={problem,id:group.id,controller:new AbortController(),started:false};jobs.set(group.id,job);pump();
@@ -120,7 +143,7 @@ export function createInkRecognition({getProblem,makeField,remember,save,redraw,
       timeout=setTimeout(()=>job.controller.abort(),32000);
       await sessionReady;if(job.controller.signal.aborted)throw new DOMException('Canceled','AbortError');
       const group=find(job.problem,job.id);if(!group||group.status!=='pending')return;
-      const response=await fetch('/api/recognize',{method:'POST',headers:{'Content-Type':'application/json','X-Math-Mode':'1'},body:JSON.stringify({image:inkImage(group.strokes)}),signal:job.controller.signal});
+      const response=await fetch(group.reader==='careful'?'/api/recognize-careful':'/api/recognize',{method:'POST',headers:{'Content-Type':'application/json','X-Math-Mode':'1'},body:JSON.stringify({image:inkImage(group.strokes)}),signal:job.controller.signal});
       const result=await response.json();if(job.controller.signal.aborted||jobs.get(job.id)!==job||!find(job.problem,job.id))return;
       if(!response.ok)throw new Error(result.error||'Recognition unavailable. Your original ink is saved.');
       if(!Array.isArray(result.lines)||!result.lines.length)throw new Error('No readable math found. Original ink saved; restore it or try again.');
@@ -141,9 +164,16 @@ export function createInkRecognition({getProblem,makeField,remember,save,redraw,
   }
   function recognize(){
     if(isDrawing())return;const problem=getProblem();try{inkImage(problem.strokes);}catch(err){toast(err.message);return;}
-    remember();const group={id:crypto.randomUUID(),status:'pending',lines:[],strokes:structuredClone(problem.strokes),...placement(problem.strokes)};
+    const lineId=lineState(problem);remember();const group={id:crypto.randomUUID(),lineId,status:'pending',lines:[],strokes:structuredClone(problem.strokes),...placement(problem.strokes)};
     problem.inkConversions??=[];problem.inkConversions.push(group);problem.strokes=[];hideKeyboard();renderTyped();redraw();save();
   }
-  button.onclick=recognize;
-  return {recognize,cancel,renderTyped,pan,beginWriting};
+  function newLine(){
+    if(isDrawing())return;const p=getProblem(),lineId=lineState(p);
+    if(p.strokes.length)recognize();
+    if(!p.inkConversions?.some(g=>g.lineId===lineId))return;
+    remember();hideKeyboard();p.inkLineId=crypto.randomUUID();setPan(0);renderTyped();completed.scrollTop=completed.scrollHeight;redraw();save();
+  }
+  sessionReady.then(()=>renderTyped());
+  button.onclick=recognize;document.querySelector('#inkNewLine').onclick=newLine;
+  return {recognize,newLine,cancel,renderTyped,pan,beginWriting};
 }

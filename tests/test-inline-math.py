@@ -32,7 +32,7 @@ try:
     assert math.evaluate(r"f=>f.value.replace(/\s+/g,'')")=='x'
     after=canvas.bounding_box()
     assert before==after  # No strip steals space or moves the writing origin.
-    rect=math.bounding_box();assert rect['x']==12 and abs(rect['y']-(before['y']+70))<1
+    rect=math.bounding_box();assert rect['x']==12 and abs(rect['y']-(before['y']+32))<1
     assert page.locator('#inkTyped').evaluate('n=>n.parentElement.id')=='inkScroll'
     # Write a continuation directly to the right on the same grid row.
     x,y=rect['x']+rect['width']+22,rect['y']+5
@@ -59,12 +59,10 @@ try:
     page.get_by_role('button',name='↵',exact=True).click();page.wait_for_timeout(200)
     page.reload(wait_until='networkidle')
     assert math.count()==1 and math.evaluate(r"f=>f.value.replace(/\s+/g,'')")=='x+3+1'
-    # The grid and editable math pan together, not as separate scrolling sections.
+    # The current line cannot scroll into an unrestricted multi-line canvas.
     top=math.bounding_box()['y'];r=canvas.bounding_box()
-    canvas.evaluate("n=>n.addEventListener('wheel',e=>window.scrollDelta=e.deltaY,{once:true})")
-    page.mouse.move(330,r['y']+180);page.mouse.wheel(0,40);page.wait_for_timeout(150)
-    assert abs(math.bounding_box()['y']-(top-page.evaluate('window.scrollDelta')))<1
-    page.mouse.wheel(0,-40);page.wait_for_timeout(150)
+    page.mouse.move(330,r['y']+60);page.mouse.wheel(0,40);page.wait_for_timeout(150)
+    assert math.bounding_box()['y']==top
     out=ROOT/'.artifacts/live';out.mkdir(parents=True,exist_ok=True)
     page.screenshot(path=str(out/'inline-equation.png'))
     # Saved recovery restores only the handwritten addition; the prior equation remains.
@@ -77,7 +75,7 @@ try:
     assert not errors,errors
     assert len(calls)==2
     browser.close()
-    print('PASS: same-grid compact editable math, handwritten continuation joins whole equation, unchanged canvas geometry, shared pan, numpad editing, reload and original-ink recovery. Mocked recognition, Chromium not iOS.')
+    print('PASS: same-grid compact editable math, handwritten continuation joins whole equation, unchanged canvas geometry, current-line bounds, numpad editing, reload and original-ink recovery. Mocked recognition, Chromium not iOS.')
 finally:
  server.shutdown();server.server_close();thread.join()
  print('Stopped the temporary inline test server.')

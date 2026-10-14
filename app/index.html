@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f1115">
 <title>Math Mode</title>
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 <header id="top">
@@ -44,14 +44,20 @@
   </section>
 
   <section id="view-ink" class="view">
+    <div id="inkPast"><span class="inkPastLabel">Previous lines</span><div id="inkCompleted" aria-label="Completed math lines"></div></div>
+    <div id="inkLineLabel">Current line 1</div>
     <div id="inkScroll"><canvas id="inkCanvas"></canvas><div id="inkTyped" hidden></div></div>
-    <p id="inkPrivacy">Convert sends only your handwriting for recognition. Keep writing; no confirmation.</p>
+    <p id="inkPrivacy">Only cropped handwriting is sent for recognition.</p>
     <div class="toolbar" id="inkTools">
       <button id="inkUndo" aria-label="Undo handwriting">↶ Undo</button>
       <button id="inkConvert">Convert</button>
-      <button data-pen="#7dd3fc" class="on" aria-label="Blue pen"><i style="background:#7dd3fc"></i></button>
-      <button data-pen="#fcc2d7" aria-label="Pink pen"><i style="background:#fcc2d7"></i></button>
-      <button data-pen="#e8eaf0" aria-label="White pen"><i style="background:#e8eaf0"></i></button>
+      <button id="inkNewLine">New line ↑</button>
+      <button id="inkPen" aria-label="Pen colors" aria-expanded="false"><i style="background:#7dd3fc"></i></button>
+      <div id="inkPalette" hidden>
+        <button data-pen="#7dd3fc" class="on" aria-label="Blue pen"><i style="background:#7dd3fc"></i></button>
+        <button data-pen="#fcc2d7" aria-label="Pink pen"><i style="background:#fcc2d7"></i></button>
+        <button data-pen="#e8eaf0" aria-label="White pen"><i style="background:#e8eaf0"></i></button>
+      </div>
       <button data-pen="erase">⌫ erase</button>
       <button id="inkClear">Clear</button>
     </div>
@@ -73,6 +79,6 @@
 <div id="kb" hidden></div>
 <div id="toast" hidden></div>
 
-<script type="module" src="app.js?v=5"></script>
+<script type="module" src="app.js?v=6"></script>
 </body>
 </html>

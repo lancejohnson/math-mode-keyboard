@@ -17,7 +17,7 @@ with sync_playwright() as p:
         page=browser.new_page(viewport={'width':390,'height':844},device_scale_factor=2,is_mobile=True,has_touch=True)
         errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
         page.goto(url.rstrip('/')+'/#recognition='+token,wait_until='domcontentloaded',timeout=60000)
-        page.wait_for_function("document.querySelector('#inkPrivacy').textContent.startsWith('Convert sends only')")
+        page.wait_for_function("document.querySelector('#inkPrivacy').textContent.startsWith('Cropped ink')")
         page.wait_for_function("localStorage.getItem('mathmode-v1') !== null",timeout=30000)
         assert not errors,errors
         assert '#recognition=' not in page.url
@@ -35,7 +35,7 @@ with sync_playwright() as p:
                 page.mouse.move(225,r['y']+35);page.mouse.down();page.mouse.move(310,r['y']+75,steps=10);page.mouse.up()
             elapsed=time.perf_counter()-started
             result=response.value.json()
-            assert response.value.ok and result['model']=='claude-sonnet-5-5',(name,result)
+            assert response.value.ok and result['model']=='bttr-local',(name,result)
             assert len(result['lines'])==1 and normalize(result['lines'][0]['latex'])==expected[name],(name,result)
             page.locator('#inkTyped math-field').wait_for()
             page.wait_for_timeout(250)
@@ -75,7 +75,7 @@ with sync_playwright() as p:
         page.screenshot(path=str(ROOT/'.artifacts/live/inline-real-continuation.png'))
         print('PASS real same-grid handwritten +3 continuation; one editable equation, no canvas movement, incorrect arithmetic preserved')
         assert not errors,errors
-        print('PASS private invite exchange and URL removal; fast single-model recognition through public service. Chromium, not iOS.')
+        print('PASS private invite exchange and URL removal; dedicated fast math recognition through public service. Chromium, not iOS.')
     except Exception as exc:
         print('Live test error:',str(exc).replace(token,'[private invite]').replace(url,'[live app]'))
         print('Browser errors:',errors)

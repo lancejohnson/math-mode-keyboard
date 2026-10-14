@@ -20,7 +20,7 @@ test('one fast transcription call, no second reader or reasoning wait',async()=>
  assert.equal(calls.length,1);assert.equal(result.lines[0].latex,'2+2=5');assert.equal(result.model,'fast-reader');assert.equal(recognize.provider,'Anthropic');
  assert.equal('reasoning' in calls[0][2],false);assert.equal(calls[0][1].messages[0].content.length,1);
 });
-async function setup(t,recognize=async()=>recognized,perHour=120){const server=createServer({token:'a'.repeat(48),recognize,secureCookies:false,perHour});await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>new Promise(r=>server.close(r)));const url='http://127.0.0.1:'+server.address().port;const session=await fetch(url+'/api/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({invite:'a'.repeat(48)})});const cookie=session.headers.get('set-cookie').split(';')[0];return {url,cookie};}
+async function setup(t,recognize=async()=>recognized,perHour=120,careful){const server=createServer({token:'a'.repeat(48),recognize,careful,secureCookies:false,perHour});await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>new Promise(r=>server.close(r)));const url='http://127.0.0.1:'+server.address().port;const session=await fetch(url+'/api/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({invite:'a'.repeat(48)})});const cookie=session.headers.get('set-cookie').split(';')[0];return {url,cookie};}
 const headers=cookie=>({'Content-Type':'application/json','X-Math-Mode':'1',Cookie:cookie});
 test('private API, cookie, same-origin, static boundary and payload limits',async t=>{
  let calls=0;const {url,cookie}=await setup(t,async()=>{calls++;return recognized;});
@@ -32,6 +32,15 @@ test('private API, cookie, same-origin, static boundary and payload limits',asyn
  for(const path of ['/server/server.mjs','/.git/config','/%2e%2e%2fserver/server.mjs'])assert.equal((await fetch(url+path)).status,404);
  assert.equal((await fetch(url+'/')).status,200);
  assert.match((await fetch(url+'/recognition.js')).headers.get('content-type'),/javascript/);
+});
+test('slower AI reading is explicit, shares all private API protections and cannot bypass the budget',async t=>{
+ let fast=0,slow=0;const careful=async()=>{slow++;return recognized;};careful.provider='Anthropic';
+ const {url,cookie}=await setup(t,async()=>{fast++;return {...recognized,model:'bttr-local'};},1,careful);
+ const status=await (await fetch(url+'/api/status')).json();assert.equal(status.careful,true);assert.equal(status.carefulProvider,'Anthropic');
+ assert.equal((await fetch(url+'/api/recognize-careful',{method:'POST',headers:headers(''),body:JSON.stringify({image})})).status,401);
+ assert.equal((await fetch(url+'/api/recognize-careful',{method:'POST',headers:{...headers(cookie),Origin:'https://evil.test'},body:JSON.stringify({image})})).status,403);
+ const result=await fetch(url+'/api/recognize-careful',{method:'POST',headers:headers(cookie),body:JSON.stringify({image})});assert.equal(result.status,200);assert.equal(slow,1);assert.equal(fast,0);
+ assert.equal((await fetch(url+'/api/recognize',{method:'POST',headers:headers(cookie),body:JSON.stringify({image})})).status,429);
 });
 test('model failure leaves client a safe retry response; budgets bound authenticated calls',async t=>{
  const first=await setup(t,async()=>{throw new Error('internal credential details');});

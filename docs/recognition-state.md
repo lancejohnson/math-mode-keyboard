@@ -42,3 +42,12 @@ The server does not persist or log handwriting images/results. Provider data han
 Node tests cover faithful parsing, incorrect arithmetic, exactly one model call with no enabled reasoning, private access, origins, static boundaries, payload limits, failures and quotas. Phone-size Chromium tests use explicit model mocks and exercise automatic application, immediate continued writing, deferred reflow while drawing, editing, recovery, refresh, Undo reconciliation and late-response races. `tests/test-inline-math.py` covers same-grid positioning, whole-equation continuation/editing, unchanged canvas geometry, shared panning and reload/recovery. `tests/test-live-recognition.py` separately exercises the real public service with manually drawn powers, a fraction and deliberately incorrect arithmetic, writing fresh ink while each request runs and recovering exact original vectors, and checks a real handwritten +3 continuation joined into one equation without moving the canvas.
 
 The real public-service run measured 1.73, 1.11 and 1.02 seconds for those three conversions, respectively. A small direct comparison put Sonnet 5.5 at 1.1–1.5 seconds and Sonnet 4.5 at 1.4–1.7 seconds. These are a few test fixtures, not a benchmark establishing best recognition accuracy or a latency guarantee. They are not Lance's handwriting. Chromium phone viewports are not iOS Safari.
+
+## Current line and fast reader (v6)
+
+- Each conversion stores `lineId`. `problem.inkLineId` is the writing line; groups on other lines render in `#inkCompleted` and never receive continuations.
+- New line converts unfinished strokes first (keeping their pending batch on the old line), then starts a fresh `inkLineId`. It never waits for a response.
+- Undo snapshots include `inkLineId`, so undoing New line returns the previous line to the writing area.
+- Restoring ink from a previous line makes that line current again (converting any unfinished ink on the current line first).
+- `reader:'careful'` batches post to `/api/recognize-careful`, which has the same session, origin, size and budget checks as `/api/recognize`.
+- The native worker is a separate process group, killed on timeout, invalid output or server exit; the server starts a new one on the next request.
