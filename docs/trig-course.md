@@ -27,7 +27,12 @@ are original.
    similar triangle bigger, ratios don't change); sine, cosine and tangent; solving for sides
    and angles; reciprocal ratios; complementary angles; area with ½ab·sin C.
 3. **Special triangles.** 45-45-90 and 30-60-90 from a square and an equilateral triangle;
-   the exact values, derived rather than memorised.
+   the exact values, derived first, then drilled until automatic.
+
+**Facts to know by heart** are part of the units, not a separate course. A topic that teaches
+angles lists them (`facts:` in the unit page, cards in `app/trig/facts.js`); a "by heart" topic
+drills them timed (only answers under 3 s count); afterwards they return as quick facts in later
+practice and as a short spaced review on the unit's topic list. `facts.html` shows all decks.
 4. **The unit circle.** cos θ and sin θ as the x and y of a point going round
    (model: drag the point); quadrants and signs; reference angles; exact values everywhere;
    sin² + cos² = 1 as the Pythagorean theorem on the circle.

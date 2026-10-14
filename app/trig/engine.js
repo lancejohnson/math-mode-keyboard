@@ -32,6 +32,8 @@ export function parseAns(s) {
 }
 
 // The circle. Angles are counterclockwise from 3 o'clock; `cur` is unwrapped so it can go negative or past a full turn.
+import { CARDS, FAST, radOf, promptFor, choicesFor, choiceText, record, status, loadFacts, saveFacts } from './facts.js?v=2';
+
 export class Wheel {
   constructor(canvas) {
     this.c = canvas; this.s = {}; addEventListener('resize', () => this.fit()); this.fit();
@@ -116,8 +118,21 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
   let prog = {}; try { prog = JSON.parse(localStorage.getItem(storeKey)) || {}; } catch { }
   prog.done ||= [];
   const save = () => { try { localStorage.setItem(storeKey, JSON.stringify(prog)); } catch { } };
-  let ti = 0, q = null, right = 0, tries = 0, phase = 'learn', last = '';
-  const T = () => topics[ti];
+  let ti = 0, cur = topics[0], q = null, right = 0, tries = 0, phase = 'learn', last = '';
+  const T = () => cur, goal = () => cur.goal ?? GOAL;
+  // Quick facts (facts.js): each topic can teach some cards (t.facts). Once a topic is done, its cards come
+  // back as timed "Quick fact" questions in later practice and in the short review on the topic list.
+  let fs = loadFacts(), recent = [];
+  const unlocked = () => [...new Set(topics.filter(t => t.facts && (prog.done.includes(t.id) || (t === cur && cur.drill))).flatMap(t => t.facts))].map(id => CARDS[id]);
+  const dueFacts = (now = Date.now()) => unlocked().filter(c => (fs[c.id]?.due ?? 0) <= now);
+  function factQ() {
+    const pool = cur.pool || unlocked(); if (!pool.length) return null;
+    // Missed cards first, then unseen ones, then slow ones; never one of the last few asked.
+    const W = { shaky: 3, new: 2, slow: 1, automatic: .5 };
+    const card = pool.map(c => [W[status(fs[c.id])] + Math.random() - (recent.includes(c.id) ? 10 : 0), c]).sort((a, b) => b[0] - a[0])[0][1]; recent = [card.id, ...recent].slice(0, Math.min(4, pool.length - 1));
+    const useRad = card.pool !== 'rad' && card.pool !== 'deg' && Math.random() < .5, ch = choicesFor(card);
+    return { type: 'fact', card, prompt: promptFor(card, useRad).replace(/^<b>(.*)<\/b>(.*)$/, (m, a, b) => `<b>${a}</b>${b}?`), choices: ch.map(c => choiceText(card, c)), answer: ch.indexOf(card.answer), why: card.why };
+  }
 
   function list() {
     $('#topicView').hidden = true; $('#listView').hidden = false; cancelAnimationFrame(wheel.anim);
@@ -127,16 +142,21 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
     }).join('');
     const n = prog.done.length; $('#unitBar').innerHTML = topics.map(t => `<i class="${prog.done.includes(t.id) ? 'ok' : ''}"></i>`).join('');
     $('#unitStatus').textContent = n === topics.length ? 'Unit complete.' : `${n} of ${topics.length} topics mastered`;
+    fs = loadFacts(); const due = dueFacts().length, qf = $('#quickFacts');
+    if (qf) { qf.hidden = !due; qf.innerHTML = `<b>⚡ Quick facts</b> ${Math.min(due, 8)} due, about ${Math.max(1, Math.round(Math.min(due, 8) * 4 / 60 * 2) / 2)} min<small>Keeps the angles you've learned automatic.</small>`; }
   }
+  $('#quickFacts') && ($('#quickFacts').onclick = () => { const pool = dueFacts().slice(0, 8); open({ id: '_facts', title: 'Quick facts', drill: true, pool, goal: pool.length }); });
   $('#topicList').onclick = e => { const b = e.target.closest('.topic'); if (b && !b.disabled) open(+b.dataset.i); };
   $('#back').onclick = () => list();
 
   let si = 0;
   function open(i) {
-    ti = i; right = 0; tries = 0; phase = 'learn'; $('#listView').hidden = true; $('#topicView').hidden = false; scrollTo(0, 0);
-    $('#topicNum').textContent = `Topic ${i + 1} of ${topics.length} · Lesson`; $('#topicTitle').textContent = T().title;
-    wheel.fit(); $('#learn').innerHTML = T().learn; $('#learn').hidden = true; $('#learnAgain').hidden = true;
-    $('#lesson').hidden = false; $('#lessonTop').hidden = false; $('#practice').hidden = true; $('#done').hidden = true; step(0);
+    if (typeof i === 'object') { cur = i; ti = -1; } else { ti = i; cur = topics[i]; }
+    right = 0; tries = 0; phase = 'learn'; q = null; fs = loadFacts(); $('#listView').hidden = true; $('#topicView').hidden = false; scrollTo(0, 0);
+    $('#topicNum').textContent = ti < 0 ? 'Review' : `Topic ${i + 1} of ${topics.length} · Lesson`; $('#topicTitle').textContent = T().title;
+    wheel.fit(); $('#learn').innerHTML = T().learn || ''; $('#learn').hidden = true; $('#learnAgain').hidden = true;
+    $('#lesson').hidden = false; $('#lessonTop').hidden = false; $('#practice').hidden = true; $('#done').hidden = true;
+    if (T().lesson) step(0); else startPractice();
   }
   // The lesson: a few short screens, each with the circle showing one thing, and "your turn" steps
   // where the learner drags the dot and the lesson waits until it is right.
@@ -182,37 +202,49 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
   $('#stepNext').onclick = () => { if (si < T().lesson.length - 1) step(si + 1); else startPractice(); };
   $('#learnAgain').onclick = () => { const h = !$('#learn').hidden; $('#learn').hidden = h; $('#learnAgain').textContent = h ? 'Show the key idea' : 'Hide the key idea'; };
   function startPractice() {
-    phase = 'practice'; wheel.onturn = null; $('#lesson').hidden = true; $('#lessonTop').hidden = true; $('#topicNum').textContent = `Topic ${ti + 1} of ${topics.length} · Practice`;
-    $('#learnAgain').hidden = false; $('#learnAgain').textContent = 'Show the key idea'; $('#practice').hidden = false; ask(); scrollTo(0, 0);
+    phase = 'practice'; wheel.onturn = null; $('#lesson').hidden = true; $('#lessonTop').hidden = true; $('#topicNum').textContent = ti < 0 ? 'Review' : `Topic ${ti + 1} of ${topics.length} · Practice`;
+    $('#learnAgain').hidden = !T().learn; $('#learnAgain').textContent = 'Show the key idea'; $('#practice').hidden = false; ask(); scrollTo(0, 0);
   }
 
-  function bar() { $('#dots').innerHTML = Array.from({ length: GOAL }, (_, i) => `<i class="${i < right ? 'ok' : ''}"></i>`).join(''); $('#dotsText').textContent = `${right} of ${GOAL} right`; }
+  function bar() { $('#dots').innerHTML = Array.from({ length: goal() }, (_, i) => `<i class="${i < right ? 'ok' : ''}"></i>`).join(''); $('#dotsText').textContent = `${right} of ${goal()} ${T().drill ? 'fast' : 'right'}`; }
+  let clockT0 = 0, clockRaf = 0;
+  function clock(on) {
+    cancelAnimationFrame(clockRaf); const c = $('#qClock'); c.hidden = !on; if (!on) return; clockT0 = performance.now();
+    const tick = () => { const s = (performance.now() - clockT0) / 1000, i = c.firstElementChild; i.style.width = Math.min(100, 100 * s / FAST) + '%'; i.style.background = s <= FAST ? 'var(--green)' : 'var(--amber)'; if (q?.type === 'fact' && !q.done) clockRaf = requestAnimationFrame(tick); };
+    tick();
+  }
   function make(topic, force) {
     for (let k = 0; k < 8; k++) { const g = force ? topic.gens[force.gen] : pick(topic.gens), nq = g(force ? () => force.v : pick); if (force || nq.prompt !== last) return nq; }
     return pick(topic.gens)(pick);
   }
   function ask(force) {
-    cancelAnimationFrame(wheel.anim); let topic = T(), review = false;
-    // Mixed review: about one question in four comes from an earlier topic.
-    if (!force && ti > 1 && Math.random() < .25) { topic = topics[Math.floor(Math.random() * ti)]; review = true; }
-    q = make(topic, force); q.topic = topic; last = q.prompt;
-    $('#qText').innerHTML = (review ? '<span class="tag">Review</span> ' : '') + q.prompt;
+    cancelAnimationFrame(wheel.anim); let topic = T(), review = false, fact = null;
+    if (T().drill && !force) fact = factQ();
+    // Mixed review: about one question in four comes from an earlier topic; half of those are quick facts if any are learned.
+    else if (!force && ti > 1 && Math.random() < .25) { if (Math.random() < .5) fact = factQ(); if (!fact) { const old = topics.slice(0, ti).filter(t => t.gens); topic = old[Math.floor(Math.random() * old.length)]; review = true; } }
+    q = fact || make(topic, force); q.topic = topic; last = q.prompt;
+    $('#qText').innerHTML = (review ? '<span class="tag">Review</span> ' : fact && !T().drill ? '<span class="tag">Quick fact</span> ' : '') + q.prompt;
+    if (fact) { $('#choices').innerHTML = q.choices.map((c, i) => `<button class="choice fact" data-i="${i}">${c}</button>`).join(''); wheel.set({ grid: D(30) }); }
     $('#feedback').innerHTML = ''; $('#next').hidden = true; $('#check').hidden = q.type === 'choice'; $('#check').disabled = false;
-    $('#choices').hidden = q.type !== 'choice'; $('#padWrap').hidden = q.type !== 'pad';
+    $('#choices').hidden = q.type !== 'choice' && q.type !== 'fact'; $('#padWrap').hidden = q.type !== 'pad'; $('#check').hidden ||= q.type === 'fact';
+    clock(q.type === 'fact');
     if (q.type === 'choice') $('#choices').innerHTML = q.choices.map((c, i) => `<button class="choice" data-i="${i}">${c}</button>`).join('');
     if (q.type === 'pad') { pad.value = ''; $('#padUnit').textContent = q.unit || ''; }
     wheel.set(q.type === 'drag' ? { grid: q.grid ?? topic.grid, snap: q.snap ?? topic.snap, string: q.string, cur: 0, drag: true } : { grid: q.grid ?? topic.grid, show: q.show ? [q.show] : [] });
     bar();
   }
-  function grade(ok, msg) {
+  function grade(ok, msg, html) {
     tries++; if (ok) right++;
-    $('#feedback').innerHTML = ok ? `<p class="ok">✓ Right. ${q.why || ''}</p>` : `<p class="no">✗ ${msg || 'Not quite.'}</p><p>${q.why || ''}</p>`;
+    $('#feedback').innerHTML = html || (ok ? `<p class="ok">✓ Right. ${q.why || ''}</p>` : `<p class="no">✗ ${msg || 'Not quite.'}</p><p>${q.why || ''}</p>`);
     $('#check').hidden = true; $('#choices').querySelectorAll('button').forEach(b => b.disabled = true); bar();
-    if (right >= GOAL) {
-      if (!prog.done.includes(T().id)) prog.done.push(T().id); save();
-      $('#next').hidden = true; $('#done').hidden = false; const last = ti === topics.length - 1;
-      $('#doneText').innerHTML = `Topic mastered in ${tries} question${tries > 1 ? 's' : ''}.` + (last ? ' That completes the unit.' : '');
-      $('#nextTopic').textContent = last ? (nextHref ? 'Back to the course →' : 'Back to the unit') : 'Next topic →';
+    if (right >= goal()) {
+      $('#next').hidden = true; $('#done').hidden = false;
+      if (ti < 0) { $('#doneText').innerHTML = `Review done: ${right} fast out of ${tries}.`; $('#nextTopic').textContent = 'Back to the topics'; }
+      else {
+        if (!prog.done.includes(T().id)) prog.done.push(T().id); save(); const last = ti === topics.length - 1;
+        $('#doneText').innerHTML = `Topic mastered in ${tries} question${tries > 1 ? 's' : ''}.` + (last ? ' That completes the unit.' : '') + (T().facts && !T().drill ? ' Its key angles will now come back as quick facts.' : '');
+        $('#nextTopic').textContent = last ? (nextHref ? 'Back to the course →' : 'Back to the unit') : 'Next topic →';
+      }
     } else { $('#next').hidden = false; $('#next').focus({ preventScroll: true }); }
     $('#feedback').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
@@ -235,14 +267,29 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
   };
   $('#choices').onclick = e => {
     const b = e.target.closest('.choice'); if (!b || b.disabled) return; const i = +b.dataset.i, ok = i === q.answer;
+    if (q.type === 'fact') {
+      const secs = (performance.now() - clockT0) / 1000, fast = secs <= FAST, s = secs.toFixed(1) + ' s', c = q.card; q.done = true; q.secs = secs;
+      fs = loadFacts(); fs[c.id] = record(fs[c.id], ok, secs); saveFacts(fs);
+      $('#choices').querySelectorAll('.choice').forEach((el, j) => { if (j === q.answer) el.classList.add('right'); else if (j === i) el.classList.add('wrong'); });
+      wheel.set({ grid: D(30), show: [{ t: c.t * PI / 180, label: `${c.t}° = ${radOf(c.t)}`, color: C.green }] });
+      const counts = ok && (fast || !T().drill);
+      const html = !ok ? `<p class="no">✗ It's ${q.choices[q.answer]}.</p><p>${q.why}</p>`
+        : fast ? `<p class="ok">✓ ${s}</p>`
+        : T().drill ? `<p style="color:var(--amber)">Right, but ${s}. Here only answers under ${FAST} s count, so it'll come round again.</p><p>${q.why}</p>`
+        : `<p class="ok">✓ Right, ${s}. <span style="color:var(--amber)">Aim for under ${FAST} s.</span></p><p>${q.why}</p>`;
+      grade(counts, '', html);
+      // Fast and right: keep the rhythm going without a tap.
+      if (ok && fast && right < goal()) { const was = q; $('#next').hidden = true; setTimeout(() => { if (q === was) ask(); }, 650); }
+      return;
+    }
     $('#choices').querySelectorAll('.choice').forEach((c, j) => { if (j === q.answer) c.classList.add('right'); else if (j === i) c.classList.add('wrong'); });
     if (q.reveal !== undefined) wheel.set({ ...wheel.s, show: [{ t: q.reveal, label: q.revealLabel, color: C.green, string: q.string }] });
     grade(ok, ok ? '' : (q.hint?.(i) || `The answer is ${q.choices[q.answer]}.`));
   };
   $('#next').onclick = () => { ask(); $('#topicView').scrollIntoView({ behavior: 'smooth' }); };
-  $('#nextTopic').onclick = () => { if (ti < topics.length - 1) open(ti + 1); else if (nextHref) location.href = nextHref; else list(); };
+  $('#nextTopic').onclick = () => { if (ti < 0) list(); else if (ti < topics.length - 1) open(ti + 1); else if (nextHref) location.href = nextHref; else list(); };
   $('#reset').onclick = () => { if (confirm('Clear your progress for this unit?')) { prog = { done: [] }; save(); list(); } };
 
   list();
-  return { wheel, topics, step: () => T().lesson[si], si: () => si, q: () => q, right: () => right, open, ask: (gen, v) => ask({ gen, v }), prog: () => prog, parseAns, pad };
+  return { wheel, topics, facts: () => fs, dueFacts, step: () => T().lesson[si], si: () => si, q: () => q, right: () => right, open, ask: (gen, v) => ask({ gen, v }), prog: () => prog, parseAns, pad };
 }

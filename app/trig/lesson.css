@@ -72,3 +72,8 @@ button.link{background:none;border:0;color:var(--blue);font:inherit;font-size:14
 .say{min-height:4.5em}
 .factsLink{display:block;background:#1f3326;border:1px solid #2f6f45;border-radius:12px;padding:12px;margin:12px 0;color:var(--ink);text-decoration:none}
 .factsLink small{display:block;color:var(--dim);font-size:13px;margin-top:2px}
+.clock{height:6px;border-radius:3px;background:#2c3448;overflow:hidden;margin:4px 0 8px}
+.clock i{display:block;height:100%;width:0;background:var(--green)}
+.choices .choice.fact{font:600 22px/1.2 "Times New Roman",serif;min-height:56px}
+.quickFacts{display:block;width:100%;text-align:left;background:#1f3326;border:1px solid #2f6f45;border-radius:12px;padding:12px;margin:12px 0;color:var(--ink);font:inherit}
+.quickFacts small{display:block;color:var(--dim);font-size:13px;margin-top:2px}

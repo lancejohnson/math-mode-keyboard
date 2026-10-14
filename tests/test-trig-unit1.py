@@ -42,7 +42,7 @@ def answer(page, right, shots):
     if q['type'] == 'drag':
         drag_to(page, q['t'] if right else q['t'] + math.pi / 2)
         page.click('#check')
-    elif q['type'] == 'choice':
+    elif q['type'] in ('choice', 'fact'):
         i = q['answer'] if right else (q['answer'] + 1) % 4
         page.locator('#choices .choice').nth(i).click()
     else:
@@ -50,9 +50,16 @@ def answer(page, right, shots):
         type_pad(page, str(round(v, 3)).replace('-', '−'))
         page.click('#check')
     fb = page.inner_text('#feedback')
-    assert ('Right' in fb) == right, (q, fb)
+    assert ('✗' not in fb) == right, (q, fb)
     if not right and q['type'] not in shots:
         shots.add(q['type']); page.locator('#topicView').screenshot(path=str(OUT / f'trig1v2-wrong-{q["type"]}.png'))
+
+
+def nxt(page):
+    """Go to the next question: tap Next, or wait for the auto-advance after a fast right quick fact."""
+    if page.locator('#done').is_visible(): return
+    if page.locator('#next').is_visible(): page.click('#next')
+    else: page.wait_for_function('!u1.q().done')
 
 
 def lesson(page, shot=None):
@@ -92,22 +99,32 @@ def run(page):
         if ti == 0: page.locator('.topic').nth(ti).click()
         assert page.inner_text('#topicTitle') == page.evaluate(f'u1.topics[{ti}].title')
         page.wait_for_timeout(1300 if ARGS.slow else 50)
-        if ti in (0, 8): page.locator('#topicView').screenshot(path=str(OUT / f'trig1v2-learn{ti}.png'))
+        if ti in (0, 7, 8): page.locator('#topicView').screenshot(path=str(OUT / f'trig1v2-learn{ti}.png'))
         lesson(page, 'trig1v2-yourturn.png')
         if ti == 0: page.evaluate('u1.ask(2)')  # make sure a tap (choice) question gets a wrong answer
         if ti == 6: page.evaluate('u1.ask(1, 90)')  # make sure a typed (pad) question gets a wrong answer
         wrongs = 0
         while page.locator('#done').is_hidden():
-            right = not (ti in (0, 2, 4, 6, 9) and wrongs == 0)
+            right = not (ti in (0, 2, 4, 6, 7, 9) and wrongs == 0)
             answer(page, right, shots)
             if not right: wrongs += 1
-            if page.locator('#done').is_hidden(): page.click('#next')
-        assert page.evaluate('u1.right()') == 4
+            nxt(page)
+        assert page.evaluate('u1.right()') == page.evaluate(f'u1.topics[{ti}].goal || 4')
         page.click('#nextTopic') if ti < n - 1 else None
     STATE['topic'] = None
     if ARGS.topics and ARGS.topics < n: return
-    assert {'choice', 'pad'} <= shots, shots  # wrong drag is covered in specific()
+    assert {'choice', 'pad', 'fact'} <= shots, shots  # wrong drag is covered in specific()
     page.reload(); assert page.locator('.topic.done').count() == n and 'Unit complete' in page.inner_text('#unitStatus')
+    # Quick facts review on the topic list: learned angles that are due, timed, back to the list when done.
+    assert page.locator('#quickFacts').is_visible() and 'due' in page.inner_text('#quickFacts'), page.inner_text('#quickFacts')
+    page.screenshot(path=str(OUT / 'trig1v2-quickfacts-list.png'))
+    page.click('#quickFacts'); fast(page); first = True
+    while page.locator('#done').is_hidden():
+        assert page.evaluate('u1.q().type') == 'fact'
+        answer(page, True, shots)
+        if first: page.locator('#topicView').screenshot(path=str(OUT / 'trig1v2-quickfacts.png')); first = False
+        nxt(page)
+    assert 'Review done' in page.inner_text('#doneText'); page.click('#nextTopic'); assert page.locator('#listView').is_visible()
 
 
 def specific(page):
@@ -169,7 +186,7 @@ def main():
                 print(f'  {w}px ok in {time.time() - tw:.1f}s', file=sys.stderr)
                 page.close()
             browser.close()
-        print('PASS: trig unit 1 v2 — 10 topics: guess-first opener, lesson, then mastery through drag / tap / pad, wrong-answer feedback for each type, wrong-way turn caught, unlocks + progress persist; 3 phone sizes, no JS errors. Chromium, not iOS.' if not (ARGS.only or ARGS.topics) else f'PASS (partial: only={ARGS.only} topics={ARGS.topics}) in {time.time() - t0:.1f}s')
+        print('PASS: trig unit 1 v2 — 11 topics incl. timed by-heart drill + quick-facts review: guess-first opener, lesson, then mastery through drag / tap / pad, wrong-answer feedback for each type, wrong-way turn caught, unlocks + progress persist; 3 phone sizes, no JS errors. Chromium, not iOS.' if not (ARGS.only or ARGS.topics) else f'PASS (partial: only={ARGS.only} topics={ARGS.topics}) in {time.time() - t0:.1f}s')
         if not (ARGS.only or ARGS.topics): print(f'  total {time.time() - t0:.1f}s', file=sys.stderr)
     finally:
         srv.shutdown()

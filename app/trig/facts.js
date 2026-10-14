@@ -5,6 +5,12 @@
 // Spacing: every fast right answer moves the card up a box and pushes its next showing further out;
 // a slow right answer keeps it in place and brings it back soon; a wrong one sends it back to box 0.
 
+export const KEY = 'trig-facts-v1';         // shared by the units and facts.html
+export function loadFacts() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } }
+export function saveFacts(st) { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch { } }
+// Both directions of the degrees <-> radians cards for these angles.
+export const angleIds = degs => degs.flatMap(d => [`d2r:${d}`, `r2d:${d}`]);
+
 export const FAST = 3;                     // seconds, for tapping 1 of 4 answers on a phone
 export const NEED = 3;                     // fast right answers in a row to count as automatic
 const MIN = 60e3, DAY = 864e5;

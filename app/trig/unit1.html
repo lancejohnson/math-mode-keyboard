@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Unit 1 · Angles and radians</title>
-<link rel="stylesheet" href="lesson.css?v=6">
+<link rel="stylesheet" href="lesson.css?v=7">
 </head>
 <body>
 <div id="listView">
@@ -12,12 +12,12 @@
   <header>
     <small>Unit 1 of 12</small>
     <h1>Angles and radians</h1>
-    <p class="dim">Small steps. Each topic: a quick guess, a short lesson with worked examples, then practice until you get 4 right.</p>
+    <p class="dim">Small steps. Each topic: a quick guess, a short lesson with worked examples, then practice until you get 4 right. Angles you've learned come back later as quick, timed facts.</p>
     <div class="progress" id="unitBar"></div>
     <p class="dim" id="unitStatus"></p>
   </header>
+  <button class="quickFacts" id="quickFacts" hidden></button>
   <section class="topics" id="topicList"></section>
-  <p class="dim">Then drill the <a style="color:var(--blue)" href="facts.html">degrees ↔ radians facts</a> until they're automatic.</p>
   <p class="dim"><button class="link" id="reset">Clear my progress</button></p>
 </div>
 
@@ -35,6 +35,7 @@
     <div id="practice" hidden>
       <div class="dotsRow"><span class="progress small" id="dots"></span><small class="dim" id="dotsText"></small></div>
       <p class="q" id="qText"></p>
+      <div class="clock" id="qClock" hidden><i></i></div>
       <div class="choices text" id="choices"></div>
       <div id="padWrap" hidden><div class="padOut"><span id="padOut"></span><span class="dim" id="padUnit"></span></div><div class="pad" id="pad"></div></div>
       <div class="row"><button class="act" id="check">Check</button><button class="act" id="next" hidden>Next question</button></div>
@@ -45,7 +46,8 @@
 </div>
 
 <script type="module">
-import { runUnit, PI, TAU, D, C, deg, rad, piFrac, dec, options, pick } from './engine.js?v=6';
+import { angleIds } from './facts.js?v=2';
+import { runUnit, PI, TAU, D, C, deg, rad, piFrac, dec, options, pick } from './engine.js?v=7';
 
 const Q = ['', 'a quarter turn', 'two quarter turns (a half turn)', 'three quarter turns', 'a full turn'];
 const PART = { 0: '', 30: 'a third of a quarter turn', 45: 'half of a quarter turn', 60: 'two thirds of a quarter turn' };
@@ -84,17 +86,17 @@ const topics = [
       p => { const d = p([90, 45, 135, 30, 60, 180]); return readQ(D(-d), [-d, d, -(d + 45), -(d + 90), 360 - d].map(D), deg, degWhy); },
       p => readQ(D(p([45, 135, 270, 60])), [45, 135, 270, 60, -45, -135, -270, -60].map(D), deg, degWhy),
     ] },
-  { id: 'pi', title: 'Radians: π is a half turn', grid: D(90), snap: D(15),
+  { id: 'pi', title: 'Radians: π is a half turn', grid: D(90), snap: D(15), facts: angleIds([90, 180, 270, 360]),
     learn: '<p>Mathematicians usually measure turns in <b>radians</b>. The one fact to know: <b>a half turn is π</b>.</p><p>So a quarter turn is <b>π/2</b> and a full turn is <b>2π</b>. (Why π? That comes in topic 9.)</p>',
     gens: [
       p => dragQ(p([PI, PI / 2, 3 * PI / 2, -PI / 2, -PI]), rad, radWhy),
       p => readQ(p([PI / 2, PI, 3 * PI / 2, -PI / 2]), [PI / 2, PI, 3 * PI / 2, -PI / 2, 2 * PI], rad, radWhy),
       p => { const k = p([1, 2, 3, 4]), t = k * PI / 2; return { type: 'choice', prompt: `<b>${['', 'A quarter', 'A half', 'Three quarters of a', 'A full'][k]} turn</b> in radians is…`, ...options(t, [PI / 2, PI, 3 * PI / 2, 2 * PI, 4 * PI], rad), show: { t }, why: `A half turn is π, so ${['', 'a quarter turn is half of that: π/2', 'it is π', 'three quarter turns are 3 × π/2 = 3π/2', 'a full turn is two of them: 2π'][k]}.` }; },
     ] },
-  { id: 'quarters', title: 'Steps of π/4', grid: D(45), snap: D(15),
+  { id: 'quarters', title: 'Steps of π/4', grid: D(45), snap: D(15), facts: angleIds([45, 135, 225, 315]),
     learn: '<p>Half of a quarter turn is <b>π/4</b> (45°).</p><p>Count in π/4 steps: π/4, 2π/4 = π/2, <b>3π/4</b>, 4π/4 = π, 5π/4…</p>',
     gens: [p => dragQ(p(R4), rad, radWhy), p => readQ(p(R4), R4.concat([PI / 2, PI]), rad, radWhy)] },
-  { id: 'sixths', title: 'Steps of π/6 and π/3', grid: D(30), snap: D(15),
+  { id: 'sixths', title: 'Steps of π/6 and π/3', grid: D(30), snap: D(15), facts: angleIds([30, 60, 120, 150, 210, 240, 300, 330]),
     learn: '<p>Cut a half turn into <b>6 steps</b>: each is <b>π/6</b> (30°).</p><p>Two steps, 2π/6, simplify to <b>π/3</b> (60°). Four steps are <b>2π/3</b>.</p>',
     gens: [p => dragQ(p(R6), rad, radWhy), p => readQ(p(R6), R6, rad, radWhy)] },
   { id: 'convert', title: 'Switching degrees and radians', grid: D(30),
@@ -107,6 +109,8 @@ const topics = [
           why: `${d}/180 of a half turn: ${d}° = ${rad(t)}.`, hint: v => Math.abs(v - d) < .5 ? 'That\'s still in degrees. Use π for each half turn.' : null }; },
       p => { const d = p([30, 45, 60, 120, 135, 150, 210, 240, 300]), t = D(d); return { type: 'choice', prompt: `<b>${d}°</b> in radians is…`, ...options(t, [PI / 6, PI / 4, PI / 3, 2 * PI / 3, 3 * PI / 4, 5 * PI / 6, 7 * PI / 6, 4 * PI / 3, 5 * PI / 3, 3 * PI / 2], rad), show: { t }, why: `${d}/180 of a half turn, so ${rad(t)}.` }; },
     ] },
+  { id: 'by-heart', title: 'Know the 16 angles by heart', grid: D(15), drill: true, goal: 8,
+    learn: '<p>π = 180°. Building blocks: <b>π/6 = 30°</b>, <b>π/4 = 45°</b>, <b>π/3 = 60°</b>, <b>π/2 = 90°</b>.</p><p>The denominator tells you the family: <b>/6</b> → 30°, 150°, 210°, 330°; <b>/4</b> → 45°, 135°, 225°, 315°; <b>/3</b> → 60°, 120°, 240°, 300°.</p>' },
   { id: 'wrap', title: 'More than a full turn', grid: D(45), snap: D(15),
     learn: '<p>Keep turning past a full turn and the angle keeps growing.</p><p><b>2π + π/2 = 5π/2</b> ends in the same place as π/2. Angles that end together are called <b>coterminal</b>.</p>',
     gens: [
@@ -230,6 +234,15 @@ const LESSONS = {
     TRY('<p><b>Your turn.</b> The radius is 4 cm. Drag to <b>2 radians</b>. How long is that arc?</p>', 2, '4 × 2 = 8 cm', { string: true, hint: 'Two strings of edge.', done: '4 cm × 2 = 8 cm of edge.' }),
   ],
 };
+LESSONS['by-heart'] = [
+  P('<p><b>Quick guess.</b> Once you really know it, how long should it take to say what <b>5π/6</b> is in degrees?</p>', { t: 5 * PI / 6 },
+    ['About a second', 'About 10 seconds', 'About a minute'], 0, 'About a second, the way 7 × 8 = 56 just comes to you. That\'s the goal of this topic.'),
+  S('<p>You can now <b>work out</b> any of these angles. This topic is about not having to.</p><p>Every later unit (triangles, the unit circle, the graphs) is written in these 16 angles. If each one costs 10 seconds of working, there\'s no attention left for the new idea. So these get memorised, like times tables.</p>', undefined, '', { show: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(k => dimRay(k * PI / 6, rad(k * PI / 6))).concat([3, 5, 7].map(k => dimRay(k * PI / 4, rad(k * PI / 4)))) }),
+  S('<p><b>The whole system on one screen:</b> π = 180°, and four building blocks: π/6 = 30°, π/4 = 45°, π/3 = 60°, π/2 = 90°.</p><p>Every other angle is a count of one block. <b>5π/6</b> is 5 × 30° = <b>150°</b>.</p>', 5 * PI / 6, '5 × 30° = 150°', { play: { t: 5 * PI / 6, label: '5 × 30° = 150°', ms: 1400 } }),
+  S('<p><b>The shortcut to recognise them:</b> the bottom number tells you the family.</p><p><b>/6</b>: 30°, 150°, 210°, 330° (just off the horizontal). <b>/4</b>: the diagonals, 45°, 135°, 225°, 315°. <b>/3</b>: 60°, 120°, 240°, 300° (just off the vertical).</p>', undefined, '', { show: [1, 5, 7, 11].map(k => ({ t: k * PI / 6, label: rad(k * PI / 6), color: C.green })).concat([1, 3, 5, 7].map(k => dimRay(k * PI / 4, rad(k * PI / 4)))) }),
+  TRY('<p><b>Your turn.</b> Drag to <b>4π/3</b>: four steps of π/3 (60° each).</p>', 4 * PI / 3, '4 × 60° = 240°', { hint: 'π/3 is 60°. Four of those.', done: '4 × 60° = 240°.', grid: D(30), snap: D(15) }),
+  S('<p><b>How this practice works:</b> it\'s timed. Only answers <b>under 3 seconds</b> count; slow or wrong ones come back.</p><p>After this topic the angles keep returning as <b>Quick facts</b>, now and then in practice and in a short review on the topic list, spaced further apart the better you know them.</p>', 4 * PI / 3, '240°'),
+];
 topics.forEach(t => t.lesson = LESSONS[t.id]);
 
 window.u1 = runUnit({ unit: 1, topics, storeKey: 'trig-unit1-v2' });

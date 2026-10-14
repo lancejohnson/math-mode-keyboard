@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Trig facts to know by heart</title>
-<link rel="stylesheet" href="lesson.css?v=6">
+<link rel="stylesheet" href="lesson.css?v=7">
 <style>
 .deck{display:block;width:100%;text-align:left;background:#141926;border:1px solid #3b5bdb;border-radius:12px;padding:12px;margin:10px 0;color:var(--ink);font:inherit}
 .deck b{font-size:17px}.deck small{display:block;color:var(--dim);font-size:13px;margin-top:2px}
@@ -62,9 +62,8 @@ details.aid summary{color:var(--blue);cursor:pointer}
 </div>
 
 <script type="module">
-import { DECKS, CARDS, FAST, radOf, promptFor, choicesFor, choiceText, status, record, buildRound, requeue, deckSummary } from './facts.js?v=1';
+import { DECKS, CARDS, FAST, KEY, radOf, promptFor, choicesFor, choiceText, status, record, buildRound, requeue, deckSummary } from './facts.js?v=2';
 const $ = s => document.querySelector(s);
-const KEY = 'trig-facts-v1';
 let state = {}; try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { } };
 const COL = { automatic: 'var(--green)', slow: 'var(--amber)', shaky: '#ff8787', new: '#4a5470' };
