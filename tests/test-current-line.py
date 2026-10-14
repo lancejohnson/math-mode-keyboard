@@ -49,7 +49,7 @@ def run_ink_checks(page):
     fail[0]=False;page.unroute('**/api/recognize',fixture)
     page.evaluate("""()=>{window.realFetch=window.fetch;window.pendingReads=[];window.fetch=(url,...args)=>url==='/api/recognize'?new Promise(resolve=>window.pendingReads.push((latex)=>resolve(new Response(JSON.stringify({lines:[{latex,uncertain:false}],warnings:[],model:'bttr-local'}),{headers:{'Content-Type':'application/json'}})))):window.realFetch(url,...args);} """)
     convert();page.wait_for_function('window.pendingReads.length===1');r=canvas.bounding_box()
-    newline();assert canvas.bounding_box()==r
+    newline();after=canvas.bounding_box();assert after['width']==r['width'] and abs(after['y']+after['height']-r['y']-r['height'])<1 and after['height']>=r['height']-200
     assert page.locator('#inkCompleted .pending:visible').count()==1 and current().count()==0
     archived_id=ink_state()['inkConversions'][0]['lineId'];assert ink_state()['inkLineId']!=archived_id
     draw();second_ink=ink_state()['strokes'];convert();page.wait_for_function('window.pendingReads.length===2')
@@ -96,7 +96,7 @@ def run_ink_checks(page):
         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
         for name in ['Undo handwriting','New line ↑','Convert']:
             target=page.get_by_role('button',name=name,exact=True);box=target.bounding_box();assert box['height']>=44 and box['x']+box['width']<=width
-        assert 96<=canvas.bounding_box()['height']<=225
+        past=page.locator('#inkPast').bounding_box();assert past['height']<=min(.26*height,180)+1 and canvas.bounding_box()['height']>=max(past['height'],.3*height)-1,(width,height,past,canvas.bounding_box())
         assert page.locator('#inkCompleted').bounding_box()['y']<canvas.bounding_box()['y']
     page.set_viewport_size({'width':390,'height':844})
     out=ROOT/'.artifacts/live';out.mkdir(parents=True,exist_ok=True);page.screenshot(path=str(out/'current-line-workspace.png'))

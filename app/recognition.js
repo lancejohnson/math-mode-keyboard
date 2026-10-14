@@ -110,6 +110,7 @@ export function createInkRecognition({getProblem,makeField,remember,save,redraw,
       wrap.append(math,more,actions);wrap.dataset.signature=signature(group);
     }
     typed.hidden=!groups.some(g=>g.lineId===lineId);pan();
+    document.querySelector('#inkPast').hidden=!groups.some(g=>g.lineId!==lineId);
     if(follow&&!completed.contains(document.activeElement))completed.scrollTop=completed.scrollHeight;
   }
   function placement(strokes){
