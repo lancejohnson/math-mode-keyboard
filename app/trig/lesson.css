@@ -45,3 +45,22 @@ input.ans{width:150px;font-size:18px;padding:8px;border-radius:8px;border:1px so
 .units a,.units div{display:block;background:#141926;border-radius:12px;padding:10px 12px;margin:8px 0;color:var(--ink);text-decoration:none}
 .units a{border:1px solid #3b5bdb}.units div{opacity:.55}.units b{color:var(--blue);margin-right:6px}
 .units small{display:block;color:var(--dim);font-size:13px}
+/* v2: small-topic practice */
+button.link{background:none;border:0;color:var(--blue);font:inherit;font-size:14px;padding:6px 0}
+.topics{padding:8px}
+.topic{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#141926;border:1px solid #3b5bdb;border-radius:12px;padding:12px;margin:6px 0;color:var(--ink);font-size:16px;min-height:52px}
+.topic b{flex:none;width:28px;height:28px;border-radius:50%;background:#2c3448;display:grid;place-items:center;font-size:14px}
+.topic small{margin-left:auto;color:var(--blue);font-size:13px;white-space:nowrap}
+.topic.done{border-color:#2f6f45}.topic.done b{background:#2f6f45;color:var(--green)}.topic.done small{color:var(--green)}
+.topic:disabled{opacity:.45;border-color:#2c3448}.topic:disabled small{color:var(--dim)}
+.learn{font-size:17px}.learn p{margin:8px 0}
+.dotsRow{display:flex;align-items:center;gap:10px}.progress.small{width:120px;margin:0}
+.q{font-size:18px}
+.tag{background:#5f3dc4;border-radius:6px;padding:1px 6px;font-size:12px;vertical-align:2px}
+.padOut{display:flex;justify-content:space-between;align-items:center;font:600 24px/1 system-ui;background:#10131a;border:1px solid #39425a;border-radius:10px;padding:10px 12px;min-height:50px;margin:6px 0}
+.padOut .dim{font-size:16px}
+.pad{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.pad button{background:#2c3448;color:var(--ink);border:0;border-radius:10px;font:600 20px system-ui;min-height:48px}
+.pad button[data-k="π"],.pad button[data-k="/"]{background:#33406a}
+#feedback p{margin:6px 0}
+[hidden]{display:none!important}

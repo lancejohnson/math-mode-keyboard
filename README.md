@@ -61,7 +61,7 @@ GitHub Pages was not used: this account inherits a custom domain pointing elsewh
 ## Trigonometry course (draft)
 
 `app/trig/` is a trigonometry course built in the intuition-first style; the outline is in
-`docs/trig-course.md`. Unit 1, angles and radians (`app/trig/unit1.html`), has six parts:
-predict rounds, a model you drag to turn an angle (negative and multi-turn angles included),
-a degrees-to-radians recipe, a bike-wheel problem, a drawn angle that is graded, and generated
-practice with worked solutions. Test: `uv run -q --with playwright python tests/test-trig-unit1.py`.
+`docs/trig-course.md`. Unit 1, angles and radians (`app/trig/unit1.html`), is 10 small topics built on a shared
+engine (`app/trig/engine.js`). Each topic is one idea, an animated example, then practice
+(drag the dot, tap a choice, or type on a small pad) until 4 are right; later topics mix in
+review. Progress is kept in localStorage. Test: `uv run -q --with playwright python tests/test-trig-unit1.py`.
