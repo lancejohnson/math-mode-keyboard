@@ -63,7 +63,7 @@ def nxt(page):
 
 
 def lesson(page, shot=None):
-    """Step through the lesson; on "your turn" steps, Next stays disabled until the dot is dragged there."""
+    """Step through the lesson; on "your turn" steps, Next stays disabled until the dot is dragged there and Check confirms it."""
     k = 0
     while page.inner_text('#stepNext') != 'Start practice →' or page.evaluate('!!u1.step().try') and page.locator('#stepNext').is_disabled():
         st = page.evaluate('u1.step()')
@@ -76,9 +76,11 @@ def lesson(page, shot=None):
         elif st.get('try'):
             assert page.locator('#stepNext').is_disabled()
             w = st['try']['t'] + math.pi / 2
-            drag_to(page, w); assert page.locator('#stepNext').is_disabled(), (st, page.evaluate('u1.wheel.s.cur'), page.inner_text('#tryMsg'))
+            drag_to(page, w); assert page.locator('#stepNext').is_disabled() and '✓' not in page.inner_text('#tryMsg'), (st, page.inner_text('#tryMsg'))
+            page.click('#tryCheck'); assert page.locator('#stepNext').is_disabled() and '✗' in page.inner_text('#tryMsg'), page.inner_text('#tryMsg')
             drag_to(page, st['try']['t'], w)
-            assert page.locator('#stepNext').is_enabled(), st
+            assert page.locator('#stepNext').is_disabled() and '✓' not in page.inner_text('#tryMsg'), 'no answer shown before Check'
+            page.click('#tryCheck'); assert page.locator('#stepNext').is_enabled() and '✓' in page.inner_text('#tryMsg'), st
             if shot and not (OUT / shot).exists(): page.locator('#topicView').screenshot(path=str(OUT / shot))
             if page.inner_text('#stepNext') == 'Start practice →': break
         elif ARGS.slow:

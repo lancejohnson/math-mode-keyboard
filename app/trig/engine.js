@@ -165,7 +165,7 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
     $('#stepDots').innerHTML = L.map((_, j) => `<i class="${j < si ? 'ok' : j === si ? 'now' : ''}"></i>`).join('');
     $('#say').innerHTML = st.say; $('#tryMsg').innerHTML = ''; $('#stepBack').disabled = si === 0;
     $('#stepNext').textContent = si === L.length - 1 ? 'Start practice →' : 'Next';
-    $('#replay').hidden = !st.play; wheel.onturn = null; cancelAnimationFrame(wheel.anim); $('#predChoices').hidden = !st.predict;
+    $('#replay').hidden = !st.play; $('#tryCheck').hidden = true; wheel.onturn = null; cancelAnimationFrame(wheel.anim); $('#predChoices').hidden = !st.predict;
     if (st.predict) {
       const pr = st.predict, picked = prog.pred?.[T().id];
       const order = pr.choices.map((_, j) => j).sort(() => Math.random() - .5);
@@ -180,12 +180,19 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
     } else if (st.try) {
       const tr = st.try; $('#stepNext').disabled = true; $('#replay').hidden = true;
       wheel.set({ grid, snap: tr.snap ?? T().snap, string: tr.string, cur: 0, drag: true });
-      $('#tryMsg').innerHTML = `<span class="dim">Drag the pink dot.</span>`;
-      wheel.onturn = () => {
-        const c = wheel.s.cur, ok = same(c, tr.t); $('#stepNext').disabled = !ok; wheel.s.curLabel = ok ? tr.label : ''; wheel.render();
-        if (ok) { $('#tryMsg').innerHTML = `<span class="ok">✓ ${tr.done || 'That\'s it.'}</span>`; $('#stepNext').disabled = false; }
-        else if (same(norm(c), norm(tr.t)) && c) $('#tryMsg').innerHTML = `<span class="no">Right spot, but ${Math.sign(c) !== Math.sign(tr.t) ? 'turn the other way' : 'count the full turns'}.</span>`;
-        else $('#tryMsg').innerHTML = `<span class="dim">${tr.hint || 'Keep turning.'}</span>`;
+      // No live "that's it": the learner commits with Check, like a real answer.
+      const ask = '<span class="dim">Drag the pink dot, then tap Check.</span>';
+      $('#tryMsg').innerHTML = ask; $('#tryCheck').hidden = false; $('#tryCheck').disabled = true;
+      wheel.onturn = () => { $('#tryCheck').disabled = false; $('#tryMsg').innerHTML = ask; };
+      $('#tryCheck').onclick = () => {
+        const c = wheel.s.cur, ok = same(c, tr.t);
+        if (ok) {
+          wheel.set({ ...wheel.s, drag: false, curLabel: tr.label }); wheel.onturn = null;
+          $('#tryMsg').innerHTML = `<span class="ok">✓ ${tr.done || 'That\'s it.'}</span>`; $('#tryCheck').hidden = true; $('#stepNext').disabled = false;
+        } else {
+          const msg = same(norm(c), norm(tr.t)) && c ? `Right spot, but ${Math.sign(c) !== Math.sign(tr.t) ? 'turn the other way' : 'count the full turns'}.` : `Not quite. ${tr.hint || 'Try again.'}`;
+          $('#tryMsg').innerHTML = `<span class="no">✗ ${msg}</span> <span class="dim">Move the dot and check again.</span>`; $('#tryCheck').disabled = true;
+        }
       };
     } else {
       $('#stepNext').disabled = false; play();

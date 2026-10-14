@@ -31,7 +31,7 @@
     <div id="lessonTop"><div class="progress" id="stepDots"></div><div class="learn say" id="say"></div><div class="choices text" id="predChoices" hidden></div></div>
     <canvas id="wheel" aria-label="Angle circle"></canvas>
     <div id="lesson"><p class="tryMsg" id="tryMsg"></p>
-      <div class="row"><button class="act alt" id="stepBack">Back</button><button class="act alt" id="replay">↻ Replay</button><button class="act" id="stepNext">Next</button></div></div>
+      <div class="row"><button class="act alt" id="stepBack">Back</button><button class="act alt" id="replay">↻ Replay</button><button class="act" id="tryCheck" hidden>Check</button><button class="act" id="stepNext">Next</button></div></div>
     <div id="practice" hidden>
       <div class="dotsRow"><span class="progress small" id="dots"></span><small class="dim" id="dotsText"></small></div>
       <p class="q" id="qText"></p>
@@ -47,7 +47,7 @@
 
 <script type="module">
 import { angleIds } from './facts.js?v=2';
-import { runUnit, PI, TAU, D, C, deg, rad, piFrac, dec, options, pick } from './engine.js?v=8';
+import { runUnit, PI, TAU, D, C, deg, rad, piFrac, dec, options, pick } from './engine.js?v=9';
 
 const Q = ['', 'a quarter turn', 'two quarter turns (a half turn)', 'three quarter turns', 'a full turn'];
 const PART = { 0: '', 30: 'a third of a quarter turn', 45: 'half of a quarter turn', 60: 'two thirds of a quarter turn' };
