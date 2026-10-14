@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>How Math Mode reads time · review model explainer</title>
+<style>
+:root{color-scheme:dark;--bg:#12151c;--card:#1b2030;--ink:#e8eaf0;--dim:#9aa4b8;--blue:#74c0fc;--pink:#f783ac;--green:#8ce99a;--amber:#ffd43b;--violet:#b197fc;--red:#ff8787}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,system-ui,sans-serif;padding:0 12px calc(40px + env(safe-area-inset-bottom))}
+main{max-width:760px;margin:0 auto}
+header{padding:18px 4px 6px}
+header small{color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-size:12px}
+h1{font-size:24px;margin:4px 0 6px;line-height:1.2}
+section{background:var(--card);border-radius:16px;padding:14px 16px;margin:14px 0}
+h2{font-size:19px;margin:0 0 6px}
+h2 b{display:inline-block;background:#3b5bdb;border-radius:8px;padding:0 8px;margin-right:6px;font-size:14px;vertical-align:2px}
+h3{font-size:16px;margin:14px 0 4px;color:var(--blue)}
+p{margin:6px 0}
+.dim{color:var(--dim);font-size:14px}
+.eq{font:600 20px/1.3 "Times New Roman",serif;text-align:center;margin:10px 0;padding:8px;background:#141926;border-radius:10px;overflow-x:auto;white-space:nowrap}
+.eq i{color:var(--amber);font-style:italic}
+canvas{display:block;width:100%;border-radius:12px;background:#10131a;margin:8px 0}
+label.s{display:grid;grid-template-columns:7.5em 1fr 4.2em;gap:8px;align-items:center;font-size:14px;margin:6px 0}
+label.s output{text-align:right;font-variant-numeric:tabular-nums;color:var(--amber)}
+input[type=range]{width:100%;accent-color:#5c7cfa}
+table{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0}
+th,td{border-bottom:1px solid #2c3448;padding:7px 6px;text-align:left;vertical-align:top}
+th{color:var(--dim);font-weight:600}
+.scroll{overflow-x:auto}
+.out{background:#141926;border-radius:10px;padding:10px;font-size:15px;margin-top:8px}
+.out b{color:var(--amber)}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:13px;font-weight:600}
+.lv-recognize{background:#2c3448;color:var(--ink)}.lv-explain{background:#1c3d5a;color:var(--blue)}.lv-fluent{background:#3a2f5c;color:var(--violet)}.lv-automatic{background:#1f4630;color:var(--green)}
+.bar{display:flex;height:26px;border-radius:8px;overflow:hidden;margin:8px 0;font-size:12px;font-weight:600}
+.bar span{display:flex;align-items:center;justify-content:center;color:#10131a;white-space:nowrap;overflow:hidden}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:13px;color:var(--dim)}
+.legend i{display:inline-block;width:12px;height:3px;vertical-align:middle;margin-right:4px}
+blockquote{margin:8px 0;padding:6px 12px;border-left:4px solid var(--violet);color:#d0d4e0;font-size:15px;background:#161b28;border-radius:0 8px 8px 0}
+.verdict{border-left:4px solid var(--green);padding:6px 12px;background:#15241b;border-radius:0 8px 8px 0;margin:8px 0}
+ul{padding-left:20px;margin:6px 0}li{margin:3px 0}
+code{background:#10131a;padding:1px 5px;border-radius:5px;font-size:13px}
+nav{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px}nav a{color:var(--blue);font-size:14px;white-space:nowrap}
+.seg{display:flex;gap:6px;margin:6px 0;flex-wrap:wrap}
+.seg button{background:#232a3d;border:1px solid #39425a;color:var(--ink);border-radius:999px;padding:7px 12px;font-size:14px;min-height:38px}
+.seg button[aria-pressed=true]{background:#2b3a66;border-color:var(--blue)}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <small>Math Mode · design reference · October 2026</small>
+  <h1>How reviews read the clock</h1>
+  <p class="dim">The model behind non-speed reviews: what “expected time” means, how it falls with practice, how forgetting slows it, what each mastery level asks for, how we catch blown-off work, and how XP is awarded. Code: <code>app/model/timing.js</code> (tests in <code>timing.test.js</code>). Every chart below runs that same code.</p>
+  <nav><a href="#short">Short version</a><a href="#curve">Curve</a><a href="#floor">Floor</a><a href="#forget">Forgetting</a><a href="#score">Scoring</a><a href="#levels">Levels</a><a href="#effort">Effort</a><a href="#xp">XP</a><a href="#sources">Sources</a><a href="#tune">To tune</a></nav>
+</header>
+
+<section id="short">
+  <h2><b>0</b>The short version</h2>
+  <ul>
+    <li><b>Every problem has a floor:</b> the time someone who has truly mastered it would take — reading it, thinking through each step, and physically writing the answer.</li>
+    <li><b>Practice shrinks the gap above the floor.</b> For one learner on one topic the gap shrinks roughly exponentially. Averaged over many learners it looks like the famous “power law of practice”.</li>
+    <li><b>Forgetting adds time back.</b> A slow answer three weeks after the last review is partly fading memory, so we excuse that part before judging mastery.</li>
+    <li><b>We score an attempt by how much of the gap it closed</b> (0 = beginner speed, 1 = at the floor), so every problem, learner and level sits on one 0–1 scale.</li>
+    <li><b>Time never fails a correct answer.</b> It scales credit between 0.7× and 1.3× and decides whether the memory model hears “hard”, “good” or “easy”.</li>
+    <li><b>Mastery levels are points on the curve:</b> recognize (no time rule), explain &amp; sketch (starts promptly), fluent (within 1.5× the floor), automatic (within 1.2× the floor <i>and</i> consistent).</li>
+    <li><b>XP = minutes of focused work for a typical learner</b>, with Math Academy’s carrot-and-stick bands, including a penalty for blowing off a task.</li>
+  </ul>
+</section>
+
+<section id="curve">
+  <h2><b>1</b>The learning curve</h2>
+  <div class="eq"><i>T</i>(<i>n</i>) = floor + (start − floor) · e<sup>−rate · <i>n</i></sup></div>
+  <p><i>n</i> is the number of practices so far. <b>start</b> is a typical first attempt. <b>rate</b> is fitted for each learner on each topic from their own times. The dashed line is the power-law shape you get when you average many learners together; individual learners look exponential (Heathcote, Brown &amp; Mewhort 2000).</p>
+  <canvas id="cv" width="720" height="600" aria-label="Learning curve chart"></canvas>
+  <div class="legend"><span><i style="background:var(--blue)"></i>expected time</span><span><i style="background:#9aa4b8"></i>power-law (group average)</span><span><i style="background:var(--violet)"></i>fluent line (1.5× floor)</span><span><i style="background:var(--green)"></i>automatic line (1.2× floor)</span><span>● simulated attempts, coloured by level shown</span></div>
+  <p class="dim">Across: practices (n). Up: seconds.</p>
+  <label class="s">Floor (s)<input type="range" id="cFloor" min="3" max="60" value="12"><output id="oFloor"></output></label>
+  <label class="s">Start (× floor)<input type="range" id="cStart" min="1.5" max="8" step="0.1" value="4"><output id="oStart"></output></label>
+  <label class="s">Rate<input type="range" id="cRate" min="0.05" max="1.2" step="0.01" value="0.35"><output id="oRate"></output></label>
+  <label class="s">Noise<input type="range" id="cNoise" min="0" max="0.5" step="0.01" value="0.18"><output id="oNoise"></output></label>
+  <div class="out" id="curveOut"></div>
+  <p class="dim">Each simulated learner’s times wobble around the curve; the dots are re-scored with the same level rules the app will use. Notice that “automatic” needs the dots to bunch up, not just to fall. Dots can slip back a level when recent answers wobble; the stored record keeps the highest level shown, and a slip only shortens the next review interval.</p>
+</section>
+
+<section id="floor">
+  <h2><b>2</b>Where the floor comes from</h2>
+  <div class="eq">floor = reading + thinking + writing</div>
+  <ul>
+    <li><b>Reading:</b> about 0.25 s per word of the prompt.</li>
+    <li><b>Thinking:</b> about 1.35 s per solution step — the “mental preparation” step in the Keystroke-Level Model used to estimate expert task times (Card, Moran &amp; Newell 1980).</li>
+    <li><b>Writing:</b> number of symbols in the answer × <i>this learner’s</i> seconds per symbol. We measure that once with a short copy test (copy a printed expression), because handwriting speed differs a lot between people and is not math skill.</li>
+  </ul>
+  <label class="s">Prompt words<input type="range" id="fWords" min="0" max="60" value="12"><output id="oWords"></output></label>
+  <label class="s">Steps<input type="range" id="fSteps" min="1" max="12" value="3"><output id="oSteps"></output></label>
+  <label class="s">Symbols written<input type="range" id="fSym" min="1" max="80" value="18"><output id="oSym"></output></label>
+  <label class="s">s per symbol<input type="range" id="fSps" min="0.3" max="1.5" step="0.05" value="0.7"><output id="oSps"></output></label>
+  <div class="bar" id="floorBar"></div>
+  <div class="out" id="floorOut"></div>
+  <p class="dim">This is only the first guess. Once real attempts exist, the floor for a problem becomes the fastest 10% of correct times from experienced learners (or Lance’s own times), adjusted for each learner’s writing speed. If a learner keeps beating the floor, the floor was set too high and gets lowered.</p>
+</section>
+
+<section id="forget">
+  <h2><b>3</b>Forgetting slows recall</h2>
+  <div class="eq">expected × (1 + k · (1 − <i>R</i>))</div>
+  <p><i>R</i> is retrievability from the memory model: the chance the learner can still recall the topic today (1 right after a review, falling over the days). In the ACT-R memory model, recall gets slower as a memory weakens (Anderson; Pavlik &amp; Anderson 2005). We start with <i>k</i> = 1, so at <i>R</i> = 0.7 we expect answers to take 30% longer, and we don’t count that 30% against mastery.</p>
+  <label class="s">Retrievability R<input type="range" id="gR" min="0.3" max="1" step="0.01" value="0.75"><output id="oR"></output></label>
+  <label class="s">Answer time (s)<input type="range" id="gT" min="5" max="60" value="17"><output id="oT"></output></label>
+  <div class="out" id="forgetOut"></div>
+</section>
+
+<section id="score">
+  <h2><b>4</b>Scoring one attempt</h2>
+  <div class="eq">gap closed = (ln start − ln <i>t</i>) ÷ (ln start − ln floor), clipped to 0…1</div>
+  <p>Measured on a log scale, because halving your time from 40 s to 20 s is about as much progress as halving it from 20 s to 10 s. <i>t</i> is the answer time after the forgetting allowance.</p>
+  <table><thead><tr><th>Gap closed</th><th>Credit multiplier</th><th>Grade sent to the memory model</th></tr></thead>
+  <tbody><tr><td>under 0.33</td><td>0.7× – 0.9×</td><td>hard (next review sooner)</td></tr><tr><td>0.33 – 0.8</td><td>0.9× – 1.18×</td><td>good</td></tr><tr><td>0.8 and up</td><td>1.18× – 1.3×</td><td>easy (next review later)</td></tr><tr><td colspan="3">A wrong answer is “again” regardless of time.</td></tr></tbody></table>
+  <p class="dim">Math Academy does the same in spirit: “if a student submits a correct answer but takes an excessively long time relative to the expected time for a student who has mastered the topic, the weight of that evidence is diminished” (mathacademy.com, How Our AI Works).</p>
+</section>
+
+<section id="levels">
+  <h2><b>5</b>Mastery levels as targets on the curve</h2>
+  <p>Each topic carries a required level (default per topic, overridable per course or learner). A topic can have several requirements, each with its own memory record. A question type can only demonstrate levels up to its ceiling (multiple choice tops out at recognize).</p>
+  <div class="scroll"><table><thead><tr><th>Level</th><th>Time rule</th><th>Why</th></tr></thead><tbody>
+    <tr><td><span class="pill lv-recognize">Recognize</span></td><td>None. Correct is enough.</td><td>Recognition questions are quick by nature; time adds little.</td></tr>
+    <tr><td><span class="pill lv-explain">Explain &amp; sketch</span></td><td>First stroke within 2× the start floor (reading + one step); at most 1 restart.</td><td>Someone who understands starts promptly and doesn’t scrap their sketch twice. Total time varies too much with how much they choose to write.</td></tr>
+    <tr><td><span class="pill lv-fluent">Fluent</span></td><td>Median of the last 3 correct answers within 1.5× the floor.</td><td>Procedures you can do without struggling.</td></tr>
+    <tr><td><span class="pill lv-automatic">Automatic</span></td><td>Median of the last 5 correct within 1.2× the floor, and spread of log times ≤ 0.25.</td><td>Automatic skills are fast <i>and</i> consistent (Segalowitz &amp; Segalowitz 1993). Usually earned on the speed track, not here.</td></tr>
+  </tbody></table></div>
+  <p>Unlocking: a topic opens when every prerequisite has reached its required level. Partial credit from harder topics (FIRe) can keep a prerequisite’s memory fresh, but cannot raise its level — a level is only shown directly.</p>
+</section>
+
+<section id="effort">
+  <h2><b>6</b>Effort: Math Academy’s penalty, and whether we need one</h2>
+  <h3>What Math Academy does</h3>
+  <blockquote>“…in the absence of a penalty system, adversarial students will complete tasks that they feel are easy and then submit random guesses to intentionally fail out of tasks that require more effort. This tanks their performance, causing their adaptive learning schedule to slow down or even begin falling backwards.” — <i>The Math Academy Way</i>, p. 312</blockquote>
+  <ul>
+    <li>They call these students “XP hackers”: they are minimizing effort per XP. The penalty takes XP away when a task is blown off, “and even more XP if they continue blowing off tasks” (p. 313), so the cheapest way to earn XP becomes honest work.</li>
+    <li>Triggers are “patterns indicating lack of effort (e.g., rushing and guessing)” (p. 431); the FAQ says the system “detects that the student is rushing and guessing”.</li>
+    <li>Calibration: “how frustrated a teacher, tutor, or guardian sitting next to the student would become” (p. 313).</li>
+    <li>Result: many adversarial students’ pass rates rose from under 50% to over 90%; diligent students rarely see a penalty (p. 313).</li>
+  </ul>
+  <h3>Is it only because of multiple choice?</h3>
+  <div class="verdict"><b>No.</b> The book never ties the penalty to multiple choice. The problem is the incentive: failing a hard task gets you out of it (it is postponed and you are moved to other work), so a student who wants XP cheaply fails hard tasks on purpose. Multiple choice only makes the junk answer quicker to give. Free-response handwriting removes lucky guesses, <i>not</i> the incentive — a learner can still scribble “0” on every hard question to make it go away.</div>
+  <h3>What we do</h3>
+  <ul>
+    <li><b>Detect, always.</b> An answer is <b>rushed</b> if it is wrong and took less than half the time needed just to <i>write</i> the expected answer (we already know the writing floor). An answer is <b>blank</b> if no ink. Rushed and blank answers are not treated as forgetting — they tell the scheduler nothing about memory, so they don’t drag the schedule backwards.</li>
+    <li><b>Penalize only when there are stakes.</b> For Lance learning on his own, there is no one to game, so the penalty can be off; the detection still protects the schedule. For students (children, classes), turn it on: two or more rushed answers making up half the task → negative XP (half the task’s XP, growing with repeat blow-offs, capped at 2×).</li>
+    <li><b>Explain &amp; sketch questions are graded by features</b>, so a junk sketch fails on content; the effort check catches the speed of giving up.</li>
+  </ul>
+</section>
+
+<section id="xp">
+  <h2><b>7</b>XP: how Math Academy does it, and ours</h2>
+  <h3>Math Academy</h3>
+  <ul>
+    <li><b>1 XP ≈ 1 minute of fully focused, productive work for an average serious (but imperfect) student</b> (p. 309). A typical course is ~3,000 XP; prealgebra ~2,000, precalculus ~4,000, AP Calculus BC ~6,000 (pp. 49, 388).</li>
+    <li>Recommended pace: 20–40 XP a day, 3–5 days a week; 40 XP per weekday is the benchmark; at least 15 (FAQ; p. 389).</li>
+    <li>Every task type earns XP: lessons, reviews, multi-step problems and quizzes (a timed quiz roughly every 150 XP).</li>
+    <li><b>Carrot and stick</b> (p. 311): bonus XP for perfect, full for nearly perfect, most for passable, a little for nearly passable, zero for poor, negative for blowing off a task.</li>
+    <li><b>XP is not progress.</b> Progress is the share of topics completed and only moves when a lesson is passed; XP needed varies with performance (pp. 313–314).</li>
+    <li>Weekly leagues by XP, promotion and demotion (p. 310). Warning signs: failing more than 1 in 10 lessons, any negative XP, or half or fewer XP per minute worked (p. 431).</li>
+    <li>The exact numbers per band are not published.</li>
+  </ul>
+  <h3>Ours</h3>
+  <ul>
+    <li><b>Base XP = the typical learner’s expected minutes for the task</b>, straight from the curve above (the typical learner’s <i>n</i>, not this learner’s). Faster learners therefore earn more XP per minute — which is the reward for real fluency.</li>
+    <li>Explain &amp; sketch, sketch-the-graph and predict-observe-explain tasks earn XP like any other, by their expected time — so the intuition work that sets this course apart is not second-class.</li>
+    <li>Partial credit from other topics (FIRe) earns <b>no</b> XP; XP is only for work done.</li>
+    <li>Progress is shown separately: topics at their required level ÷ topics in the course.</li>
+  </ul>
+  <label class="s">Typical minutes<input type="range" id="xBase" min="2" max="30" value="10"><output id="oBase"></output></label>
+  <label class="s">Questions<input type="range" id="xTot" min="3" max="10" value="5"><output id="oTot"></output></label>
+  <label class="s">Correct<input type="range" id="xCor" min="0" max="10" value="5"><output id="oCor"></output></label>
+  <label class="s">Rushed<input type="range" id="xRush" min="0" max="10" value="0"><output id="oRush"></output></label>
+  <label class="s">Earlier blow-offs<input type="range" id="xPrior" min="0" max="5" value="0"><output id="oPrior"></output></label>
+  <div class="out" id="xpOut"></div>
+  <table><thead><tr><th>Band</th><th>Condition (ours)</th><th>XP</th></tr></thead><tbody>
+    <tr><td>Perfect</td><td>passed, every question right</td><td>1.25× base</td></tr>
+    <tr><td>Nearly perfect</td><td>passed, ≥ 90% right</td><td>1× base</td></tr>
+    <tr><td>Passed</td><td>passed</td><td>0.8× base</td></tr>
+    <tr><td>Nearly passed</td><td>not passed, ≥ 50% right</td><td>0.2× base</td></tr>
+    <tr><td>Not passed</td><td>below that</td><td>0</td></tr>
+    <tr><td>Blow-off</td><td>≥ 2 rushed answers and at least half the task</td><td>−0.5× base × (1 + earlier blow-offs), capped at −2× base</td></tr>
+  </tbody></table>
+  <p class="dim">“Passed” here means the task’s own pass rule; in the calculator it is ≥ 80% right.</p>
+</section>
+
+<section id="sources">
+  <h2><b>8</b>Sources</h2>
+  <p class="dim">Math Academy quotes and page numbers were checked against the PDF of <i>The Math Academy Way</i> (working draft, 510 pages, justinmath.com) and mathacademy.com on 14 October 2026. The learning-science citations are from memory and have not been re-checked — verify before quoting them elsewhere.</p>
+  <div class="scroll"><table><thead><tr><th>Source</th><th>Used for</th></tr></thead><tbody>
+    <tr><td>Newell &amp; Rosenbloom 1981, power law of practice</td><td>Overall curve shape; the floor term</td></tr>
+    <tr><td>Heathcote, Brown &amp; Mewhort 2000</td><td>Exponential curve for an individual</td></tr>
+    <tr><td>Logan 1988, instance theory of automaticity</td><td>Speed-up = shift from computing to recalling</td></tr>
+    <tr><td>Rickard 1997</td><td>That shift can be sudden; a sudden drop is an “it clicked” signal</td></tr>
+    <tr><td>Segalowitz &amp; Segalowitz 1993</td><td>Consistency as the mark of automaticity</td></tr>
+    <tr><td>Card, Moran &amp; Newell 1980, Keystroke-Level Model</td><td>Expert time = sum of physical and mental steps</td></tr>
+    <tr><td>Anderson (ACT-R); Pavlik &amp; Anderson 2005</td><td>Recall slows as memory fades</td></tr>
+    <tr><td>Koedinger et al., Additive Factors Model / DataShop</td><td>Fitting learning curves per skill from real data</td></tr>
+    <tr><td><i>The Math Academy Way</i>, ch. 22 Gamification (pp. 307–315), FAQ pp. 431–438</td><td>XP calibration, bands, penalties, progress vs XP</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="tune">
+  <h2><b>9</b>Numbers to tune with real data</h2>
+  <div class="scroll"><table><thead><tr><th>Setting</th><th>Starting value</th><th>How it gets replaced</th></tr></thead><tbody>
+    <tr><td>Seconds per step</td><td>1.35</td><td>Fastest 10% of correct times, minus writing time, ÷ steps</td></tr>
+    <tr><td>Seconds per symbol</td><td>0.7</td><td>Each learner’s copy test</td></tr>
+    <tr><td>Start multiple</td><td>4× floor</td><td>Median first-attempt time per problem type</td></tr>
+    <tr><td>Rate</td><td>0.35</td><td>Fitted per learner and topic (<code>fitRate</code>)</td></tr>
+    <tr><td>Forgetting k</td><td>1.0</td><td>Fit slowdown vs retrievability across reviews</td></tr>
+    <tr><td>Level ratios</td><td>2× start, 1.5×, 1.2×, spread 0.25</td><td>Compare with Lance’s own sense of “I know this cold”</td></tr>
+    <tr><td>Credit range</td><td>0.7× – 1.3×</td><td>Check that reviews don’t bunch up or vanish</td></tr>
+    <tr><td>XP bands</td><td>1.25 / 1 / 0.8 / 0.2 / 0 / −0.5</td><td>Taste; Math Academy doesn’t publish theirs</td></tr>
+  </tbody></table></div>
+  <p class="dim">Not yet built: the topic graph, per-requirement memory records, FIRe credit flow, the review picker, and recording stroke timestamps (first stroke, pauses, restarts) in the Math Mode canvas. Distraction gaps and a backgrounded app mark an attempt’s timing as unknown.</p>
+</section>
+</main>
+
+<script type="module">
+import * as M from './timing.js';
+const $ = id => document.getElementById(id);
+const fmt = (x, d = 1) => Number(x).toFixed(d);
+const pill = id => id ? `<span class="pill lv-${id}">${M.LEVELS.find(l => l.id === id).label}</span>` : '<span class="pill lv-recognize">none</span>';
+function bind(ids, fn) { ids.forEach(([id, o, f]) => { const el = $(id); const upd = () => { $(o).textContent = f ? f(+el.value) : el.value; fn(); }; el.addEventListener('input', upd); $(o).textContent = f ? f(+el.value) : el.value; }); fn(); }
+
+// 1. Curve
+let seed = 11;
+const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+const gauss = () => Math.sqrt(-2 * Math.log(rnd() || 1e-9)) * Math.cos(2 * Math.PI * rnd());
+function drawCurve() {
+  const floor = +$('cFloor').value, start = floor * +$('cStart').value, rate = +$('cRate').value, noise = +$('cNoise').value;
+  const c = $('cv'), g = c.getContext('2d'), W = c.width, H = c.height, L = 70, B = 44, T = 18, Rm = 12, N = 20;
+  g.clearRect(0, 0, W, H);
+  const ymax = start * 1.35, x = n => L + (W - L - Rm) * n / N, y = t => T + (H - T - B) * (1 - t / ymax);
+  g.font = '22px system-ui'; g.fillStyle = '#9aa4b8'; g.strokeStyle = '#2c3448'; g.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) { const t = ymax * i / 4; g.beginPath(); g.moveTo(L, y(t)); g.lineTo(W - Rm, y(t)); g.stroke(); g.fillText(fmt(t, 0) + 's', 4, y(t) + 8); }
+  for (let n = 0; n <= N; n += 5) g.fillText(n, Math.min(x(n) - 6, W - 30), H - 12);
+  const hline = (t, col, lab) => { g.strokeStyle = col; g.setLineDash([2, 4]); g.beginPath(); g.moveTo(L, y(t)); g.lineTo(W - Rm, y(t)); g.stroke(); g.setLineDash([]); g.fillStyle = col; g.font = '18px system-ui'; g.fillText(lab, L + 8, lab === 'floor' ? y(t) + 18 : y(t) - 4); g.font = '22px system-ui'; };
+  hline(floor * 1.5, '#b197fc', 'fluent 1.5×'); hline(floor * 1.2, '#8ce99a', 'automatic 1.2×'); hline(floor, '#ffd43b', 'floor');
+  const line = (f, col, dash) => { g.strokeStyle = col; g.lineWidth = 4; g.setLineDash(dash || []); g.beginPath(); for (let i = 0; i <= 200; i++) { const n = N * i / 200; i ? g.lineTo(x(n), y(f(n))) : g.moveTo(x(n), y(f(n))); } g.stroke(); g.setLineDash([]); };
+  line(n => M.powerLawTime({ floor, start, n }), '#9aa4b8', [6, 5]);
+  line(n => M.expectedTime({ floor, start, rate, n }), '#74c0fc');
+  seed = 11; const att = []; let reached = {};
+  for (let n = 0; n <= N; n++) {
+    const seconds = M.expectedTime({ floor, start, rate, n }) * Math.exp(noise * gauss());
+    att.push({ correct: true, seconds, firstStroke: Math.min(seconds * 0.3, floor * 0.3 * 1.9), restarts: 0 });
+    const lv = M.levelEvidence(att, { floor, firstStrokeFloor: floor * 0.3 });
+    if (lv && !(lv in reached)) reached[lv] = n;
+    g.fillStyle = { recognize: '#e8eaf0', explain: '#74c0fc', fluent: '#b197fc', automatic: '#8ce99a' }[lv];
+    g.beginPath(); g.arc(x(n), y(Math.min(seconds, ymax)), 8, 0, 7); g.fill();
+  }
+  const fit = M.fitRate(att.map((a, n) => ({ n, seconds: a.seconds })), { floor, start });
+  const toLevel = k => k in reached ? `practice ${reached[k]}` : 'not within 20';
+  $('curveOut').innerHTML = `Gap halves every <b>${fmt(Math.LN2 / rate)}</b> practices. ${pill('fluent')} first shown at <b>${toLevel('fluent')}</b>; ${pill('automatic')} at <b>${toLevel('automatic')}</b>. Rate fitted back from the dots: <b>${fmt(fit, 2)}</b> (true ${fmt(rate, 2)}).`;
+}
+bind([['cFloor', 'oFloor', v => v + ' s'], ['cStart', 'oStart', v => fmt(v) + '×'], ['cRate', 'oRate', v => fmt(v, 2)], ['cNoise', 'oNoise', v => fmt(v, 2)]], drawCurve);
+
+// 2. Floor
+function drawFloor() {
+  const f = M.floorTime({ words: +$('fWords').value, steps: +$('fSteps').value, symbols: +$('fSym').value, secPerSymbol: +$('fSps').value });
+  const seg = (v, col, lab) => v > 0 ? `<span style="flex:${v};background:${col}">${lab} ${fmt(v)}s</span>` : '';
+  $('floorBar').innerHTML = seg(f.read, '#ffd43b', 'read') + seg(f.think, '#b197fc', 'think') + seg(f.write, '#74c0fc', 'write');
+  $('floorOut').innerHTML = `Floor <b>${fmt(f.total)} s</b>. Fluent needs ≤ <b>${fmt(f.total * 1.5)} s</b>, automatic ≤ <b>${fmt(f.total * 1.2)} s</b>. A beginner’s first try is expected around <b>${fmt(f.total * 4, 0)} s</b>. First stroke floor ${fmt(f.firstStroke)} s. A wrong answer under <b>${fmt(f.write / 2)} s</b> is flagged as rushed.`;
+}
+bind([['fWords', 'oWords'], ['fSteps', 'oSteps'], ['fSym', 'oSym'], ['fSps', 'oSps', v => fmt(v, 2)]], drawFloor);
+
+// 3+4. Forgetting and scoring (floor 10 s, start 40 s)
+function drawForget() {
+  const R = +$('gR').value, t = +$('gT').value, floor = 10, start = 40;
+  const g = M.gapClosed(t, { floor, start, R }), raw = M.gapClosed(t, { floor, start }), c = M.creditFromTime(g);
+  $('forgetOut').innerHTML = `Problem with floor 10 s, typical first try 40 s. Allowance for fading: ×${fmt(M.forgettingFactor(R), 2)}, so ${t} s counts as <b>${fmt(t / M.forgettingFactor(R))} s</b>.<br>Gap closed <b>${fmt(g, 2)}</b> (without the allowance it would be ${fmt(raw, 2)}). Credit <b>${fmt(c.multiplier, 2)}×</b>, grade <b>${c.grade}</b>.`;
+}
+bind([['gR', 'oR', v => fmt(v, 2)], ['gT', 'oT', v => v + ' s']], drawForget);
+
+// 7. XP
+function drawXP() {
+  const tot = +$('xTot').value; ['xCor', 'xRush'].forEach(id => { $(id).max = tot; if (+$(id).value > tot) $(id).value = tot; });
+  $('oCor').textContent = $('xCor').value; $('oRush').textContent = $('xRush').value;
+  const cor = +$('xCor').value, base = M.baseXP(+$('xBase').value * 60);
+  const r = M.awardXP(base, { correct: cor, total: tot, passed: cor / tot >= 0.8, rushed: +$('xRush').value, priorBlowOffs: +$('xPrior').value });
+  $('xpOut').innerHTML = `Base <b>${base} XP</b> → <b>${r.xp > 0 ? '+' : ''}${r.xp} XP</b> (${r.band}).`;
+}
+bind([['xBase', 'oBase', v => v + ' min'], ['xTot', 'oTot'], ['xCor', 'oCor'], ['xRush', 'oRush'], ['xPrior', 'oPrior']], drawXP);
+</script>
+</body>
+</html>

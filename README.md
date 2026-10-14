@@ -38,7 +38,7 @@ The native library, model and Python environment live outside the repository in 
 Authentication, origin checks, image dimensions, payload size, concurrent requests, per-minute/hour budgets and model-call timeouts are enforced server-side. See [recognition state/safety traces](docs/recognition-state.md).
 
 ```sh
-node --test app/core.test.js server/server.test.mjs
+node --test app/core.test.js app/model/timing.test.js server/server.test.mjs
 uv run --with playwright python test-phone.py
 uv run --with playwright python tests/test-inline-math.py
 # Focused eraser behavior + toolbar fit at three phone widths; no screenshots:
@@ -65,3 +65,7 @@ GitHub Pages was not used: this account inherits a custom domain pointing elsewh
 engine (`app/trig/engine.js`). Each topic is one idea, an animated example, then practice
 (drag the dot, tap a choice, or type on a small pad) until 4 are right; later topics mix in
 review. Progress is kept in localStorage. Test: `uv run -q --with playwright python tests/test-trig-unit1.py`.
+
+## Review timing model
+
+`app/model/timing.js` is the timing model for non-speed reviews: the floor (mastered time), the learning curve, the forgetting allowance, scoring an attempt, mastery-level evidence, the effort check and XP. `app/model/index.html` (served at `/model/`) is an interactive explainer that runs the same code, with the Math Academy research on XP and effort penalties. Tests: `node --test app/model/timing.test.js`.
