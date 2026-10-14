@@ -84,32 +84,85 @@ try:
     page.wait_for_timeout(200)
     saved=page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')
     assert len(saved['problems'][0]['shapes'])==1
-    # Ink gets real stored strokes. No recognition claims.
+    # UI regression tests use explicit fixtures; a separate live test exercises real models.
+    recognition_calls=[]
+    def fixture(route):
+      recognition_calls.append(json.loads(route.request.post_data))
+      route.fulfill(json={'lines':[{'latex':'x^{2}+2x=3','uncertain':False}],'warnings':[],'alternatives':[],'checked':True,'agreement':True})
+    page.route('**/api/recognize',fixture)
     page.get_by_role('button',name='Ink',exact=True).click()
     page.mouse.move(50,200);page.mouse.down();page.mouse.move(150,260,steps=15);page.mouse.up()
     page.wait_for_timeout(200)
-    assert len(page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]['strokes'])==1
     original=page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]['strokes']
+    assert len(original)==1
     page.mouse.dblclick(290,400,delay=90)
+    page.get_by_role('button',name='Use this math',exact=True).wait_for()
     page.wait_for_timeout(200)
-    compact=page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]['strokes']
-    assert len(compact)==1 and compact[0]['packed']
-    assert compact[0]['pts']!=original[0]['pts']
+    assert len(recognition_calls)==1 and recognition_calls[0]['image'].startswith('data:image/png;base64,')
+    assert set(recognition_calls[0])=={'image'}
+    assert page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]['strokes']==original
+    page.get_by_role('button',name='Keep ink',exact=True).click()
+    page.get_by_role('button',name='Convert',exact=True).click()
+    page.get_by_role('button',name='Use this math',exact=True).click()
+    page.wait_for_timeout(200)
+    converted=page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]
+    assert converted['strokes']==[] and converted['inkConversions'][0]['lines'][0]['latex']=='x^{2}+2x=3'
+    assert converted['inkConversions'][0]['strokes']==original
+    assert page.locator('#inkTyped math-field').count()==1
+    # Editing uses the existing big-key pad. Return in an ink field must not add a Step.
+    before=page.locator('#lines math-field').count()
+    typed=page.locator('#inkTyped math-field').first
+    typed.evaluate("f=>{f.value='x=4';f.dispatchEvent(new Event('input',{bubbles:true}));f.focus();}")
+    page.wait_for_timeout(200)
+    page.get_by_role('button',name='↵ step',exact=True).click()
+    assert page.locator('#lines math-field').count()==before
+    page.get_by_role('button',name='Undo handwriting').click()
+    page.wait_for_timeout(200)
+    restored=page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]
+    assert restored['strokes']==original and restored['inkConversions']==[]
     undo=page.get_by_role('button',name='Undo handwriting').bounding_box()
     assert undo['width']>=70 and undo['height']>=44
-    page.mouse.move(50,300);page.mouse.down();page.mouse.move(220,350,steps=15);page.mouse.up()
-    page.get_by_role('button',name='Shrink ↓',exact=True).click()
+    # Readers can disagree; the alternative is explicitly selectable.
+    page.unroute('**/api/recognize',fixture)
+    def alternate(route):
+      route.fulfill(json={'lines':[{'latex':'x=1','uncertain':True}],'warnings':['Check final symbol'],'alternatives':[{'lines':[{'latex':'x=l','uncertain':True}],'model':'other'}],'checked':True,'agreement':False})
+    page.route('**/api/recognize',alternate)
+    page.get_by_role('button',name='Convert',exact=True).click()
+    page.get_by_role('button',name='Reading 2',exact=True).click()
+    assert page.locator('#inkReview math-field').first.evaluate('f=>f.value')=='x=l'
+    page.locator('#inkReview math-field').first.evaluate("f=>{f.focus();f.executeCommand('moveToMathfieldEnd')}")
     page.wait_for_timeout(200)
-    stacked=page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]['strokes']
-    assert len(stacked)==2 and stacked[0]['pts']==compact[0]['pts']
-    assert min(p[1] for p in stacked[1]['pts'])>max(p[1] for p in stacked[0]['pts'])
-    page.get_by_role('button',name='Undo handwriting').click()
+    page.get_by_role('button',name='+',exact=True).click()
+    page.get_by_role('button',name='1',exact=True).click()
+    assert page.locator('#inkReview math-field').first.evaluate('f=>f.value')=='x=l+1'
+    page.get_by_role('button',name='Use this math',exact=True).click()
     page.wait_for_timeout(200)
-    restored=page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]['strokes']
-    assert len(restored)==2 and not restored[1].get('packed')
-    page.get_by_role('button',name='Undo handwriting').click()
-    page.get_by_role('button',name='Undo handwriting').click()
+    page.reload(wait_until='networkidle')
+    assert page.locator('#inkTyped math-field').first.evaluate('f=>f.value')=='x=l+1'
+    page.get_by_role('button',name='↶ Restore ink',exact=True).click()
     page.wait_for_timeout(200)
+    assert page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]['strokes']==original
+    page.unroute('**/api/recognize',alternate)
+    def failed(route):route.fulfill(status=503,json={'error':'Recognition failed. Your ink is untouched.'})
+    page.route('**/api/recognize',failed)
+    page.get_by_role('button',name='Convert',exact=True).click()
+    page.wait_for_timeout(300)
+    assert page.locator('#inkReview').is_hidden()
+    assert page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]['strokes']==original
+    # A late response must not overwrite a later request, even if cancellation is ignored.
+    page.evaluate("""()=>{window.realFetch=window.fetch;window.pendingReads=[];window.fetch=(url,...args)=>url==='/api/recognize'?new Promise(resolve=>window.pendingReads.push(()=>resolve(new Response(JSON.stringify({lines:[{latex:'x=9',uncertain:false}],warnings:[],alternatives:[],checked:true,agreement:true}),{headers:{'Content-Type':'application/json'}})))):window.realFetch(url,...args);}""")
+    page.get_by_role('button',name='Convert',exact=True).click()
+    page.get_by_role('button',name='Steps',exact=True).click()
+    page.get_by_role('button',name='Ink',exact=True).click()
+    page.get_by_role('button',name='Convert',exact=True).click()
+    page.evaluate('window.pendingReads[0]()')
+    page.wait_for_timeout(100)
+    assert page.get_by_role('button',name='Reading…',exact=True).is_disabled()
+    assert page.locator('#inkReview math-field').count()==0
+    page.evaluate('window.pendingReads[1]()')
+    page.get_by_role('button',name='Use this math',exact=True).wait_for()
+    page.get_by_role('button',name='Keep ink',exact=True).click()
+    page.evaluate('window.fetch=window.realFetch')
     assert page.evaluate('JSON.parse(localStorage.getItem("mathmode-v1"))')['problems'][0]['strokes']==original
     for width,height in [(375,667),(390,844)]:
       page.set_viewport_size({'width':width,'height':height})
@@ -134,7 +187,7 @@ try:
     page.screenshot(path=str(out/'compact-pad.png'))
     assert not errors,errors
     b.close()
-    print('PASS: number pad, fraction navigation, blank/hold-slide-copy steps, both-side operations, graph/shape, double-tap ink shrinking/undo, local persistence, 3 phone sizes; no browser JS errors.')
+    print('PASS: number pad, fraction navigation, blank/hold-slide-copy steps, both-side operations, graph/shape, recognition preview/edit/alternatives/undo (mocked models), local persistence, 3 phone sizes; no browser JS errors.')
 finally:
  server.shutdown();server.server_close();thread.join()
  print('Stopped the temporary test HTTP server.')

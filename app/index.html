@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f1115">
 <title>Math Mode</title>
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 <header id="top">
@@ -44,10 +44,13 @@
   </section>
 
   <section id="view-ink" class="view">
+    <div id="inkTyped" hidden></div>
+    <div id="inkReview" hidden role="region" aria-label="Recognition review" aria-live="polite"></div>
     <div id="inkScroll"><canvas id="inkCanvas"></canvas></div>
+    <p id="inkPrivacy">Convert sends only your handwriting to OpenAI + Anthropic for recognition.</p>
     <div class="toolbar" id="inkTools">
       <button id="inkUndo" aria-label="Undo handwriting">↶ Undo</button>
-      <button id="inkCompact">Shrink ↓</button>
+      <button id="inkConvert">Convert</button>
       <button data-pen="#7dd3fc" class="on" aria-label="Blue pen"><i style="background:#7dd3fc"></i></button>
       <button data-pen="#fcc2d7" aria-label="Pink pen"><i style="background:#fcc2d7"></i></button>
       <button data-pen="#e8eaf0" aria-label="White pen"><i style="background:#e8eaf0"></i></button>
@@ -72,6 +75,6 @@
 <div id="kb" hidden></div>
 <div id="toast" hidden></div>
 
-<script type="module" src="app.js?v=2"></script>
+<script type="module" src="app.js?v=3"></script>
 </body>
 </html>

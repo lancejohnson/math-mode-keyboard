@@ -110,3 +110,25 @@ body:has(#kb:not([hidden])) #qpane{max-height:max(90px,calc(100dvh - 530px - env
 #inkTools [data-pen="erase"]{font-size:0;width:34px;padding:8px 6px}
 #inkTools [data-pen="erase"]::after{content:'⌫';font-size:20px}
 #inkClear{margin-left:auto;padding:8px 6px!important}
+
+/* Recognized math and review are genuine editable MathLive fields, never resized ink. */
+#inkTyped,#inkReview{flex:none;max-height:38%;overflow-y:auto;background:#151b29;border-bottom:1px solid #303a53;padding:8px 12px}
+#inkTyped[hidden],#inkReview[hidden]{display:none}
+#inkReview{max-height:60%;background:#192237}
+#inkScroll{min-height:60px}
+#view-ink math-field{display:block;width:100%;font-size:24px;background:transparent;border:0;color:#e8eaf0;padding:7px 0;--caret-color:#74c0fc;--primary-color:#74c0fc;--selection-background-color:#3b5bdb66}
+.inkGroup{border-bottom:1px solid #2a354b;padding:4px 0 8px}
+.inkGroup:last-child{border:0}
+.inkGroupActions,.readingChoices,.reviewActions{display:flex;gap:8px;margin-top:6px}
+.inkGroupActions button,.readingChoices button,.reviewActions button{border-radius:9px;background:#2b3854;padding:9px 12px;font-size:13px;min-height:40px}
+.reviewActions{position:sticky;bottom:-8px;background:#192237;padding:8px 0}
+.reviewActions button{flex:1;min-height:44px}
+.reviewActions button:last-child,.readingChoices button.on{background:#3b5bdb;font-weight:600}
+button:disabled{opacity:.5;cursor:default}
+.reviewHeading{font-size:16px;font-weight:700;margin-bottom:5px}
+.reviewNote{font-size:12px;color:#b2bfd6;line-height:1.4;margin-bottom:8px}
+.reviewWarning{font-size:12px;color:#ffd43b;margin:5px 0;line-height:1.4}
+.recognitionSource{display:block;max-height:95px;width:100%;object-fit:contain;background:#fff;border-radius:8px;margin:5px 0}
+#inkPrivacy{flex:none;font-size:10px;line-height:1.3;padding:5px 10px;color:#8f9bb3;background:#1a1d24}
+#inkConvert{min-width:70px;padding:8px 6px!important}
+body:has(#inkReview:not([hidden])) #inkTyped{display:none}
