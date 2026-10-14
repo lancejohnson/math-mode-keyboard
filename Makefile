@@ -13,3 +13,4 @@ test-trig:
 	$(call PASS,tests/test-trig-unit1.py) uv run -q --with playwright python tests/test-trig-unit1.py $(ARGS)
 	$(call PASS,app/trig/facts.test.js) node --test app/trig/facts.test.js
 	$(call PASS,tests/test-trig-facts.py) uv run -q --with playwright python tests/test-trig-facts.py
+	$(call PASS,tests/test-trig-map.py) uv run -q --with playwright python tests/test-trig-map.py

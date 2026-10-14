@@ -77,3 +77,20 @@ button.link{background:none;border:0;color:var(--blue);font:inherit;font-size:14
 .choices .choice.fact{font:600 22px/1.2 "Times New Roman",serif;min-height:56px}
 .quickFacts{display:block;width:100%;text-align:left;background:#1f3326;border:1px solid #2f6f45;border-radius:12px;padding:12px;margin:12px 0;color:var(--ink);font:inherit}
 .quickFacts small{display:block;color:var(--dim);font-size:13px;margin-top:2px}
+/* Knowledge map (map.html) */
+.mapLink{display:block;margin:10px 0 0;color:var(--blue);font-size:14px;text-decoration:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 10px;margin:4px 0 10px;font-size:12px;color:var(--dim)}
+.st{display:inline-flex;align-items:center;gap:4px}.st i{width:10px;height:10px;border-radius:3px;border:2px solid var(--dim)}
+.st.mastered i{border-color:var(--green);background:#1f3326}.st.review i{border-color:var(--amber);background:#33301c}.st.learning i{border-color:var(--blue)}.st.open i{border-color:var(--blue);border-style:dashed}.st.locked i{opacity:.4}
+.kind{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border-radius:6px}
+.kind.concept{background:#2b2550;color:var(--violet)}.kind.procedure{background:#1d3348;color:var(--blue)}.kind.automatic{background:#3d2f12;color:var(--amber)}
+.graph{position:relative;display:flex;flex-direction:column;gap:30px;padding:4px 0 8px}
+.graph svg{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.edge{fill:none;stroke:#3d4560;stroke-width:1.6}.edge.lit{stroke:#5c8a68}
+.graph .row{display:flex;flex-wrap:nowrap;align-items:stretch;justify-content:space-evenly;gap:6px;margin:0;position:relative;z-index:1}
+.node{flex:0 1 32%;max-width:150px;min-width:0;display:flex;flex-direction:column;gap:3px;padding:8px;border-radius:12px;background:var(--card);border:2px solid #2c3346;color:var(--ink);text-decoration:none;font-size:13px;line-height:1.25}
+.node b{font-weight:600}.node small{color:var(--dim);font-size:11px}
+.node.mastered{border-color:var(--green)}.node.review{border-color:var(--amber)}.node.learning{border-color:var(--blue)}.node.open{border-color:var(--blue);border-style:dashed}.node.locked{color:#6c7590;border-color:#252b3b}.node.locked .kind{opacity:.6}
+.cards{display:flex;height:6px;border-radius:3px;overflow:hidden;background:#2c3346;margin-top:2px}
+.cards .automatic{background:var(--green)}.cards .slow{background:var(--amber)}.cards .shaky{background:#ff8787}.cards .new{background:#3d4560}
+.kindsInfo h3{margin:0 0 6px;font-size:16px}.kindsInfo p{margin:8px 0;font-size:14px}

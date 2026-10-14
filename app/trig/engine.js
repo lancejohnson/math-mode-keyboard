@@ -297,5 +297,7 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
   $('#reset').onclick = () => { if (confirm('Clear your progress for this unit?')) { prog = { done: [] }; save(); list(); } };
 
   list();
+  // unit1.html#<topic id> (from the knowledge map) opens that topic if it's unlocked.
+  { const i = topics.findIndex(t => t.id === location.hash.slice(1)); if (i >= 0 && (i === 0 || prog.done.includes(topics[i].id) || prog.done.includes(topics[i - 1].id))) open(i); }
   return { wheel, topics, facts: () => fs, dueFacts, step: () => T().lesson[si], si: () => si, q: () => q, right: () => right, open, ask: (gen, v) => ask({ gen, v }), prog: () => prog, parseAns, pad };
 }

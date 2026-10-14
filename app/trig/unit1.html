@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Unit 1 · Angles and radians</title>
-<link rel="stylesheet" href="lesson.css?v=7">
+<link rel="stylesheet" href="lesson.css?v=8">
 </head>
 <body>
 <div id="listView">
@@ -15,6 +15,7 @@
     <p class="dim">Small steps. Each topic: a short lesson with a worked example, a quick guess that stretches it, then practice until you get 4 right. Angles you've learned come back later as quick, timed facts.</p>
     <div class="progress" id="unitBar"></div>
     <p class="dim" id="unitStatus"></p>
+    <a class="mapLink" href="map.html">Knowledge map: prerequisites, knowledge types, progress →</a>
   </header>
   <button class="quickFacts" id="quickFacts" hidden></button>
   <section class="topics" id="topicList"></section>
@@ -47,7 +48,7 @@
 
 <script type="module">
 import { angleIds } from './facts.js?v=2';
-import { runUnit, PI, TAU, D, C, deg, rad, piFrac, dec, options, pick } from './engine.js?v=9';
+import { runUnit, PI, TAU, D, C, deg, rad, piFrac, dec, options, pick } from './engine.js?v=10';
 
 const Q = ['', 'a quarter turn', 'two quarter turns (a half turn)', 'three quarter turns', 'a full turn'];
 const PART = { 0: '', 30: 'a third of a quarter turn', 45: 'half of a quarter turn', 60: 'two thirds of a quarter turn' };

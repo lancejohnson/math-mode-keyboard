@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Knowledge map · Unit 1</title>
+<link rel="stylesheet" href="lesson.css?v=8">
+</head>
+<body class="mapPage">
+<nav class="crumb"><a href="./">← Trigonometry</a></nav>
+<header>
+  <small>Unit 1 · knowledge map</small>
+  <h1>Angles and radians</h1>
+  <p class="dim" id="summary"></p>
+</header>
+<div class="legend" id="legend"></div>
+<div class="graph" id="graph"><svg id="edges" aria-hidden="true"></svg></div>
+<section class="kindsInfo" id="kindsInfo"></section>
+<p class="dim">Arrows show what each topic builds on. Topics still unlock in list order on the unit page. Progress is stored on this device.</p>
+<script type="module">
+import { UNIT1, KINDS, layers, topicState, STATE_TEXT } from './map.js?v=1';
+import { loadFacts } from './facts.js?v=2';
+const $ = s => document.querySelector(s);
+const U = UNIT1, T = U.topics;
+let prog = {}; try { prog = JSON.parse(localStorage.getItem(U.storeKey)) || {}; } catch { }
+const facts = loadFacts(), st = Object.fromEntries(T.map((t, i) => [t.id, topicState(t, i, T, prog, facts)]));
+
+const mastered = T.filter(t => st[t.id].done).length, ft = T.find(t => t.id === 'by-heart'), fc = st[ft.id].cards;
+const due = fc.due;  // the by-heart topic covers every angle card once
+$('#summary').innerHTML = `<b>${mastered} of ${T.length}</b> topics mastered · <b>${fc.automatic} of ${fc.total}</b> angle facts automatic${due ? ` · <b>${due}</b> ${due === 1 ? 'fact' : 'facts'} due for review` : ''}`;
+$('#legend').innerHTML = Object.entries(KINDS).map(([k, v]) => `<span class="kind ${k}">${v.label}</span>`).join('') +
+  ['mastered', 'review', 'learning', 'open', 'locked'].map(s => `<span class="st ${s}"><i></i>${STATE_TEXT[s]}</span>`).join('');
+
+const rows = layers(T), by = Object.fromEntries(T.map((t, i) => [t.id, { ...t, i }]));
+$('#graph').insertAdjacentHTML('beforeend', rows.map(r => `<div class="row">${r.map(id => {
+  const t = by[id], s = st[id], c = s.cards, k = KINDS[t.kind];
+  const bar = c ? `<span class="cards" title="facts">${['automatic', 'slow', 'shaky', 'new'].map(x => `<i class="${x}" style="flex:${c[x]}"></i>`).join('')}</span><small>${c.automatic}/${c.total} automatic${c.due ? ` · ${c.due} due` : ''}</small>` : '';
+  return `<a class="node ${s.state}" id="n-${id}" href="${s.open ? `${U.href}#${id}` : '#'}" data-id="${id}"><span class="kind ${t.kind}">${k.label}</span><b>${t.title}</b><small>${STATE_TEXT[s.state]}</small>${bar}</a>`;
+}).join('')}</div>`).join(''));
+$('#graph').onclick = e => { const a = e.target.closest('.node'); if (a && !st[a.dataset.id].open) e.preventDefault(); };
+
+$('#kindsInfo').innerHTML = '<h3>Types of knowledge</h3>' + Object.entries(KINDS).map(([k, v]) =>
+  `<p><span class="kind ${k}">${v.label}</span> ${v.goal}. Practice target: <b>${v.level}</b>. <span class="dim">${T.filter(t => t.kind === k).map(t => t.title).join(' · ')}</span></p>`).join('');
+
+function drawEdges() {
+  const g = $('#graph').getBoundingClientRect(), svg = $('#edges');
+  svg.setAttribute('width', g.width); svg.setAttribute('height', g.height);
+  svg.innerHTML = '<defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L8 4L0 8z" fill="#5c6680"/></marker></defs>' +
+    T.flatMap(t => t.needs.map(n => {
+      const a = $(`#n-${n}`).getBoundingClientRect(), b = $(`#n-${t.id}`).getBoundingClientRect();
+      const x1 = a.left + a.width / 2 - g.left, y1 = a.bottom - g.top, x2 = b.left + b.width / 2 - g.left, y2 = b.top - g.top - 2, m = (y1 + y2) / 2;
+      const lit = st[n].done ? ' lit' : '';
+      return `<path class="edge${lit}" d="M${x1} ${y1}C${x1} ${m} ${x2} ${m} ${x2} ${y2}" marker-end="url(#ah)"/>`;
+    })).join('');
+}
+drawEdges(); addEventListener('resize', drawEdges);
+window.map = { st, rows };
+</script>
+</body>
+</html>
