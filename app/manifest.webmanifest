@@ -3,7 +3,7 @@
  "short_name": "Math Mode",
  "description": "Intuition-first math: trig course, math workspace with handwriting.",
  "id": "/",
- "start_url": "/trig/",
+ "start_url": "/",
  "scope": "/",
  "display": "standalone",
  "orientation": "portrait",

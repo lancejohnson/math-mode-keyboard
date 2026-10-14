@@ -2,88 +2,64 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0f1115">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Math Mode</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg?v=2" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon-180.png?v=2">
 <meta name="apple-mobile-web-app-title" content="Math Mode">
-<link rel="stylesheet" href="style.css?v=9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#12151c">
+<script>
+// The private handwriting link used to be /#recognition=…; the workspace now lives at /workspace/.
+const toWorkspace = () => { if (/^#recognition=/.test(location.hash)) location.replace('/workspace/' + location.hash); };
+toWorkspace(); addEventListener('hashchange', toWorkspace);
+</script>
+<script src="/nav.js?v=2" defer></script>
+<link rel="stylesheet" href="/trig/lesson.css?v=8">
+<style>
+.hero{display:flex;gap:14px;align-items:center;margin:22px 0 6px}
+.hero img{width:56px;height:56px;border-radius:13px}
+.hero h1{margin:0;font-size:26px}
+.hero p{margin:2px 0 0}
+.home h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin:26px 0 8px}
+.home a.card{display:block;background:var(--card);border:1px solid #2a3248;border-radius:14px;padding:14px 16px;margin:0 0 10px;color:var(--ink);text-decoration:none}
+.home a.card b{display:block;font-size:17px}
+.home a.card small{display:block;color:var(--dim);margin-top:3px;font-size:14px}
+.home a.card.main{border-color:var(--pink)}
+.home a.card .go{float:right;color:var(--pink);font-weight:600;font-size:14px}
+.home .pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.home .pair a.card{margin:0}
+</style>
 </head>
-<body>
-<header id="top">
-  <div class="bar">
-    <select id="problem" aria-label="Problem"></select>
-    <button id="newProblem" class="icon" title="New problem">＋</button>
-    <a id="toCourse" class="chip" href="/trig/" style="text-decoration:none" title="Trig course">π Course</a>
-    <button id="qToggle" class="chip" title="Pin a question on top">📌 Question</button>
-  </div>
-  <nav class="tabs">
-    <button data-mode="steps" class="on">Steps</button>
-    <button data-mode="moves">Moves</button>
-    <button data-mode="ink">Ink</button>
-    <button data-mode="graph">Graph</button>
-  </nav>
-</header>
+<body class="home">
+<div class="hero"><img src="/icon-180.png?v=2" alt=""><div><h1>Math Mode</h1><p class="dim">Intuition-first math, practiced until it sticks.</p></div></div>
 
-<section id="qpane" hidden>
-  <div class="qtools">
-    <label class="chip">📷 Photo / screenshot<input id="qFile" type="file" accept="image/*" hidden></label>
-    <button id="qText" class="chip">Aa Type it</button>
-    <button id="qWeb" class="chip">↗ Math Academy</button>
-    <button id="qClear" class="chip">Clear</button>
-  </div>
-  <div id="qBody"><div class="qempty">Pin a screenshot of your question or type it. Math Academy opens separately.</div></div>
-  <div id="qDivider"><span></span></div>
-</section>
+<h2>Trigonometry</h2>
+<a class="card main" id="continue" href="/trig/unit1.html"><span class="go">Start →</span><b>Unit 1: Angles and radians</b><small id="u1progress">11 small topics · practice until you get 4 right</small></a>
+<div class="pair">
+  <a class="card" href="/trig/facts.html"><b>Facts</b><small>Timed rounds until they're automatic</small></a>
+  <a class="card" href="/trig/map.html"><b>Knowledge map</b><small>What leads to what, and your progress</small></a>
+</div>
+<a class="card" href="/trig/" style="margin-top:10px"><b>All 12 units</b><small>The full course outline</small></a>
 
-<main>
-  <section id="view-steps" class="view on">
-    <div id="movesPanel" hidden><div class="moveIntro">Apply to both sides of the selected equation</div><div class="moveRow"><span>by</span><math-field id="operand" aria-label="Operation value">3</math-field><button data-op="Add">＋</button><button data-op="Subtract">−</button><button data-op="Multiply">×</button><button data-op="Divide">÷</button></div><div class="moveIntro">Numeric nonzero values only. A new simplified step is added.</div></div>
-    <div id="lines"></div>
-    <div class="stepsHelp">↵ starts a blank line. Hold ↵ and slide up to copy the current line. Flick x/y up for a power. → moves out of a fraction or exponent. No automatic checking in this prototype.</div>
-  </section>
+<h2>Tools</h2>
+<a class="card" href="/workspace/"><b>Math workspace</b><small>Big number pad, step-by-step work, handwriting, graphs</small></a>
 
-  <section id="view-ink" class="view">
-    <div id="inkPast"><span class="inkPastLabel">Previous lines</span><div id="inkCompleted" aria-label="Completed math lines"></div></div>
-    <div id="inkLineLabel">Current line 1</div>
-    <div id="inkScroll"><canvas id="inkCanvas"></canvas><div id="inkTyped" hidden></div><button id="inkZoom" hidden>1.0× · reset</button></div>
-    <p id="inkPrivacy">Only cropped handwriting is sent for recognition.</p>
-    <div class="toolbar" id="inkTools">
-      <button id="inkUndo" aria-label="Undo handwriting">↶ Undo</button>
-      <button id="inkConvert">Convert</button>
-      <button id="inkNewLine">New line ↑</button>
-      <button id="inkPen" aria-label="Pen colors" aria-expanded="false"><i style="background:#7dd3fc"></i></button>
-      <div id="inkPalette" hidden>
-        <button data-pen="#7dd3fc" class="on" aria-label="Blue pen"><i style="background:#7dd3fc"></i></button>
-        <button data-pen="#fcc2d7" aria-label="Pink pen"><i style="background:#fcc2d7"></i></button>
-        <button data-pen="#e8eaf0" aria-label="White pen"><i style="background:#e8eaf0"></i></button>
-      </div>
-      <button data-pen="erase" id="inkEraser" aria-label="Eraser" aria-pressed="false"><i></i><span>Eraser</span></button>
-      <button id="inkClear">Clear</button>
-    </div>
-  </section>
+<h2>Earlier prototypes</h2>
+<a class="card" href="/lesson/"><b>Graphing parabolas</b><small>The first intuition-first lesson</small></a>
+<a class="card" href="/model/"><b>How reviews read the clock</b><small>How fact reviews use your answer time</small></a>
 
-  <section id="view-graph" class="view">
-    <div id="curves"></div>
-    <div id="graphWrap"><canvas id="graphCanvas"></canvas><div id="graphTip" hidden></div></div>
-    <div class="toolbar" id="graphTools">
-      <button data-gmode="move" class="on">✋ Move</button>
-      <button data-gmode="draw">📐 Draw shape</button>
-      <button id="gAxes">Axes</button>
-      <button id="gUndo">↶</button>
-      <button id="gHome">⌂</button>
-    </div>
-  </section>
-</main>
-
-<div id="kb" hidden></div>
-<div id="toast" hidden></div>
-
-<script type="module" src="app.js?v=9"></script>
+<script>
+try {
+  const done = (JSON.parse(localStorage.getItem('trig-unit1-v2') || '{}').done || []).length;
+  if (done) {
+    document.getElementById('u1progress').textContent = `${done} of 11 topics mastered`;
+    document.querySelector('#continue .go').textContent = done >= 11 ? 'Review →' : 'Continue →';
+  }
+} catch {}
+</script>
 </body>
 </html>

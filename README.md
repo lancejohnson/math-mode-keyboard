@@ -2,7 +2,7 @@
 
 A phone-first, live math scratchpad with a real large-key numpad, not a modified QWERTY keyboard.
 
-Live: https://math.lancejohnson.com/ (trig course: https://math.lancejohnson.com/trig/). Named Cloudflare Tunnel `math-mode-agentbox` -> 127.0.0.1:8732; token in agentbox `~/.config/cf/math-mode-tunnel.token`, run by `math-mode-tunnel.service`.
+Live: https://math.lancejohnson.com/ (home page; trig course at /trig/, math workspace at /workspace/). Named Cloudflare Tunnel `math-mode-agentbox` -> 127.0.0.1:8732; token in agentbox `~/.config/cf/math-mode-tunnel.token`, run by `math-mode-tunnel.service`.
 
 This is a temporary Cloudflare Tunnel address. It remains live while the tunnel runs; a tunnel restart can change the URL.
 

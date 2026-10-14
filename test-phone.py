@@ -15,7 +15,7 @@ try:
     b=p.chromium.launch(executable_path=str(exe))
     page=b.new_page(viewport={'width':390,'height':844},device_scale_factor=2,has_touch=True,is_mobile=True)
     errors=[];page.on('pageerror',lambda e:errors.append(e.stack))
-    page.goto(os.environ.get('MATH_MODE_TEST_URL',f'http://127.0.0.1:{server.server_port}'),wait_until='networkidle')
+    page.goto(os.environ.get('MATH_MODE_TEST_URL',f'http://127.0.0.1:{server.server_port}/workspace/'),wait_until='networkidle')
     page.wait_for_timeout(1200)
     assert not errors,errors
     page.wait_for_selector('#kb:not([hidden])',timeout=5000)

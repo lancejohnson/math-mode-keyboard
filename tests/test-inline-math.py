@@ -15,7 +15,7 @@ try:
     page=browser.new_page(viewport={'width':390,'height':844},device_scale_factor=2,is_mobile=True,has_touch=True)
     page.set_default_timeout(6000)
     errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-    page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle')
+    page.goto(f'http://127.0.0.1:{server.server_port}/workspace/',wait_until='networkidle')
     original=[{'color':'#7dd3fc','pts':[[80,70],[120,110]]},{'color':'#7dd3fc','pts':[[120,70],[80,110]]}]
     state={'problems':[{'id':'inline','title':'Continue the equation','lines':[{'id':'step','latex':'','why':''}],'strokes':original,'curves':[],'shapes':[]}],'current':'inline','tab':'ink','layout':'compact'}
     page.add_init_script("if(!localStorage.getItem('inline-fixture-loaded')){localStorage.setItem('mathmode-v1',JSON.stringify("+json.dumps(state)+"));localStorage.setItem('inline-fixture-loaded','1');}")

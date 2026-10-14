@@ -1,12 +1,12 @@
-// Site-wide tab bar for the course pages: Course · Unit 1 · Map · Facts · Workspace.
+// Site-wide tab bar: Home · Trig · Unit 1 · Facts · Workspace (the map is linked from Home, Trig and Unit 1).
 // Self-contained (own styles) so any page can load it with one <script defer>.
 (() => {
   const TABS = [
-    ['Course', '/trig/', p => p === '/trig/' || p === '/trig/index.html'],
+    ['Home', '/', p => p === '/' || p === '/index.html'],
+    ['Trig', '/trig/', p => p === '/trig/' || p === '/trig/index.html' || p === '/trig/map.html'],
     ['Unit 1', '/trig/unit1.html'],
-    ['Map', '/trig/map.html'],
     ['Facts', '/trig/facts.html'],
-    ['Workspace', '/', p => p === '/' || p === '/index.html'],
+    ['Workspace', '/workspace/'],
   ];
   const here = location.pathname;
   const css = document.createElement('style');
@@ -18,7 +18,7 @@
   const nav = document.createElement('nav'); nav.id = 'siteNav'; nav.setAttribute('aria-label', 'Sections');
   nav.innerHTML = TABS.map(([label, href, is]) => {
     const on = is ? is(here) : here === href;
-    return `<a href="${href}"${on ? ' class="on" aria-current="page"' : ''}>${label === 'Course' ? '<span class="pi">π</span>' : ''}${label}</a>`;
+    return `<a href="${href}"${on ? ' class="on" aria-current="page"' : ''}>${label === 'Home' ? '<span class="pi">π</span>' : ''}${label}</a>`;
   }).join('');
   const mount = () => {
     // Stretch across the page: cancel the body's side padding.

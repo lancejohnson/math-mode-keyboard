@@ -120,7 +120,7 @@ def main():
                 page.on('pageerror', lambda error: errors.append(str(error)))
                 page.route('**/api/status', lambda route: route.fulfill(json={'authorized': True, 'recognition': True, 'provider': 'test fixture'}))
                 page.route('**/api/recognize', lambda route: route.fulfill(json={'lines': [{'latex': 'x+2=5', 'uncertain': False}], 'warnings': [], 'model': 'test fixture'}))
-                page.goto(f'http://127.0.0.1:{server.server_port}', wait_until='load')
+                page.goto(f'http://127.0.0.1:{server.server_port}/workspace/', wait_until='load')
                 run_eraser_checks(page)
                 assert not errors, errors
             finally:

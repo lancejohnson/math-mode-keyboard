@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1115">
+<title>Math Mode</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg?v=2" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-180.png?v=2">
+<meta name="apple-mobile-web-app-title" content="Math Mode">
+<link rel="stylesheet" href="/style.css?v=9">
+</head>
+<body>
+<header id="top">
+  <div class="bar">
+    <select id="problem" aria-label="Problem"></select>
+    <button id="newProblem" class="icon" title="New problem">＋</button>
+    <a id="toHome" class="chip" href="/" style="text-decoration:none" title="Home">π Home</a>
+    <button id="qToggle" class="chip" title="Pin a question on top">📌 Question</button>
+  </div>
+  <nav class="tabs">
+    <button data-mode="steps" class="on">Steps</button>
+    <button data-mode="moves">Moves</button>
+    <button data-mode="ink">Ink</button>
+    <button data-mode="graph">Graph</button>
+  </nav>
+</header>
+
+<section id="qpane" hidden>
+  <div class="qtools">
+    <label class="chip">📷 Photo / screenshot<input id="qFile" type="file" accept="image/*" hidden></label>
+    <button id="qText" class="chip">Aa Type it</button>
+    <button id="qWeb" class="chip">↗ Math Academy</button>
+    <button id="qClear" class="chip">Clear</button>
+  </div>
+  <div id="qBody"><div class="qempty">Pin a screenshot of your question or type it. Math Academy opens separately.</div></div>
+  <div id="qDivider"><span></span></div>
+</section>
+
+<main>
+  <section id="view-steps" class="view on">
+    <div id="movesPanel" hidden><div class="moveIntro">Apply to both sides of the selected equation</div><div class="moveRow"><span>by</span><math-field id="operand" aria-label="Operation value">3</math-field><button data-op="Add">＋</button><button data-op="Subtract">−</button><button data-op="Multiply">×</button><button data-op="Divide">÷</button></div><div class="moveIntro">Numeric nonzero values only. A new simplified step is added.</div></div>
+    <div id="lines"></div>
+    <div class="stepsHelp">↵ starts a blank line. Hold ↵ and slide up to copy the current line. Flick x/y up for a power. → moves out of a fraction or exponent. No automatic checking in this prototype.</div>
+  </section>
+
+  <section id="view-ink" class="view">
+    <div id="inkPast"><span class="inkPastLabel">Previous lines</span><div id="inkCompleted" aria-label="Completed math lines"></div></div>
+    <div id="inkLineLabel">Current line 1</div>
+    <div id="inkScroll"><canvas id="inkCanvas"></canvas><div id="inkTyped" hidden></div><button id="inkZoom" hidden>1.0× · reset</button></div>
+    <p id="inkPrivacy">Only cropped handwriting is sent for recognition.</p>
+    <div class="toolbar" id="inkTools">
+      <button id="inkUndo" aria-label="Undo handwriting">↶ Undo</button>
+      <button id="inkConvert">Convert</button>
+      <button id="inkNewLine">New line ↑</button>
+      <button id="inkPen" aria-label="Pen colors" aria-expanded="false"><i style="background:#7dd3fc"></i></button>
+      <div id="inkPalette" hidden>
+        <button data-pen="#7dd3fc" class="on" aria-label="Blue pen"><i style="background:#7dd3fc"></i></button>
+        <button data-pen="#fcc2d7" aria-label="Pink pen"><i style="background:#fcc2d7"></i></button>
+        <button data-pen="#e8eaf0" aria-label="White pen"><i style="background:#e8eaf0"></i></button>
+      </div>
+      <button data-pen="erase" id="inkEraser" aria-label="Eraser" aria-pressed="false"><i></i><span>Eraser</span></button>
+      <button id="inkClear">Clear</button>
+    </div>
+  </section>
+
+  <section id="view-graph" class="view">
+    <div id="curves"></div>
+    <div id="graphWrap"><canvas id="graphCanvas"></canvas><div id="graphTip" hidden></div></div>
+    <div class="toolbar" id="graphTools">
+      <button data-gmode="move" class="on">✋ Move</button>
+      <button data-gmode="draw">📐 Draw shape</button>
+      <button id="gAxes">Axes</button>
+      <button id="gUndo">↶</button>
+      <button id="gHome">⌂</button>
+    </div>
+  </section>
+</main>
+
+<div id="kb" hidden></div>
+<div id="toast" hidden></div>
+
+<script type="module" src="/app.js?v=9"></script>
+</body>
+</html>

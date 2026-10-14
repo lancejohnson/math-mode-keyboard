@@ -53,7 +53,7 @@ if __name__ == '__main__':
             exe=next(pathlib.Path.home().glob('.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell'))
             browser=p.chromium.launch(executable_path=str(exe))
             try:
-                url=f'http://127.0.0.1:{server.server_port}'
+                url=f'http://127.0.0.1:{server.server_port}/workspace/'
                 healthy=run_diagnostics(browser,url)
                 assert healthy['ok'], healthy
                 broken=run_diagnostics(browser,url,mutate=inject_faults)

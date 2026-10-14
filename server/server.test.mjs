@@ -63,5 +63,5 @@ test('home screen app: manifest and icons are served with the right types',async
  const url='http://127.0.0.1:'+server.address().port;const m=await fetch(url+'/manifest.webmanifest');
  assert.equal(m.headers.get('content-type'),'application/manifest+json');const man=await m.json();assert.equal(man.display,'standalone');
  for(const i of man.icons){const r=await fetch(url+i.src);assert.equal(r.status,200,i.src);}
- for(const page of ['/','/trig/','/trig/unit1.html','/trig/map.html','/trig/facts.html','/lesson/','/model/']){const h=await (await fetch(url+page)).text();assert.match(h,/rel="manifest"/,page);assert.match(h,/apple-touch-icon/,page);}
+ for(const page of ['/','/workspace/','/trig/','/trig/unit1.html','/trig/map.html','/trig/facts.html','/lesson/','/model/']){const h=await (await fetch(url+page)).text();assert.match(h,/rel="manifest"/,page);assert.match(h,/apple-touch-icon/,page);}
 });

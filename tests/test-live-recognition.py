@@ -16,7 +16,7 @@ with sync_playwright() as p:
     try:
         page=browser.new_page(viewport={'width':390,'height':844},device_scale_factor=2,is_mobile=True,has_touch=True)
         errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-        page.goto(url.rstrip('/')+'/#recognition='+token,wait_until='domcontentloaded',timeout=60000)
+        page.goto(url.rstrip('/')+'/workspace/#recognition='+token,wait_until='domcontentloaded',timeout=60000)
         page.wait_for_function("document.querySelector('#inkPrivacy').textContent.startsWith('Cropped ink')")
         page.wait_for_function("localStorage.getItem('mathmode-v1') !== null",timeout=30000)
         assert not errors,errors

@@ -111,6 +111,6 @@ if __name__=='__main__':
             exe=next(pathlib.Path.home().glob('.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell'))
             browser=p.chromium.launch(executable_path=str(exe));page=browser.new_page(viewport={'width':390,'height':844},device_scale_factor=2,is_mobile=True,has_touch=True)
             errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-            page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_timeout(400)
+            page.goto(f'http://127.0.0.1:{server.server_port}/workspace/',wait_until='networkidle');page.wait_for_timeout(400)
             run_ink_checks(page);assert not errors,errors;browser.close()
     finally:server.shutdown();server.server_close();thread.join();print('Stopped the temporary current-line test server.')
