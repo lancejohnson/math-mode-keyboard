@@ -67,3 +67,6 @@ button.link{background:none;border:0;color:var(--blue);font:inherit;font-size:14
 .say{min-height:5.6em}
 #stepDots{margin:8px 0 2px}
 .tryMsg{min-height:1.5em;margin:4px 0;font-size:16px}
+#predChoices{margin-top:4px}
+.tryMsg{font-size:15px}
+.say{min-height:4.5em}

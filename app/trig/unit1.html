@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Unit 1 · Angles and radians</title>
-<link rel="stylesheet" href="lesson.css?v=4">
+<link rel="stylesheet" href="lesson.css?v=5">
 </head>
 <body>
 <div id="listView">
@@ -12,7 +12,7 @@
   <header>
     <small>Unit 1 of 12</small>
     <h1>Angles and radians</h1>
-    <p class="dim">Small steps. Each topic is a short lesson on one idea, then practice until you get 4 right.</p>
+    <p class="dim">Small steps. Each topic: a quick guess, a short lesson with worked examples, then practice until you get 4 right.</p>
     <div class="progress" id="unitBar"></div>
     <p class="dim" id="unitStatus"></p>
   </header>
@@ -27,7 +27,7 @@
     <h2 id="topicTitle" style="margin-top:2px"></h2>
     <div class="learn" id="learn" hidden></div>
     <button class="link" id="learnAgain" hidden>Show the key idea</button>
-    <div id="lessonTop"><div class="progress" id="stepDots"></div><div class="learn say" id="say"></div></div>
+    <div id="lessonTop"><div class="progress" id="stepDots"></div><div class="learn say" id="say"></div><div class="choices text" id="predChoices" hidden></div></div>
     <canvas id="wheel" aria-label="Angle circle"></canvas>
     <div id="lesson"><p class="tryMsg" id="tryMsg"></p>
       <div class="row"><button class="act alt" id="stepBack">Back</button><button class="act alt" id="replay">↻ Replay</button><button class="act" id="stepNext">Next</button></div></div>
@@ -44,7 +44,7 @@
 </div>
 
 <script type="module">
-import { runUnit, PI, TAU, D, C, deg, rad, piFrac, dec, options, pick } from './engine.js?v=4';
+import { runUnit, PI, TAU, D, C, deg, rad, piFrac, dec, options, pick } from './engine.js?v=6';
 
 const Q = ['', 'a quarter turn', 'two quarter turns (a half turn)', 'three quarter turns', 'a full turn'];
 const PART = { 0: '', 30: 'a third of a quarter turn', 45: 'half of a quarter turn', 60: 'two thirds of a quarter turn' };
@@ -132,90 +132,100 @@ const topics = [
 // The lessons. Each screen shows one thing; "try" screens wait until the learner drags the dot there.
 const S = (say, t, label, o = {}) => ({ say, play: t === undefined ? undefined : { t, label, string: o.string }, ...o });
 const TRY = (say, t, label, o = {}) => ({ say, try: { t, label, ...o } });
+// A one-tap prediction before the lesson (Singapore-style anchor question). Any answer moves on; the reply explains.
+const P = (say, show, choices, answer, then) => ({ say, predict: { show, choices, answer, then } });
 const dimRay = (t, label) => ({ t, label, color: C.dim });
 const LESSONS = {
   turns: [
-    S('<p>Picture the hand of a clock. An <b>angle</b> measures how far something has <b>turned</b>.</p><p>Every angle here starts at the grey line marked <b>start</b>, pointing right.</p>', undefined, '', { cur: 0 }),
-    S('<p>We turn <b>counterclockwise ↺</b>, the opposite way to a clock\'s hands.</p><p>Watch the dot turn up and to the left.</p>', D(135), ''),
-    S('<p>Turning all the way round, back to the start, is a <b>full turn</b>. A full turn is <b>360°</b> (degrees).</p>', TAU, '360°', { play: { t: TAU, label: '360°', ms: 1800 } }),
-    S('<p>Half of that, pointing left, is a <b>half turn</b>: 360° ÷ 2 = <b>180°</b>.</p>', PI, '180°'),
-    S('<p>Half again, pointing straight up, is a <b>quarter turn</b>: <b>90°</b>.</p><p>The tick marks on the circle are every 45°, half of a quarter turn.</p>', D(90), '90°'),
-    S('<p>Three quarter turns is 3 × 90° = <b>270°</b>, pointing straight down.</p>', D(270), '270°'),
-    TRY('<p><b>Your turn.</b> Drag the pink dot round to <b>180°</b>.</p>', PI, '180°', { hint: '180° is a half turn: point left.', done: 'A half turn, pointing left.' }),
+    P('<p><b>Quick guess.</b> The hand started at <b>start</b> and turned to here. What fraction of a full turn is that?</p>', { t: D(90) },
+      ['A quarter turn', 'A half turn', 'A third of a turn', 'A tenth of a turn'], 0,
+      'Four of these turns would bring the hand all the way round. Next: how we put a number on it.'),
+    S('<p>An <b>angle</b> measures <b>how far something has turned</b>, like the hand of a clock.</p><p>To compare angles we need the same starting line every time. Ours is the grey line marked <b>start</b>, pointing right (3 o\'clock), and we turn <b>counterclockwise ↺</b>, the opposite way to a clock\'s hands.</p>', D(135), ''),
+    S('<p>We count turning in <b>degrees</b>. Long ago a full turn was split into <b>360</b> equal parts, because 360 divides evenly by 2, 3, 4, 5, 6, 8, 9, 10, 12… so lots of useful fractions come out as whole numbers.</p><p>A full turn, back to the start: <b>360°</b>.</p>', TAU, '360°', { play: { t: TAU, label: '360°', ms: 1800 } }),
+    S('<p>Everything else is a fraction of 360°.</p><p><b>Half</b> a turn points left: 360° ÷ 2 = <b>180°</b>.<br><b>A quarter</b> turn points straight up: 360° ÷ 4 = <b>90°</b>. That\'s the corner of a square, a "right angle".</p>', D(90), '90°', { show: [dimRay(PI, '180°')] }),
+    S('<p><b>Worked example:</b> where does 270° point?</p><p>270 ÷ 90 = 3, so it is <b>three quarter turns</b>: up, left, then down. The tick marks on the circle are every 45°, half of a quarter turn, to help you count.</p>', D(270), '270°', { play: { t: D(270), label: '270°', ms: 1600 } }),
+    TRY('<p><b>Your turn.</b> Drag the pink dot round to <b>180°</b>.</p>', PI, '180°', { hint: '180° is half of 360°: point left.', done: 'A half turn, pointing left.' }),
     TRY('<p>Now drag it to <b>270°</b>.</p>', D(270), '270°', { hint: 'Three quarter turns: keep going past the left.', done: 'Three quarter turns, pointing down.' }),
   ],
   thirty: [
-    S('<p>A quarter turn is 90°. Cut it into <b>3 equal steps</b>: each step is 90° ÷ 3 = <b>30°</b>.</p><p>The ticks now mark every 30°.</p>', D(30), '30°'),
-    S('<p>Two steps make <b>60°</b>.</p>', D(60), '60°'),
-    S('<p>For <b>120°</b>: go a quarter turn (90°), then one more step (30°).</p>', D(120), '120°', { show: [dimRay(D(90), '')] }),
-    S('<p>For <b>210°</b>: a half turn (180°), then one step past it.</p>', D(210), '210°', { show: [dimRay(PI, '')] }),
+    P('<p><b>Quick guess.</b> A quarter turn is 90°. This turn is <b>two thirds</b> of a quarter turn. How many degrees?</p>', { t: D(60) },
+      ['60°', '45°', '30°', '66°'], 0, 'A third of 90° is 30°, so two thirds is 60°. Let\'s use that 30° step.'),
+    S('<p>Cut a quarter turn into <b>3 equal steps</b>: each is 90° ÷ 3 = <b>30°</b>. The ticks now mark every 30°.</p><p>Why bother? 30° and 60° turn up constantly in trigonometry (they come from triangles you\'ll meet in Unit 3), so it pays to see them instantly.</p>', D(30), '30°'),
+    S('<p>To place any multiple of 30°, <b>split it into quarter turns plus steps</b>.</p><p><b>Worked example: 120°.</b> 120 = 90 + 30, so one quarter turn, then one more step.</p>', D(120), '120°', { show: [dimRay(D(90), '90°')] }),
+    S('<p><b>Worked example: 210°.</b> 210 = 180 + 30: a half turn, then one step past it. You\'ll end just below the left side.</p>', D(210), '210°', { show: [dimRay(PI, '180°')] }),
     TRY('<p><b>Your turn.</b> Drag to <b>60°</b>.</p>', D(60), '60°', { hint: 'Two 30° steps.', done: 'Two steps of 30°.' }),
-    TRY('<p>Now <b>150°</b>.</p>', D(150), '150°', { hint: 'A quarter turn, then two more steps.', done: '90° + 30° + 30°.' }),
+    TRY('<p>Now <b>150°</b>.</p>', D(150), '150°', { hint: '150 = 90 + 30 + 30.', done: '90° + 30° + 30°.' }),
   ],
   negative: [
-    S('<p>So far every turn went <b>counterclockwise ↺</b>. Those angles are <b>positive</b>.</p>', D(90), '90°'),
-    S('<p>Turn the other way, <b>clockwise ↻</b>, and the angle is <b>negative</b>.</p><p><b>−90°</b> is a quarter turn clockwise. It points down. The arrow turns orange for negative angles.</p>', D(-90), '−90°'),
-    S('<p>Notice: −90° ends in the same spot as 270°. Same place, different trip.</p>', D(-90), '−90°', { show: [{ t: D(270), label: '270°', color: C.violet }] }),
-    S('<p><b>−180°</b> ends pointing left, just like 180°. The sign tells you which way you turned.</p>', -PI, '−180°'),
+    P('<p><b>Quick guess.</b> This hand turned <b>clockwise ↻</b>, the other way, to point down. What should we call this angle?</p>', { t: D(-90) },
+      ['−90°', '90°', '270°', '180°'], 0, 'The minus sign records the direction. 270° ends in the same place, but got there the long way round.'),
+    S('<p>So far every turn went counterclockwise ↺. We call those angles <b>positive</b>.</p><p>Turning the other way, <b>clockwise ↻</b>, gives a <b>negative</b> angle. The number says how far; the sign says which way. (On the circle the arrow turns orange for negative.)</p>', D(-90), '−90°'),
+    S('<p><b>Worked example.</b> −90° and 270° end in exactly the same place: pointing down.</p><p>They are different angles because the <b>trip</b> is different: a quarter turn clockwise versus three quarter turns counterclockwise. Later, when angles describe motion (a wheel, a wave), the trip matters.</p>', D(-90), '−90°', { show: [{ t: D(270), label: '270°', color: C.violet }] }),
+    S('<p>A quick way to check: <b>a negative angle and the positive angle that ends in the same place add up to 360°</b> (in size). −90° ↔ 270°, −45° ↔ 315°.</p>', D(-45), '−45°', { show: [{ t: D(315), label: '315°', color: C.violet }] }),
     TRY('<p><b>Your turn.</b> Drag to <b>−90°</b>.</p>', D(-90), '−90°', { hint: 'Clockwise: down from the start.', done: 'A quarter turn clockwise.' }),
-    TRY('<p>Now <b>−45°</b>.</p>', D(-45), '−45°', { hint: 'Half of a quarter turn, clockwise.', done: 'Half a quarter turn, clockwise.' }),
+    TRY('<p>Now <b>−135°</b>.</p>', D(-135), '−135°', { hint: 'A quarter turn clockwise, then half a quarter more.', done: '90° + 45°, clockwise.' }),
   ],
   pi: [
-    S('<p>Degrees are one way to count turning. Most of trigonometry uses another unit: <b>radians</b>.</p><p>Here is a half turn, 180°.</p>', PI, '180°'),
-    S('<p>The one fact to remember: <b>a half turn is π radians</b>.</p><p>π is the number 3.14… (topic 9 shows where it comes from).</p>', PI, 'π'),
-    S('<p>A full turn is two half turns: <b>2π</b>.</p>', TAU, '2π', { play: { t: TAU, label: '2π', ms: 1800 } }),
-    S('<p>A quarter turn is half of a half turn: <b>π/2</b>.</p>', PI / 2, 'π/2'),
-    S('<p>Three quarter turns: 3 × π/2 = <b>3π/2</b>.</p>', 3 * PI / 2, '3π/2'),
+    P('<p><b>Quick guess.</b> In a new unit called <b>radians</b>, a half turn is <b>π</b>. What is a full turn?</p>', { t: TAU },
+      ['2π', 'π/2', '360π', 'π'], 0, 'Two half turns make a full turn, so 2π. That one fact is most of radians.'),
+    S('<p>Degrees are a human choice (360 parts). Trigonometry and calculus use a more natural unit, <b>radians</b>, which comes straight from the circle itself. Topic 9 shows exactly where it comes from.</p><p>For now, one fact: <b>a half turn is π radians</b>. (π ≈ 3.14.)</p>', PI, 'π = half turn'),
+    S('<p>Every other turn is a fraction of that half turn.</p><p><b>Full turn</b> = two half turns = <b>2π</b>.<br><b>Quarter turn</b> = half of a half turn = <b>π/2</b>.</p>', PI / 2, 'π/2', { show: [dimRay(PI, 'π')] }),
+    S('<p><b>Worked example: three quarter turns.</b> Each quarter turn is π/2, so three of them are 3 × π/2 = <b>3π/2</b>. It points straight down, same as 270°.</p>', 3 * PI / 2, '3π/2', { play: { t: 3 * PI / 2, label: '3π/2', ms: 1600 } }),
+    S('<p>Notice that radians are usually written <b>with π in them</b>, as a fraction like 3π/2. That\'s because they count half turns: 3π/2 means "one and a half half-turns".</p><p>Negative works the same way: −π/2 is a quarter turn clockwise.</p>', -PI / 2, '−π/2'),
     TRY('<p><b>Your turn.</b> Drag to <b>π</b>.</p>', PI, 'π', { hint: 'π is a half turn.', done: 'π is a half turn.' }),
     TRY('<p>Now <b>3π/2</b>.</p>', 3 * PI / 2, '3π/2', { hint: 'Three quarter turns.', done: 'Three quarter turns.' }),
-    TRY('<p>And <b>−π/2</b>.</p>', -PI / 2, '−π/2', { hint: 'A quarter turn, clockwise.', done: 'A quarter turn clockwise.' }),
   ],
   quarters: [
-    S('<p>A quarter turn is π/2. Halve it and you get <b>π/4</b>. That\'s 45°.</p>', PI / 4, 'π/4'),
-    S('<p>Count in π/4 slices, like slices of pizza: one slice, two slices, <b>three slices = 3π/4</b>.</p>', 3 * PI / 4, '3π/4', { play: { t: 3 * PI / 4, label: '3π/4', ms: 1600 } }),
-    S('<p>Four slices, 4π/4, is just <b>π</b>. Fractions get simplified, but you\'re still counting slices.</p>', PI, '4π/4 = π'),
-    S('<p><b>5π/4</b> is five slices: one past the half turn.</p>', 5 * PI / 4, '5π/4', { show: [dimRay(PI, '')] }),
+    P('<p><b>Quick guess.</b> A quarter turn is π/2. What is <b>half</b> of a quarter turn?</p>', { t: PI / 4 },
+      ['π/4', 'π/8', '2π', 'π/3'], 0, 'Halving π/2 doubles the bottom number: π/4. Bigger bottom, smaller slice.'),
+    S('<p>Half of a quarter turn is <b>π/4</b>, which is 45°. Eight of these slices make a full turn, like a pizza cut into 8.</p><p>Why does halving make the bottom bigger? π/4 means "π split into 4 pieces", and more pieces means each one is smaller.</p>', PI / 4, 'π/4'),
+    S('<p>To place an angle like 3π/4, <b>read it as a count of slices</b>: the top number (3) is how many π/4 slices to turn.</p><p><b>Worked example: 3π/4</b> = three slices. One, two, three: just short of the half turn.</p>', 3 * PI / 4, '3π/4', { play: { t: 3 * PI / 4, label: '3π/4', ms: 1600 } }),
+    S('<p>Some counts simplify: 2π/4 = π/2 (a quarter turn), 4π/4 = π (a half turn). You\'re still counting the same slices.</p><p><b>Worked example: 5π/4</b> is five slices, one past the half turn.</p>', 5 * PI / 4, '5π/4', { show: [dimRay(PI, 'π')] }),
     TRY('<p><b>Your turn.</b> Drag to <b>3π/4</b>.</p>', 3 * PI / 4, '3π/4', { hint: 'Three 45° slices.', done: 'Three slices of π/4.' }),
-    TRY('<p>Now <b>7π/4</b>.</p>', 7 * PI / 4, '7π/4', { hint: 'Seven slices: one short of a full turn.', done: 'Seven slices, one short of a full turn.' }),
+    TRY('<p>Now <b>7π/4</b>.</p>', 7 * PI / 4, '7π/4', { hint: 'Seven slices: one short of a full turn (8π/4).', done: 'Seven slices, one short of a full turn.' }),
   ],
   sixths: [
-    S('<p>Now cut a half turn into <b>6 steps</b>. Each step is <b>π/6</b> (30°).</p>', PI / 6, 'π/6'),
-    S('<p>Five steps make <b>5π/6</b>, one step short of the half turn.</p>', 5 * PI / 6, '5π/6', { play: { t: 5 * PI / 6, label: '5π/6', ms: 1600 } }),
-    S('<p>Two steps, 2π/6, simplifies to <b>π/3</b> (60°). So π/3 means two 30° steps.</p>', PI / 3, 'π/3 = 2π/6'),
-    S('<p>Four steps, 4π/6, simplifies to <b>2π/3</b>.</p>', 2 * PI / 3, '2π/3 = 4π/6'),
-    S('<p>A bigger number on the bottom means a <b>smaller</b> slice: π/6 is 30°, π/3 is 60°.</p>', PI / 3, 'π/3', { show: [{ t: PI / 6, label: 'π/6', color: C.blue }] }),
+    P('<p><b>Quick guess.</b> Cut a half turn (π) into <b>6 equal steps</b>. What is one step?</p>', { t: PI / 6 },
+      ['π/6', '6π', 'π/3', '1/6'], 0, 'π split into 6 is π/6, which is 180° ÷ 6 = 30°.'),
+    S('<p>One step is <b>π/6</b> (30°). Twelve of them make a full turn, like the hours on a clock face.</p><p>The same counting idea works: <b>5π/6</b> is five steps, one short of the half turn.</p>', 5 * PI / 6, '5π/6', { play: { t: 5 * PI / 6, label: '5π/6', ms: 1600 } }),
+    S('<p>The catch: fractions get <b>simplified</b>, which hides the count.</p><p>Two steps, 2π/6, is written <b>π/3</b>. So whenever you see π/3, think "2 of the 30° steps" = 60°.</p>', PI / 3, 'π/3 = 2π/6'),
+    S('<p><b>Worked example: 2π/3.</b> Rewrite with sixths: 2π/3 = 4π/6, so four steps (120°).</p><p><b>Worked example: 4π/3</b> = 8π/6, eight steps (240°).</p>', 4 * PI / 3, '4π/3 = 8π/6', { show: [dimRay(2 * PI / 3, '2π/3')] }),
+    S('<p>A common slip is mixing up π/6 and π/3. Remember: <b>a bigger number on the bottom means a smaller slice</b>. π/6 is 30°, π/3 is 60°.</p>', PI / 3, 'π/3', { show: [{ t: PI / 6, label: 'π/6', color: C.blue }] }),
     TRY('<p><b>Your turn.</b> Drag to <b>5π/6</b>.</p>', 5 * PI / 6, '5π/6', { hint: 'Five 30° steps.', done: 'Five steps of π/6.' }),
-    TRY('<p>Now <b>π/3</b>.</p>', PI / 3, 'π/3', { hint: 'π/3 = 2π/6: two steps.', done: 'Two steps of π/6.' }),
-    TRY('<p>And <b>4π/3</b>.</p>', 4 * PI / 3, '4π/3', { hint: '4π/3 = 8π/6: eight steps.', done: 'Eight steps of π/6.' }),
+    TRY('<p>Now <b>4π/3</b>.</p>', 4 * PI / 3, '4π/3', { hint: '4π/3 = 8π/6: eight steps.', done: 'Eight steps of π/6.' }),
   ],
   convert: [
-    S('<p>π radians and 180° are the <b>same turn</b>. So to change radians into degrees, put 180° where π is.</p>', PI, 'π = 180°'),
-    S('<p><b>π/3</b> → 180° ÷ 3 = <b>60°</b>.</p>', PI / 3, 'π/3 = 60°'),
-    S('<p><b>3π/4</b> → 3 × (180° ÷ 4) = 3 × 45° = <b>135°</b>.</p>', 3 * PI / 4, '3π/4 = 135°'),
-    S('<p>Going the other way, ask: <b>what fraction of 180° is it?</b></p><p>60° is 60/180 = 1/3 of a half turn, so 60° = <b>π/3</b>.</p>', PI / 3, '60° = π/3'),
-    S('<p>150° is 150/180 = 5/6 of a half turn, so 150° = <b>5π/6</b>.</p>', 5 * PI / 6, '150° = 5π/6'),
-    TRY('<p><b>Your turn.</b> Drag to <b>2π/3</b>. How many degrees is that?</p>', 2 * PI / 3, '2π/3 = 120°', { hint: '2 × (180° ÷ 3).', done: '2 × 60° = 120°.' }),
+    P('<p><b>Quick guess.</b> π radians is the same turn as 180°. So how many degrees is <b>π/3</b>?</p>', { t: PI / 3 },
+      ['60°', '540°', '3°', '30°'], 0, 'π/3 is 180° split into 3, which is 60°.'),
+    S('<p>π and 180° are two names for the <b>same half turn</b>. So converting is just swapping one name for the other.</p><p><b>Radians → degrees: replace π with 180°.</b></p>', PI, 'π = 180°'),
+    S('<p><b>Worked example: 3π/4.</b> Replace π: 3 × 180° / 4. Do the division first, it\'s easier: 180° ÷ 4 = 45°, then 3 × 45° = <b>135°</b>.</p>', 3 * PI / 4, '3π/4 = 135°'),
+    S('<p><b>Degrees → radians: ask what fraction of 180° it is</b>, then put π on top.</p><p><b>Worked example: 150°.</b> 150/180 simplifies to 5/6, so 150° = <b>5π/6</b>.</p>', 5 * PI / 6, '150° = 5π/6'),
+    S('<p>Check yourself with size: π ≈ 3.14, so 5π/6 ≈ 2.6 radians, a bit less than a half turn (3.14). 150° is a bit less than 180°. They agree.</p><p>A common mistake is to leave the answer in degrees, or to multiply by 180 instead of dividing.</p>', 5 * PI / 6, '≈ 2.6 rad'),
+    TRY('<p><b>Your turn.</b> Drag to <b>2π/3</b>, and work out its degrees as you go.</p>', 2 * PI / 3, '2π/3 = 120°', { hint: '2 × (180° ÷ 3).', done: '180° ÷ 3 = 60°, times 2 is 120°.' }),
   ],
   wrap: [
-    S('<p>Keep turning past a full turn and the angle keeps growing.</p>', TAU, '2π', { play: { t: TAU, label: '2π', ms: 1600 } }),
-    S('<p>One full turn plus a quarter turn: 2π + π/2 = <b>5π/2</b>.</p>', 5 * PI / 2, '5π/2', { play: { t: 5 * PI / 2, label: '5π/2', ms: 2000 } }),
-    S('<p>5π/2 ends exactly where π/2 ends. Angles that end in the same place are called <b>coterminal</b>.</p>', 5 * PI / 2, '5π/2', { show: [{ t: PI / 2, label: 'π/2', color: C.green }] }),
-    S('<p>To find the matching angle between 0 and 2π, <b>take away full turns</b>: 5π/2 − 2π = π/2.</p>', 5 * PI / 2, '5π/2 − 2π = π/2', { show: [{ t: PI / 2, label: '', color: C.green }] }),
-    S('<p>For a negative angle, <b>add a full turn</b>: −π/2 + 2π = <b>3π/2</b>.</p>', -PI / 2, '−π/2', { show: [{ t: 3 * PI / 2, label: '3π/2', color: C.green }] }),
-    TRY('<p><b>Your turn.</b> Drag to <b>9π/4</b>.</p>', 9 * PI / 4, '9π/4', { hint: 'One full turn, then π/4 more.', done: '2π + π/4 = 9π/4.', grid: D(45) }),
+    P('<p><b>Quick guess.</b> This hand turned all the way round <b>once</b>, then a quarter more. Which simpler angle ends in the same place?</p>', { t: 5 * PI / 2 },
+      ['π/2', 'π', '3π/2', 'None, it\'s somewhere new'], 0, 'After a full turn you\'re back at the start, so the extra quarter turn lands at π/2.'),
+    S('<p>Angles aren\'t stuck below a full turn. A wheel that spins twice has turned 4π. Keep turning and the angle keeps growing.</p><p><b>Worked example:</b> one full turn plus a quarter turn is 2π + π/2 = <b>5π/2</b>.</p>', 5 * PI / 2, '5π/2', { play: { t: 5 * PI / 2, label: '5π/2', ms: 2000 } }),
+    S('<p>5π/2 ends exactly where π/2 ends. Angles that end in the same place are called <b>coterminal</b> ("same end").</p><p>Why it matters: sine and cosine (Unit 4) only care where an angle ends, so coterminal angles give the same answers.</p>', 5 * PI / 2, '5π/2', { show: [{ t: PI / 2, label: 'π/2', color: C.green }] }),
+    S('<p>To find the matching angle between 0 and 2π, <b>take away full turns</b> (2π each) until you land in that range.</p><p>For a negative angle, <b>add full turns</b>: −π/2 + 2π = <b>3π/2</b>.</p>', -PI / 2, '−π/2', { show: [{ t: 3 * PI / 2, label: '3π/2', color: C.green }] }),
+    TRY('<p><b>Your turn.</b> Drag to <b>9π/4</b>. Watch the arrow spiral past the start.</p>', 9 * PI / 4, '9π/4', { hint: '9π/4 = 8π/4 + π/4: one full turn, then π/4 more.', done: '2π + π/4 = 9π/4.', grid: D(45) }),
   ],
   'why-pi': [
-    S('<p>Why is a half turn called π? Take a piece of string <b>exactly as long as the radius</b> (centre to edge).</p>', 0, '', { cur: 0, show: [{ t: 0, label: 'radius', color: C.blue }] }),
-    S('<p>Lay it along the edge of the circle. The turn it covers is <b>1 radian</b>, a bit under 60°.</p>', 1, '1 radian', { play: { t: 1, label: '1 radian', string: true } }),
-    S('<p>Keep laying strings. A half turn takes 3 and a bit: about <b>3.14 strings</b>. That number is <b>π</b>.</p>', PI, 'π ≈ 3.14', { play: { t: PI, label: 'π ≈ 3.14', string: true, ms: 2200 } }),
-    S('<p>A full turn takes 2π ≈ <b>6.28 strings</b>. That works on any circle, big or small, because the string grows with the radius.</p>', TAU, '2π ≈ 6.28', { play: { t: TAU, label: '2π ≈ 6.28', string: true, ms: 2500 } }),
+    P('<p><b>Quick guess.</b> Take a string <b>exactly as long as the radius</b> and lay it along the edge, like this. How many strings fit in a <b>half turn</b>?</p>', { t: 1, string: true },
+      ['About 3.14', 'Exactly 3', 'About 2', 'It depends on the circle\'s size'], 0, 'A bit more than 3: that number is π. And it\'s the same on every circle.'),
+    S('<p>Here is where radians come from. Take a piece of string <b>as long as the radius</b> (centre to edge) and lay it along the edge.</p><p>The turn it covers is <b>1 radian</b>, about 57°. So a radian is measured with the circle\'s own ruler, not a made-up 360.</p>', 1, '1 radian ≈ 57°', { play: { t: 1, label: '1 radian ≈ 57°', string: true } }),
+    S('<p>Keep laying strings end to end. A half turn takes 3 and a bit: about <b>3.14 strings</b>. That number is <b>π</b>, and it\'s why "π radians" means a half turn.</p>', PI, 'π ≈ 3.14 strings', { play: { t: PI, label: 'π ≈ 3.14 strings', string: true, ms: 2200 } }),
+    S('<p>Why doesn\'t the circle\'s size matter? A bigger circle has a longer edge, but its string is longer too, by exactly the same factor. So it\'s always 3.14 strings per half turn.</p><p>A full turn is <b>2π ≈ 6.28 strings</b>.</p>', TAU, '2π ≈ 6.28', { play: { t: TAU, label: '2π ≈ 6.28', string: true, ms: 2500 } }),
     TRY('<p><b>Your turn.</b> Drag to <b>2 radians</b>: two strings of edge.</p>', 2, '2 rad', { string: true, hint: 'Count the blue string pieces.', done: 'Two radius-lengths of edge.' }),
   ],
   arc: [
-    S('<p>Each radian of turning moves <b>one radius</b> along the edge. That\'s what a radian is.</p>', 1, '1 radius of edge', { play: { t: 1, label: '1 radius of edge', string: true } }),
-    S('<p>So 3 radians moves 3 radius-lengths. If the radius is 2 cm, that\'s 3 × 2 = <b>6 cm</b> of edge.</p>', 3, '3 × 2 cm = 6 cm', { play: { t: 3, label: '3 × 2 cm = 6 cm', string: true, ms: 1800 } }),
-    S('<p>The rule: <b>arc length = radius × angle</b>, with the angle in radians.</p>', 2, 'arc = radius × angle', { play: { t: 2, label: 'arc = radius × angle', string: true } }),
-    S('<p>A half turn is π radians. On a circle of radius 5 cm the arc is 5 × π = <b>5π ≈ 15.7 cm</b>.</p>', PI, '5π ≈ 15.7 cm', { play: { t: PI, label: '5π ≈ 15.7 cm', string: true, ms: 2000 } }),
+    P('<p><b>Quick guess.</b> The radius is <b>2 cm</b>. The dot turns <b>3 radians</b>: three radius-strings of edge. How long is that piece of edge?</p>', { t: 3, string: true },
+      ['6 cm', '5 cm', '1.5 cm', '3 cm'], 0, 'Three strings, each 2 cm long: 6 cm. That\'s the whole rule.'),
+    S('<p>A radian <b>is</b> one radius of edge (topic 9). So each radian you turn moves you one radius-length along the edge.</p><p>That edge distance is called the <b>arc length</b>.</p>', 1, '1 radius of edge', { play: { t: 1, label: '1 radius of edge', string: true } }),
+    S('<p>So: <b>arc length = radius × angle</b>, with the angle in radians.</p><p><b>Worked example:</b> radius 2 cm, angle 3: arc = 2 × 3 = <b>6 cm</b>.</p>', 3, '2 × 3 = 6 cm', { play: { t: 3, label: '2 × 3 = 6 cm', string: true, ms: 1800 } }),
+    S('<p><b>Worked example with π:</b> radius 5 cm, half turn (π). Arc = 5 × π = <b>5π cm ≈ 15.7 cm</b>. Leaving it as 5π is exact; 15.7 is rounded.</p>', PI, '5π ≈ 15.7 cm', { play: { t: PI, label: '5π ≈ 15.7 cm', string: true, ms: 2000 } }),
+    S('<p>Watch out: the rule only works in <b>radians</b>. Using degrees (radius × 180) would give 900 cm for that half turn, which is far too long.</p><p>If you\'re given degrees, convert first (topic 7).</p>', PI, '5 × 180 = 900? no', { play: { t: PI, label: '5 × 180 = 900? ✗', string: true } }),
     TRY('<p><b>Your turn.</b> The radius is 4 cm. Drag to <b>2 radians</b>. How long is that arc?</p>', 2, '4 × 2 = 8 cm', { string: true, hint: 'Two strings of edge.', done: '4 cm × 2 = 8 cm of edge.' }),
   ],
 };

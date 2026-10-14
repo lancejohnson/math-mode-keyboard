@@ -60,7 +60,13 @@ def lesson(page, shot=None):
     k = 0
     while page.inner_text('#stepNext') != 'Start practice →' or page.evaluate('!!u1.step().try') and page.locator('#stepNext').is_disabled():
         st = page.evaluate('u1.step()')
-        if st.get('try'):
+        if st.get('predict'):
+            assert page.locator('#stepNext').is_disabled() and page.inner_text('#stepNext') == 'Start the lesson →'
+            pr = st['predict']; wrong = page.evaluate('u1.si()') == 0 and page.evaluate('u1.topics.indexOf(u1.topics.find(t=>t.title===document.querySelector("#topicTitle").innerText))') % 2 == 1
+            page.locator(f'#predChoices .choice[data-j="{(pr["answer"] + 1) % 4 if wrong else pr["answer"]}"]').click()
+            assert page.locator('#stepNext').is_enabled() and ('Not quite' in page.inner_text('#tryMsg')) == wrong, page.inner_text('#tryMsg')
+            if not (OUT / 'trig1v2-predict.png').exists(): page.locator('#topicView').screenshot(path=str(OUT / 'trig1v2-predict.png'))
+        elif st.get('try'):
             assert page.locator('#stepNext').is_disabled()
             w = st['try']['t'] + math.pi / 2
             drag_to(page, w); assert page.locator('#stepNext').is_disabled(), (st, page.evaluate('u1.wheel.s.cur'), page.inner_text('#tryMsg'))
@@ -134,7 +140,7 @@ def main():
     ap.add_argument('--slow', action='store_true', help='real animation timing and pauses (as before)')
     ap.parse_args(namespace=ARGS)
     t0 = time.time()
-    (OUT / 'trig1v2-yourturn.png').unlink(missing_ok=True)
+    for f in ('trig1v2-yourturn.png', 'trig1v2-predict.png'): (OUT / f).unlink(missing_ok=True)
     OUT.mkdir(parents=True, exist_ok=True)
     srv = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(ROOT / 'app')))
     http.server.SimpleHTTPRequestHandler.log_message = lambda *a: None
@@ -162,7 +168,7 @@ def main():
                 print(f'  {w}px ok in {time.time() - tw:.1f}s', file=sys.stderr)
                 page.close()
             browser.close()
-        print('PASS: trig unit 1 v2 — 10 topics mastered through drag / tap / pad, wrong-answer feedback for each type, wrong-way turn caught, unlocks + progress persist; 3 phone sizes, no JS errors. Chromium, not iOS.' if not (ARGS.only or ARGS.topics) else f'PASS (partial: only={ARGS.only} topics={ARGS.topics}) in {time.time() - t0:.1f}s')
+        print('PASS: trig unit 1 v2 — 10 topics: guess-first opener, lesson, then mastery through drag / tap / pad, wrong-answer feedback for each type, wrong-way turn caught, unlocks + progress persist; 3 phone sizes, no JS errors. Chromium, not iOS.' if not (ARGS.only or ARGS.topics) else f'PASS (partial: only={ARGS.only} topics={ARGS.topics}) in {time.time() - t0:.1f}s')
         if not (ARGS.only or ARGS.topics): print(f'  total {time.time() - t0:.1f}s', file=sys.stderr)
     finally:
         srv.shutdown()

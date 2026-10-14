@@ -145,8 +145,20 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
     $('#stepDots').innerHTML = L.map((_, j) => `<i class="${j < si ? 'ok' : j === si ? 'now' : ''}"></i>`).join('');
     $('#say').innerHTML = st.say; $('#tryMsg').innerHTML = ''; $('#stepBack').disabled = si === 0;
     $('#stepNext').textContent = si === L.length - 1 ? 'Start practice →' : 'Next';
-    $('#replay').hidden = !st.play; wheel.onturn = null; cancelAnimationFrame(wheel.anim);
-    if (st.try) {
+    $('#replay').hidden = !st.play; wheel.onturn = null; cancelAnimationFrame(wheel.anim); $('#predChoices').hidden = !st.predict;
+    if (si === 0 && st.predict) $('#stepNext').textContent = 'Start the lesson →';
+    if (st.predict) {
+      const pr = st.predict, picked = prog.pred?.[T().id];
+      const order = pr.choices.map((_, j) => j).sort(() => Math.random() - .5);
+      $('#predChoices').innerHTML = order.map(j => `<button class="choice" data-j="${j}">${pr.choices[j]}</button>`).join('');
+      wheel.set({ grid, show: [{ ...pr.show, label: '' }] }); $('#stepNext').disabled = true;
+      $('#predChoices').onclick = e => {
+        const b = e.target.closest('.choice'); if (!b || b.disabled) return; const j = +b.dataset.j, ok = j === pr.answer;
+        $('#predChoices').querySelectorAll('.choice').forEach(c => { const k = +c.dataset.j; c.disabled = true; if (k === pr.answer) c.classList.add('right'); else if (k === j) c.classList.add('wrong'); });
+        $('#tryMsg').innerHTML = `<span class="${ok ? 'ok' : 'no'}">${ok ? '✓ Good guess.' : 'Not quite, and that\'s fine: this is what the lesson is for.'}</span> ${pr.then}`;
+        (prog.pred ||= {})[T().id] = ok ? 'right' : pr.choices[j]; save(); $('#stepNext').disabled = false;
+      };
+    } else if (st.try) {
       const tr = st.try; $('#stepNext').disabled = true; $('#replay').hidden = true;
       wheel.set({ grid, snap: tr.snap ?? T().snap, string: tr.string, cur: 0, drag: true });
       $('#tryMsg').innerHTML = `<span class="dim">Drag the pink dot.</span>`;
