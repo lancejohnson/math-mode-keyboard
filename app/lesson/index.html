@@ -35,6 +35,11 @@ button.act:disabled{opacity:.4}
 input.num{width:90px;font-size:18px;padding:8px;border-radius:8px;border:1px solid #39425a;background:#10131a;color:var(--ink)}
 textarea{width:100%;min-height:90px;font:inherit;padding:10px;border-radius:10px;border:1px solid #39425a;background:#10131a;color:var(--ink)}
 .reveal{background:#141926;border-radius:10px;padding:10px;margin-top:8px}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.choice{background:#232a3d;border:2px solid #39425a;border-radius:12px;padding:6px;color:var(--ink);font-size:14px;min-height:44px}
+.choice canvas{margin:0 auto 4px;width:100%;height:auto;aspect-ratio:3/2;background:#10131a}
+.choice.right{border-color:var(--green);background:#1f3326}.choice.wrong{border-color:#ff8787;background:#3a2226}
+.choice:disabled{color:var(--ink);opacity:1}
 </style>
 </head>
 <body>
@@ -43,6 +48,20 @@ textarea{width:100%;min-height:90px;font:inherit;padding:10px;border-radius:10px
   <h1>Graphing parabolas from y = a(x − h)² + k</h1>
   <p class="dim">Play with the model, learn the four features that define the graph, use the model to solve a problem, then sketch one yourself.</p>
 </header>
+
+<section id="predict">
+  <h2><b>Start</b>Predict first</h2>
+  <p class="dim">Guess before you look. Being surprised is the point — that's where the learning happens.</p>
+  <p id="predictQ"></p>
+  <div class="choices" id="predictChoices"></div>
+  <canvas id="predictCanvas" aria-label="What actually happens"></canvas>
+  <div id="predictAfter" hidden>
+    <p id="predictVerdict" aria-live="polite"></p>
+    <textarea id="predictText" aria-label="Your explanation" placeholder="Why did it do that? Say it in your own words first."></textarea>
+    <div class="row"><button class="act alt" id="predictWhy">Show why</button><button class="act" id="predictNext">Next prediction</button></div>
+    <div class="reveal" id="predictKey" hidden></div>
+  </div>
+</section>
 
 <section id="explore">
   <h2><b>1</b>Explore</h2>
@@ -243,8 +262,42 @@ $('#sketchNew').onclick=()=>{target=randomParabola();$('#sketchEq').textContent=
 // 5 · Explain
 $('#explainShow').onclick=()=>{$('#explainKey').hidden=false;};
 
+// 0 · Predict, observe, explain: commit to a guess, watch it happen, explain the gap.
+const BASE={a:1,h:0,k:0};
+const rounds=[
+  {q:'y = x² becomes <b>y = x² + 3</b>. What happens to the graph?',to:{a:1,h:0,k:3},right:0,
+   opts:[['Moves up 3',{a:1,h:0,k:3}],['Moves down 3',{a:1,h:0,k:-3}],['Moves right 3',{a:1,h:3,k:0}],['Gets narrower',{a:3,h:0,k:0}]],
+   why:'Adding 3 <i>after</i> squaring adds 3 to every output, so every point rises 3. The shape doesn\'t change.'},
+  {q:'y = x² becomes <b>y = (x − 2)²</b>. What happens?',to:{a:1,h:2,k:0},right:1,
+   opts:[['Moves left 2',{a:1,h:-2,k:0}],['Moves right 2',{a:1,h:2,k:0}],['Moves down 2',{a:1,h:0,k:-2}],['Moves up 2',{a:1,h:0,k:2}]],
+   why:'The lowest output, 0, now happens when x − 2 = 0 — at <b>x = 2</b>. Every height the old graph reached at x, the new one reaches 2 later, at x + 2. So it shifts <b>right</b>: the minus sign inside moves it the positive way.'},
+  {q:'y = x² becomes <b>y = −½x²</b>. What happens?',to:{a:-.5,h:0,k:0},right:0,
+   opts:[['Flips and gets wider',{a:-.5,h:0,k:0}],['Flips and gets narrower',{a:-2,h:0,k:0}],['Only gets wider',{a:.5,h:0,k:0}],['Moves down ½',{a:1,h:0,k:-.5}]],
+   why:'The minus sign turns every output upside down, so it opens down. The ½ halves every height, so it climbs (falls) more slowly — that looks <b>wider</b>.'}];
+let round=0,shown=BASE,anim=0;
+const predict=new Plane($('#predictCanvas'),p=>{p.curve(x=>f(BASE,x),'#ffffff40',2,[6,5]);p.curve(x=>f(shown,x),'#e8eaf0');p.dot(shown.h,shown.k,COLORS.vertex,6);
+  if(shown===BASE)p.text('y = x²  (now)',1.5,f(BASE,1.5),'#c9d2e3',0);});
+function thumb(c,m){const W=150,H=100,d=devicePixelRatio||1;c.width=W*d;c.height=H*d;const g=c.getContext('2d');g.setTransform(d,0,0,d,0,0);const u=W/12,X=x=>W/2+x*u,Y=y=>H*.62-y*u;
+  g.strokeStyle='#39425a';g.lineWidth=1;g.beginPath();g.moveTo(0,Y(0));g.lineTo(W,Y(0));g.moveTo(X(0),0);g.lineTo(X(0),H);g.stroke();
+  for(const [mm,col,dash] of [[BASE,'#ffffff40',[4,4]],[m,'#74c0fc',[]]]){g.strokeStyle=col;g.setLineDash(dash);g.lineWidth=2.5;g.beginPath();for(let px=0;px<=W;px+=2){const y=f(mm,(px-W/2)/u);px?g.lineTo(px,Y(y)):g.moveTo(px,Y(y));}g.stroke();}g.setLineDash([]);}
+function showRound(){const r=rounds[round];shown=BASE;cancelAnimationFrame(anim);predict.render();$('#predictQ').innerHTML=`<b>${round+1} of ${rounds.length}.</b> `+r.q;$('#predictAfter').hidden=true;$('#predictKey').hidden=true;$('#predictText').value='';
+  $('#predictChoices').innerHTML=r.opts.map(([t],i)=>`<button class="choice" data-i="${i}"><canvas></canvas>${t}</button>`).join('');
+  $$('#predictChoices canvas').forEach((c,i)=>thumb(c,r.opts[i][1]));}
+const $$=s=>[...document.querySelectorAll(s)];
+$('#predictChoices').onclick=e=>{const b=e.target.closest('.choice');if(!b||b.disabled)return;const r=rounds[round],i=+b.dataset.i,ok=i===r.right;
+  $$('#predictChoices .choice').forEach((c,j)=>{c.disabled=true;if(j===r.right)c.classList.add('right');else if(j===i)c.classList.add('wrong');});
+  // Observe: morph the real graph from y = x² to the new one.
+  const t0=performance.now();const step=t=>{const u=Math.min(1,(t-t0)/1200),e2=u<.5?2*u*u:1-(-2*u+2)**2/2;
+    shown={a:BASE.a+(r.to.a-BASE.a)*e2,h:BASE.h+(r.to.h-BASE.h)*e2,k:BASE.k+(r.to.k-BASE.k)*e2};predict.render();if(u<1)anim=requestAnimationFrame(step);else{shown=r.to;predict.render();}};
+  anim=requestAnimationFrame(step);$('#predictCanvas').scrollIntoView({behavior:'smooth',block:'center'});
+  $('#predictVerdict').innerHTML=ok?'<span class="ok">✓ Your prediction matched. Can you say <i>why</i>?</span>':`<span class="no">Surprise! It ${r.opts[r.right][0].toLowerCase()}, not “${r.opts[i][0].toLowerCase()}”.</span> Before reading the reason, try to explain it in your own words.`;
+  $('#predictNext').textContent=round===rounds.length-1?'Now explore it yourself ↓':'Next prediction';$('#predictAfter').hidden=false;};
+$('#predictWhy').onclick=()=>{$('#predictKey').innerHTML=rounds[round].why;$('#predictKey').hidden=false;};
+$('#predictNext').onclick=()=>{if(round<rounds.length-1){round++;showRound();$('#predict').scrollIntoView({behavior:'smooth'});}else $('#explore').scrollIntoView({behavior:'smooth'});};
+showRound();
+
 // Test hooks for the headless phone check.
-window.lesson={explore,ex,solve,sv,sketch,setTarget(m){target=m;$('#sketchEq').textContent=equation(m.a,m.h,m.k);$('#sketchClear').onclick();},target:()=>target};
+window.lesson={predict,shown:()=>shown,explore,ex,solve,sv,sketch,setTarget(m){target=m;$('#sketchEq').textContent=equation(m.a,m.h,m.k);$('#sketchClear').onclick();},target:()=>target};
 </script>
 </body>
 </html>

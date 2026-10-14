@@ -26,6 +26,16 @@ def draw(page, fn, x0, x1):
 
 def run(page):
     page.set_default_timeout(6000)
+    # Predict, observe, explain: a right guess, then the classic wrong one (x − 2 moves right).
+    choice = lambda t: page.locator('#predictChoices .choice', has_text=t).click()
+    choice('Moves up 3'); assert 'matched' in page.inner_text('#predictVerdict')
+    page.wait_for_function('lesson.shown().k===3'); page.click('#predictNext')
+    choice('Moves left 2'); v = page.inner_text('#predictVerdict'); assert 'Surprise' in v and 'moves right 2' in v, v
+    assert page.locator('#predictChoices .right').inner_text().strip() == 'Moves right 2'
+    page.wait_for_function('lesson.shown().h===2'); page.click('#predictWhy'); assert 'x = 2' in page.inner_text('#predictKey')
+    page.locator('#predict').screenshot(path=str(OUT / 'lesson-predict.png'))
+    page.click('#predictNext'); choice('Flips and gets narrower'); page.wait_for_function('lesson.shown().a===-0.5')
+    assert page.inner_text('#predictNext') == 'Now explore it yourself ↓'
     # Explore: drag vertex to (2,1), shape handle to a = -1.
     drag(page, 'explore', (0, -2), (2, 1))
     assert page.locator('#exploreEq').inner_text() == 'y = (x − 2)² + 1', page.locator('#exploreEq').inner_text()
@@ -82,7 +92,7 @@ def main():
                 assert not errors, errors
                 page.close()
             browser.close()
-        print('PASS: lesson prototype — drag model + feature callouts, five-move recipe, solve-with-model + symmetry, freehand sketch graded on features (right passes, wrong direction/vertex caught); 3 phone sizes, no JS errors. Chromium, not iOS.')
+        print('PASS: lesson prototype — predict/observe/explain with morph and surprise feedback, drag model + feature callouts, five-move recipe, solve-with-model + symmetry, freehand sketch graded on features (right passes, wrong direction/vertex caught); 3 phone sizes, no JS errors. Chromium, not iOS.')
     finally:
         srv.shutdown()
 
