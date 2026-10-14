@@ -2,7 +2,7 @@
 import base64,ctypes,io,json,os,sys
 from PIL import Image,ImageOps
 import numpy as np
-from scipy.ndimage import label,find_objects
+from scipy.ndimage import label,find_objects,binary_erosion,grey_erosion
 Image.MAX_IMAGE_PIXELS=2400000
 lib=ctypes.CDLL(os.environ['MATH_MODE_OCR_LIBRARY'])
 lib.crispembed_ocr_model_init.argtypes=[ctypes.c_char_p,ctypes.c_int];lib.crispembed_ocr_model_init.restype=ctypes.c_void_p
@@ -24,11 +24,16 @@ try:
    image=image.crop(box)
    # Connected-component heights keep superscripts and stacked fractions intact.
    # Horizontal fraction/equality bars do not dictate the character scale.
-   labels,count=label(np.asarray(image)<180)
+   ink=np.asarray(image)<180;labels,count=label(ink)
    if count>6000:raise ValueError()
    heights=[o[0].stop-o[0].start for o in find_objects(labels) if o and o[0].stop-o[0].start>=8 and (o[1].stop-o[1].start)<4*(o[0].stop-o[0].start)]
    glyph=float(np.median(heights)) if heights else image.height
    scale=min(36/max(1,glyph),200/image.height,900/image.width)
+   # The reader expects pen strokes about 3 px wide at its 36 px character height.
+   # Phone ink is thin relative to large handwriting; without thickening, a 6
+   # becomes an i and whole equations fail. Thicken (never thin) to match.
+   edge=ink&~binary_erosion(ink);width=2*ink.sum()/max(1,edge.sum());grow=int(round(3/scale-width))
+   if grow>=1:image=Image.fromarray(grey_erosion(np.asarray(ImageOps.expand(image,border=grow,fill=255)),size=(grow+1,grow+1)))
    image=image.resize((max(1,round(image.width*scale)),max(1,round(image.height*scale))),Image.Resampling.LANCZOS)
    image=ImageOps.expand(image,border=10,fill=255)
    n=ctypes.c_int();text=lib.crispembed_ocr_model_recognize(ctx,image.tobytes(),image.width,image.height,1,ctypes.byref(n))

@@ -7,7 +7,7 @@ const image=async name=>'data:image/png;base64,'+(await readFile(new URL(`../tes
 const normalize=s=>s.replace(/\s+/g,'').replaceAll('^{2}','^2').toLowerCase();
 test('real dedicated reader preserves powers, fractions and incorrect arithmetic without an external model',{skip:!enabled},async t=>{
  const recognize=await createLocalRecognizer();t.after(()=>recognize.close());
- for(const [name,want] of [['quadratic','x^2+2x=3'],['fraction','\\frac{2x+3}{x-1}=5'],['wrong-arithmetic','2+2=5']]){
+ for(const [name,want] of [['quadratic','x^2+2x=3'],['fraction','\\frac{2x+3}{x-1}=5'],['wrong-arithmetic','2+2=5'],['phone-quadratic','x^2+2x=3'],['phone-fraction','\\frac{2x+3}{x-1}=5'],['phone-wrong-arithmetic','2+2=5'],['phone-plus-six','+6']]){
   const result=await recognize(await image(name),AbortSignal.timeout(6000));assert.equal(result.model,'bttr-local');assert.equal(result.lines.length,1);assert.equal(normalize(result.lines[0].latex),want);
  }
 });
