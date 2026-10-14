@@ -94,6 +94,7 @@ def run(page):
         page.wait_for_timeout(1300 if ARGS.slow else 50)
         if ti in (0, 8): page.locator('#topicView').screenshot(path=str(OUT / f'trig1v2-learn{ti}.png'))
         lesson(page, 'trig1v2-yourturn.png')
+        if ti == 0: page.evaluate('u1.ask(2)')  # make sure a tap (choice) question gets a wrong answer
         if ti == 6: page.evaluate('u1.ask(1, 90)')  # make sure a typed (pad) question gets a wrong answer
         wrongs = 0
         while page.locator('#done').is_hidden():
