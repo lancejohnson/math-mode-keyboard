@@ -166,7 +166,6 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
     $('#say').innerHTML = st.say; $('#tryMsg').innerHTML = ''; $('#stepBack').disabled = si === 0;
     $('#stepNext').textContent = si === L.length - 1 ? 'Start practice →' : 'Next';
     $('#replay').hidden = !st.play; wheel.onturn = null; cancelAnimationFrame(wheel.anim); $('#predChoices').hidden = !st.predict;
-    if (si === 0 && st.predict) $('#stepNext').textContent = 'Start the lesson →';
     if (st.predict) {
       const pr = st.predict, picked = prog.pred?.[T().id];
       const order = pr.choices.map((_, j) => j).sort(() => Math.random() - .5);

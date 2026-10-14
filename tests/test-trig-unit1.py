@@ -68,8 +68,8 @@ def lesson(page, shot=None):
     while page.inner_text('#stepNext') != 'Start practice →' or page.evaluate('!!u1.step().try') and page.locator('#stepNext').is_disabled():
         st = page.evaluate('u1.step()')
         if st.get('predict'):
-            assert page.locator('#stepNext').is_disabled() and page.inner_text('#stepNext') == 'Start the lesson →'
-            pr = st['predict']; wrong = page.evaluate('u1.si()') == 0 and page.evaluate('u1.topics.indexOf(u1.topics.find(t=>t.title===document.querySelector("#topicTitle").innerText))') % 2 == 1
+            assert page.locator('#stepNext').is_disabled() and page.evaluate('u1.si()') >= 2  # guess comes after the lesson
+            pr = st['predict']; wrong = page.evaluate('u1.topics.indexOf(u1.topics.find(t=>t.title===document.querySelector("#topicTitle").innerText))') % 2 == 1
             page.locator(f'#predChoices .choice[data-j="{(pr["answer"] + 1) % 4 if wrong else pr["answer"]}"]').click()
             assert page.locator('#stepNext').is_enabled() and ('Not quite' in page.inner_text('#tryMsg')) == wrong, page.inner_text('#tryMsg')
             if not (OUT / 'trig1v2-predict.png').exists(): page.locator('#topicView').screenshot(path=str(OUT / 'trig1v2-predict.png'))
@@ -186,7 +186,7 @@ def main():
                 print(f'  {w}px ok in {time.time() - tw:.1f}s', file=sys.stderr)
                 page.close()
             browser.close()
-        print('PASS: trig unit 1 v2 — 11 topics incl. timed by-heart drill + quick-facts review: guess-first opener, lesson, then mastery through drag / tap / pad, wrong-answer feedback for each type, wrong-way turn caught, unlocks + progress persist; 3 phone sizes, no JS errors. Chromium, not iOS.' if not (ARGS.only or ARGS.topics) else f'PASS (partial: only={ARGS.only} topics={ARGS.topics}) in {time.time() - t0:.1f}s')
+        print('PASS: trig unit 1 v2 — 11 topics incl. timed by-heart drill + quick-facts review: short lesson then a stretch guess, then mastery through drag / tap / pad, wrong-answer feedback for each type, wrong-way turn caught, unlocks + progress persist; 3 phone sizes, no JS errors. Chromium, not iOS.' if not (ARGS.only or ARGS.topics) else f'PASS (partial: only={ARGS.only} topics={ARGS.topics}) in {time.time() - t0:.1f}s')
         if not (ARGS.only or ARGS.topics): print(f'  total {time.time() - t0:.1f}s', file=sys.stderr)
     finally:
         srv.shutdown()
