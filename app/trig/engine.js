@@ -37,14 +37,22 @@ import { CARDS, FAST, radOf, promptFor, choicesFor, choiceText, record, status, 
 export class Wheel {
   constructor(canvas) {
     this.c = canvas; this.s = {}; addEventListener('resize', () => this.fit()); this.fit();
-    let prev = null, raw = 0;
+    // raw = total turning so far. pos (topics before negative angles): the dot just goes where the finger is,
+    // read as 0°–360° counterclockwise, so the short clockwise drag to 300° still means 300°.
+    let prev = null, raw = 0, lastD = 0;
     const loc = e => { const b = this.c.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
     const move = e => {
       if (prev === null) return; const [x, y] = loc(e); if (Math.hypot(x - this.cx, y - this.cy) < this.R * .15) return;
-      const a = Math.atan2(this.cy - y, x - this.cx); let d = a - prev; d = ((d + PI) % TAU + TAU) % TAU - PI; raw += d; prev = a;
-      raw = Math.max(-1.5 * TAU, Math.min(2.5 * TAU, raw)); const sn = this.s.snap || PI / 12; this.s.cur = Math.round(raw / sn) * sn; this.render(); this.onturn?.();
+      const a = Math.atan2(this.cy - y, x - this.cx); let d = a - prev; d = ((d + PI) % TAU + TAU) % TAU - PI;
+      // A jump this big means the finger cut across the middle (or iOS skipped events): which way it went is
+      // ambiguous, so keep the direction the finger was already turning instead of flipping.
+      if (Math.abs(d) > .6 * PI && lastD && Math.sign(d) !== Math.sign(lastD)) d += Math.sign(lastD) * TAU;
+      raw += d; prev = a; if (Math.abs(d) > .01) lastD = d;
+      const sn = this.s.snap || PI / 12;
+      if (this.s.pos) { if (raw < -sn / 2) raw += TAU; else if (raw > TAU + sn / 2) raw -= TAU; }
+      raw = Math.max(-1.5 * TAU, Math.min(2.5 * TAU, raw)); this.s.cur = Math.round(raw / sn) * sn; this.render(); this.onturn?.();
     };
-    this.c.addEventListener('pointerdown', e => { if (!this.s.drag) return; const [x, y] = loc(e); prev = Math.atan2(this.cy - y, x - this.cx); raw = this.s.cur; this.c.setPointerCapture(e.pointerId); e.preventDefault(); });
+    this.c.addEventListener('pointerdown', e => { if (!this.s.drag) return; const [x, y] = loc(e); prev = Math.atan2(this.cy - y, x - this.cx); raw = this.s.cur; lastD = 0; this.c.setPointerCapture(e.pointerId); e.preventDefault(); });
     this.c.addEventListener('pointermove', move);
     this.c.addEventListener('pointerup', e => { move(e); prev = null; });
     this.c.addEventListener('pointercancel', () => prev = null);
@@ -179,7 +187,7 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
       };
     } else if (st.try) {
       const tr = st.try; $('#stepNext').disabled = true; $('#replay').hidden = true;
-      wheel.set({ grid, snap: tr.snap ?? T().snap, string: tr.string, cur: 0, drag: true });
+      wheel.set({ grid, snap: tr.snap ?? T().snap, string: tr.string, pos: T().pos, cur: 0, drag: true });
       // No live "that's it": the learner commits with Check, like a real answer.
       const ask = '<span class="dim">Drag the pink dot, then tap Check.</span>';
       $('#tryMsg').innerHTML = ask; $('#tryCheck').hidden = false; $('#tryCheck').disabled = true;
@@ -236,7 +244,7 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
     clock(q.type === 'fact');
     if (q.type === 'choice') $('#choices').innerHTML = q.choices.map((c, i) => `<button class="choice" data-i="${i}">${c}</button>`).join('');
     if (q.type === 'pad') { pad.value = ''; $('#padUnit').textContent = q.unit || ''; }
-    wheel.set(q.type === 'drag' ? { grid: q.grid ?? topic.grid, snap: q.snap ?? topic.snap, string: q.string, cur: 0, drag: true } : { grid: q.grid ?? topic.grid, show: q.show ? [q.show] : [] });
+    wheel.set(q.type === 'drag' ? { grid: q.grid ?? topic.grid, snap: q.snap ?? topic.snap, string: q.string, pos: q.pos ?? topic.pos, cur: 0, drag: true } : { grid: q.grid ?? topic.grid, show: q.show ? [q.show] : [] });
     bar();
   }
   function grade(ok, msg, html) {

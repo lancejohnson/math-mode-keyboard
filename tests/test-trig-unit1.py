@@ -131,8 +131,18 @@ def run(page):
 
 def specific(page):
     # The classic mistakes get specific feedback.
-    page.locator('.topic').nth(0).click(); lesson(page)
-    page.evaluate('u1.ask(0, 90)'); drag_to(page, math.pi / 2 - 2 * math.pi); page.click('#check')
+    # Before negative angles are taught, the dot reads 0°–360° wherever it ends: the short clockwise drag to 300° is 300°.
+    page.evaluate('u1.open(1)'); lesson(page)
+    page.evaluate('u1.ask(0, 300)'); drag_to(page, -math.pi / 3); assert abs(page.evaluate('u1.wheel.s.cur') - 5 * math.pi / 3) < 1e-6
+    page.click('#check'); assert '✓' in page.inner_text('#feedback'), page.inner_text('#feedback')
+    # A swipe straight across the middle keeps the direction it was already turning (no flip to the other way).
+    page.evaluate('u1.ask(0, 210)'); c = page.evaluate('[u1.wheel.client(0, 0.9), u1.wheel.client(1.2, 0.9), u1.wheel.client(1.2 + math.PI, 0.9)]'.replace('math.PI', 'Math.PI'))
+    page.mouse.move(*c[0]); page.mouse.down(); page.mouse.move(*c[1]); page.mouse.move(*c[2]); page.mouse.up()
+    assert page.evaluate('u1.wheel.s.cur') > 3, page.evaluate('u1.wheel.s.cur')
+    page.click('#back')
+    # Once negatives are taught, direction matters again.
+    page.evaluate('u1.open(3)'); lesson(page)
+    page.evaluate('u1.ask(0, Math.PI / 2)'); drag_to(page, math.pi / 2 - 2 * math.pi); page.click('#check')
     assert 'wrong way' in page.inner_text('#feedback'), page.inner_text('#feedback')
     page.locator('#topicView').screenshot(path=str(OUT / 'trig1v2-wrongway.png'))
     page.click('#back')
