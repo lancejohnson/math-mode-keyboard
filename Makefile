@@ -1,4 +1,4 @@
-.PHONY: test-eraser test-trig test-trig-specific trig-unit1 trig-facts-unit trig-facts trig-map
+.PHONY: test-eraser test-trig test-trig-specific trig-unit1 trig-facts-unit trig-facts trig-map trig-nav
 
 # Focused headless phone regression; mocked recognition, no screenshots.
 test-eraser:
@@ -26,3 +26,5 @@ trig-facts:
 	$(call PASS,tests/test-trig-facts.py) uv run -q --with playwright python tests/test-trig-facts.py
 trig-map:
 	$(call PASS,tests/test-trig-map.py) uv run -q --with playwright python tests/test-trig-map.py
+trig-nav:
+	$(call PASS,tests/test-nav.py) uv run -q --with playwright python tests/test-nav.py
