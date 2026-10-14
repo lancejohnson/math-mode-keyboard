@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lesson prototype · Graphing parabolas</title>
+<style>
+:root{color-scheme:dark;--bg:#12151c;--card:#1b2030;--ink:#e8eaf0;--dim:#9aa4b8;--blue:#74c0fc;--pink:#f783ac;--green:#8ce99a;--amber:#ffd43b;--violet:#b197fc}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,system-ui,sans-serif;padding:0 12px calc(40px + env(safe-area-inset-bottom))}
+header{padding:18px 4px 6px}
+header small{color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-size:12px}
+h1{font-size:23px;margin:4px 0 2px}
+section{background:var(--card);border-radius:16px;padding:14px;margin:14px 0}
+h2{font-size:18px;margin:0 0 4px}
+h2 b{display:inline-block;background:#3b5bdb;border-radius:8px;padding:0 8px;margin-right:6px;font-size:14px;vertical-align:2px}
+p{margin:6px 0}
+.dim{color:var(--dim);font-size:14px}
+.eq{font:600 24px/1.2 "Times New Roman",serif;text-align:center;margin:8px 0;letter-spacing:.02em}
+canvas{display:block;margin:8px auto;border-radius:12px;background:#10131a;touch-action:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chip{border:1px solid #39425a;background:#232a3d;color:var(--ink);border-radius:999px;padding:8px 12px;font-size:14px;min-height:40px}
+.chip[aria-pressed=true]{background:#2b3a66;border-color:var(--c,#74c0fc);box-shadow:inset 0 0 0 1px var(--c,#74c0fc)}
+.chip i{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);margin-right:6px}
+ul.facts{margin:8px 0;padding:0;list-style:none}
+ul.facts li{padding:6px 0 6px 12px;border-left:4px solid var(--c);margin:6px 0;font-size:15px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+button.act{background:#3b5bdb;color:#fff;border:0;border-radius:10px;padding:10px 16px;font-size:16px;font-weight:600;min-height:44px}
+button.act.alt{background:#2c3448}
+button.act:disabled{opacity:.4}
+.caption{min-height:70px;background:#141926;border-radius:10px;padding:10px;font-size:15px}
+.check li{list-style:none;margin:4px 0}
+.check{padding:0;margin:8px 0}
+.ok{color:var(--green)}.no{color:#ff8787}
+input.num{width:90px;font-size:18px;padding:8px;border-radius:8px;border:1px solid #39425a;background:#10131a;color:var(--ink)}
+textarea{width:100%;min-height:90px;font:inherit;padding:10px;border-radius:10px;border:1px solid #39425a;background:#10131a;color:var(--ink)}
+.reveal{background:#141926;border-radius:10px;padding:10px;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <small>Prototype lesson · intuition first</small>
+  <h1>Graphing parabolas from y = a(x − h)² + k</h1>
+  <p class="dim">Play with the model, learn the four features that define the graph, use the model to solve a problem, then sketch one yourself.</p>
+</header>
+
+<section id="explore">
+  <h2><b>1</b>Explore</h2>
+  <p>Drag the <span style="color:var(--pink)">pink dot</span> to move the parabola. Drag the <span style="color:var(--amber)">yellow dot</span> to change its shape. Watch what changes in the equation, and what doesn't.</p>
+  <div class="eq" id="exploreEq" aria-live="polite"></div>
+  <canvas id="exploreCanvas" aria-label="Interactive parabola"></canvas>
+  <div class="chips" id="exploreChips"></div>
+  <ul class="facts" id="exploreFacts"></ul>
+</section>
+
+<section id="recipe">
+  <h2><b>2</b>Reproduce any parabola in five moves</h2>
+  <p class="dim">These features are all you need to sketch it by hand. Step through, then try another.</p>
+  <div class="eq" id="recipeEq"></div>
+  <canvas id="recipeCanvas" aria-label="Step-by-step sketch"></canvas>
+  <div class="caption" id="recipeCaption" aria-live="polite"></div>
+  <div class="row"><button class="act alt" id="recipeBack">Back</button><button class="act" id="recipeNext">Next move</button><button class="act alt" id="recipeNew">Another one</button></div>
+</section>
+
+<section id="solve">
+  <h2><b>3</b>Use the model to solve</h2>
+  <p>A cable hangs lowest at <b>(−2, −3)</b> and is fastened to a post at <b>(0, 5)</b>. Drag the model until it fits both facts.</p>
+  <div class="eq" id="solveEq"></div>
+  <canvas id="solveCanvas" aria-label="Parabola model for the cable problem"></canvas>
+  <ul class="check" id="solveChecks"></ul>
+  <div id="solveMore" hidden>
+    <p>The cable is symmetric. <b>Where is the other post?</b> Use the axis of symmetry, not algebra.</p>
+    <div class="row">x = <input class="num" id="solveX" inputmode="decimal" aria-label="Other post x"><button class="act" id="solveCheck">Check</button></div>
+    <p id="solveFeedback" aria-live="polite"></p>
+  </div>
+</section>
+
+<section id="sketch">
+  <h2><b>4</b>Sketch it yourself</h2>
+  <p>Draw this parabola with your finger. You're graded on the features, not on neatness.</p>
+  <div class="eq" id="sketchEq"></div>
+  <canvas id="sketchCanvas" aria-label="Draw the parabola here"></canvas>
+  <div class="row"><button class="act" id="sketchCheck">Check my sketch</button><button class="act alt" id="sketchClear">Clear</button><button class="act alt" id="sketchNew">New one</button></div>
+  <ul class="check" id="sketchResult" aria-live="polite"></ul>
+</section>
+
+<section id="explain">
+  <h2><b>5</b>Explain it</h2>
+  <p>Why is the vertex of y = (x − 3)² at <b>x = 3</b>, not x = −3? One or two sentences.</p>
+  <textarea id="explainText" aria-label="Your explanation"></textarea>
+  <div class="row"><button class="act" id="explainShow">Compare with the key ideas</button></div>
+  <div class="reveal" id="explainKey" hidden>
+    <p>A strong answer says:</p>
+    <ul>
+      <li>A square is never negative, so (x − 3)² is smallest — zero — when the inside is zero.</li>
+      <li>The inside x − 3 is zero when x = 3, so that's where the turning point is.</li>
+    </ul>
+    <p class="dim">Prototype: later an AI grader would read your answer against these ideas and ask one follow-up question if something is missing.</p>
+  </div>
+</section>
+
+<script>
+const $=s=>document.querySelector(s);
+const COLORS={vertex:'#f783ac',axis:'#b197fc',dir:'#8ce99a',step:'#ffd43b',yint:'#74c0fc',xint:'#ff922b'};
+const num=v=>{const r=Math.round(v*100)/100;return (r<0?'−':'')+Math.abs(r);};
+function equation(a,h,k){
+  const A=Math.round(a*100)/100;let s='y = '+(A===1?'':A===-1?'−':num(A));
+  s+=h===0?'x²':`(x ${h>0?'−':'+'} ${num(Math.abs(h))})²`;
+  if(k)s+=` ${k>0?'+':'−'} ${num(Math.abs(k))}`;return s;}
+const f=(m,x)=>m.a*(x-m.h)**2+m.k;
+
+// A square-ish coordinate plane, x from −6 to 6, that redraws itself on resize.
+class Plane{
+  constructor(canvas,draw){this.c=canvas;this.draw=draw;this.xr=6;addEventListener('resize',()=>this.fit());this.fit();}
+  fit(){const st=getComputedStyle(this.c.parentElement),w=Math.min(this.c.parentElement.clientWidth-parseFloat(st.paddingLeft)-parseFloat(st.paddingRight),520),h=Math.round(w*.88),d=devicePixelRatio||1;
+    Object.assign(this.c.style,{width:w+'px',height:h+'px'});this.c.width=w*d;this.c.height=h*d;this.w=w;this.h=h;
+    this.u=w/(2*this.xr);this.yr=h/2/this.u;this.ctx=this.c.getContext('2d');this.ctx.setTransform(d,0,0,d,0,0);this.render();}
+  X(x){return this.w/2+x*this.u}Y(y){return this.h/2-y*this.u}
+  world(e){const r=this.c.getBoundingClientRect();return[(e.clientX-r.left-this.w/2)/this.u,(this.h/2-(e.clientY-r.top))/this.u];}
+  client(x,y){const r=this.c.getBoundingClientRect();return[r.left+this.X(x),r.top+this.Y(y)];}
+  render(){const g=this.ctx;g.clearRect(0,0,this.w,this.h);g.lineWidth=1;g.font='11px system-ui';g.fillStyle='#566075';
+    for(let i=-Math.ceil(this.xr);i<=this.xr;i++){g.strokeStyle='#1f2533';g.beginPath();g.moveTo(this.X(i),0);g.lineTo(this.X(i),this.h);g.stroke();if(i)g.fillText(i,this.X(i)-3,this.Y(0)+13);}
+    for(let j=-Math.floor(this.yr);j<=this.yr;j++){g.strokeStyle='#1f2533';g.beginPath();g.moveTo(0,this.Y(j));g.lineTo(this.w,this.Y(j));g.stroke();if(j)g.fillText(j,this.X(0)+4,this.Y(j)+4);}
+    g.strokeStyle='#4a5470';g.lineWidth=1.5;g.beginPath();g.moveTo(0,this.Y(0));g.lineTo(this.w,this.Y(0));g.moveTo(this.X(0),0);g.lineTo(this.X(0),this.h);g.stroke();
+    this.draw?.(this);}
+  curve(fn,color,width=3,dash=[]){const g=this.ctx;g.save();g.strokeStyle=color;g.lineWidth=width;g.setLineDash(dash);g.beginPath();let on=false;
+    for(let px=0;px<=this.w;px+=2){const y=fn((px-this.w/2)/this.u),py=this.Y(y);if(Math.abs(y)>this.yr*3){on=false;continue;}on?g.lineTo(px,py):g.moveTo(px,py);on=true;}g.stroke();g.restore();}
+  dot(x,y,color,r=6,label){const g=this.ctx;g.fillStyle=color;g.beginPath();g.arc(this.X(x),this.Y(y),r,0,7);g.fill();if(label)this.text(label,x,y,color);}
+  ring(x,y,color){const g=this.ctx;g.strokeStyle=color;g.lineWidth=2;g.beginPath();g.arc(this.X(x),this.Y(y),15,0,7);g.stroke();}
+  vline(x,color,label){const g=this.ctx;g.save();g.strokeStyle=color;g.setLineDash([6,5]);g.lineWidth=2;g.beginPath();g.moveTo(this.X(x),0);g.lineTo(this.X(x),this.h);g.stroke();g.restore();if(label){g.fillStyle=color;g.font='600 13px system-ui';g.fillText(label,this.X(x)+5,this.h-8);}}
+  seg(x1,y1,x2,y2,color,dash=[4,4]){const g=this.ctx;g.save();g.strokeStyle=color;g.lineWidth=2;g.setLineDash(dash);g.beginPath();g.moveTo(this.X(x1),this.Y(y1));g.lineTo(this.X(x2),this.Y(y2));g.stroke();g.restore();}
+  text(t,x,y,color,dy=-12){const g=this.ctx;g.font='600 13px system-ui';const w=g.measureText(t).width;let px=this.X(x)+8,py=this.Y(y)+dy;
+    px=Math.max(4,Math.min(this.w-w-4,px));py=Math.max(14,Math.min(this.h-4,py));g.fillStyle='#10131acc';g.fillRect(px-3,py-12,w+6,16);g.fillStyle=color;g.fillText(t,px,py);}
+}
+
+// Draws the defining features of a parabola; shared by the explorer, the recipe and the answer overlay.
+function features(p,m,show){
+  const up=m.a>0;
+  if(show.axis)p.vline(m.h,COLORS.axis,`axis x = ${num(m.h)}`);
+  if(show.step)for(const s of [-2,-1,1,2]){const y=f(m,m.h+s);if(Math.abs(y)>p.yr+1)continue;
+    p.seg(m.h+s-Math.sign(s),f(m,m.h+s-Math.sign(s)),m.h+s,f(m,m.h+s-Math.sign(s)),COLORS.step,[]);p.seg(m.h+s,f(m,m.h+s-Math.sign(s)),m.h+s,y,COLORS.step,[]);p.dot(m.h+s,y,COLORS.step,4);
+    if(s===1)p.text(`1 over, ${up?'up':'down'} ${num(Math.abs(m.a))}`,m.h+1,y,COLORS.step,up?-6:16);if(s===2)p.text(`2 over, ${up?'up':'down'} ${num(Math.abs(4*m.a))}`,m.h+2,y,COLORS.step,up?-6:16);}
+  if(show.yint){const y=f(m,0);if(Math.abs(y)<p.yr)p.dot(0,y,COLORS.yint,5,`y-int (0, ${num(y)})`);}
+  if(show.xint&&-m.k/m.a>=0){const d=Math.sqrt(-m.k/m.a);for(const x of new Set([m.h-d,m.h+d]))if(Math.abs(x)<p.xr)p.dot(x,0,COLORS.xint,5,`(${num(x)}, 0)`);}
+  if(show.dir){const x=m.h-2.6,y=f(m,x);if(Math.abs(y)<p.yr){p.text(up?'a > 0 ⇒ opens up ∪':'a < 0 ⇒ opens down ∩',x,y,COLORS.dir,up?-10:22);}}
+  if(show.vertex)p.dot(m.h,m.k,COLORS.vertex,6,`vertex (${num(m.h)}, ${num(m.k)})`);
+}
+
+// Two drag handles: the vertex moves the graph, the shape handle (one step right) sets a.
+function draggable(p,m,onChange){
+  let drag=null;
+  p.c.addEventListener('pointerdown',e=>{const[x,y]=p.world(e),d=(hx,hy)=>Math.hypot(p.X(hx)-p.X(x),p.Y(hy)-p.Y(y));
+    const dv=d(m.h,m.k),ds=d(m.h+1,f(m,m.h+1));drag=Math.min(dv,ds)<34?(dv<=ds?'vertex':'shape'):null;if(drag){p.c.setPointerCapture(e.pointerId);e.preventDefault();}});
+  p.c.addEventListener('pointermove',e=>{if(!drag)return;const[x,y]=p.world(e);
+    if(drag==='vertex'){m.h=Math.max(-5,Math.min(5,Math.round(x)));m.k=Math.max(-4,Math.min(4,Math.round(y)));}
+    else{let a=Math.round((y-m.k)*4)/4;if(a===0)a=m.a>0?.25:-.25;m.a=Math.max(-4,Math.min(4,a));}
+    onChange();p.render();});
+  const end=()=>drag=null;p.c.addEventListener('pointerup',end);p.c.addEventListener('pointercancel',end);
+}
+const handles=(p,m)=>{p.dot(m.h+1,f(m,m.h+1),COLORS.step,9);p.ring(m.h+1,f(m,m.h+1),COLORS.step);p.dot(m.h,m.k,COLORS.vertex,9);p.ring(m.h,m.k,COLORS.vertex);};
+
+// 1 · Explore
+const ex={a:1,h:0,k:-2},show={vertex:true,axis:true,step:true,dir:true,yint:false,xint:false};
+const chips=[['vertex','Vertex'],['axis','Axis of symmetry'],['dir','Opens up/down'],['step','Step pattern'],['yint','y-intercept'],['xint','x-intercepts']];
+$('#exploreChips').innerHTML=chips.map(([k,t])=>`<button class="chip" data-k="${k}" style="--c:${COLORS[k]}" aria-pressed="${show[k]}"><i></i>${t}</button>`).join('');
+const explore=new Plane($('#exploreCanvas'),p=>{p.curve(x=>f(ex,x),'#e8eaf0');features(p,ex,show);handles(p,ex);});
+function exploreText(){const m=ex,up=m.a>0,A=num(Math.abs(m.a));$('#exploreEq').textContent=equation(m.a,m.h,m.k);
+  const xs=-m.k/m.a;$('#exploreFacts').innerHTML=[
+   ['vertex',`<b>Vertex (${num(m.h)}, ${num(m.k)})</b> — the turning point. Read it straight from the equation, but flip the sign inside: (x − h) means h.`],
+   ['axis',`<b>Axis of symmetry x = ${num(m.h)}</b> — the graph is a mirror image across this line. Draw one side, copy it.`],
+   ['dir',`<b>a = ${num(m.a)}, so it opens ${up?'up ∪':'down ∩'}</b>. The sign of a decides; the vertex is a ${up?'minimum':'maximum'}.`],
+   ['step',`<b>Step pattern 1, 4, 9 × a</b> — 1 step from the vertex go ${up?'up':'down'} ${A}, 2 steps ${up?'up':'down'} ${num(4*Math.abs(m.a))}. Bigger |a| = narrower.`],
+   ['yint',`<b>y-intercept (0, ${num(f(m,0))})</b> — put x = 0. A good check on your sketch.`],
+   ['xint',xs>=0?`<b>x-intercepts at ${num(m.h)} ± ${num(Math.sqrt(xs))}</b> — equally far either side of the axis.`:`<b>No x-intercepts</b> — the vertex is ${up?'above':'below'} the x-axis and it opens ${up?'up':'down'}, away from it.`]
+  ].filter(([k])=>show[k]).map(([k,t])=>`<li style="--c:${COLORS[k]}">${t}</li>`).join('');}
+$('#exploreChips').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;show[b.dataset.k]=!show[b.dataset.k];b.setAttribute('aria-pressed',show[b.dataset.k]);exploreText();explore.render();};
+draggable(explore,ex,exploreText);exploreText();
+
+// 2 · Recipe: build the sketch one defining feature at a time.
+const rc={a:2,h:1,k:-3,step:0};
+const moves=m=>[
+  `Read off the three numbers in ${equation(m.a,m.h,m.k)}: h = ${num(m.h)}, k = ${num(m.k)}, a = ${num(m.a)}. Watch the sign of h — it's the opposite of what's written inside.`,
+  `<b style="color:${COLORS.vertex}">Move 1 · Vertex.</b> Plot (${num(m.h)}, ${num(m.k)}). Everything else is measured from here.`,
+  `<b style="color:${COLORS.axis}">Move 2 · Axis.</b> Draw the dashed line x = ${num(m.h)}. Whatever you draw on one side, you'll mirror on the other.`,
+  `<b style="color:${COLORS.step}">Move 3 · One step.</b> Go 1 step left and right, then ${m.a>0?'up':'down'} a = ${num(Math.abs(m.a))}. Two mirror-image points.`,
+  `<b style="color:${COLORS.step}">Move 4 · Two steps.</b> Go 2 steps out, then ${m.a>0?'up':'down'} 4a = ${num(Math.abs(4*m.a))}. (The pattern is 1, 4, 9 × a — the square numbers.)`,
+  `<b style="color:${COLORS.dir}">Move 5 · Join.</b> A smooth ${m.a>0?'∪':'∩'} through the points, rounded at the vertex — never a pointed V. Done: you can now draw any parabola in this form.`];
+const recipe=new Plane($('#recipeCanvas'),p=>{const s=rc.step;
+  if(s>=5)p.curve(x=>f(rc,x),'#e8eaf0');
+  if(s>=2)p.vline(rc.h,COLORS.axis,`x = ${num(rc.h)}`);
+  for(const d of s>=4?[-2,-1,1,2]:s>=3?[-1,1]:[]){const y=f(rc,rc.h+d);if(Math.abs(y)<=p.yr+.2){p.seg(rc.h+d,rc.k,rc.h+d,y,COLORS.step);p.dot(rc.h+d,y,COLORS.step,6);}}
+  if(s>=1)p.dot(rc.h,rc.k,COLORS.vertex,7,`(${num(rc.h)}, ${num(rc.k)})`);});
+function recipeText(){$('#recipeEq').textContent=equation(rc.a,rc.h,rc.k);$('#recipeCaption').innerHTML=moves(rc)[rc.step];$('#recipeBack').disabled=rc.step===0;$('#recipeNext').disabled=rc.step===5;recipe.render();}
+$('#recipeNext').onclick=()=>{rc.step=Math.min(5,rc.step+1);recipeText();};
+$('#recipeBack').onclick=()=>{rc.step=Math.max(0,rc.step-1);recipeText();};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function randomParabola(){for(;;){const m={a:pick([-2,-1,-.5,.5,1,2]),h:pick([-3,-2,-1,1,2,3]),k:pick([-3,-2,-1,1,2,3])};
+  if([1,2].every(d=>Math.abs(f(m,m.h+d))<=4.5)||(Math.abs(m.a)===2&&Math.abs(f(m,m.h+1))<=4))return m;}}
+$('#recipeNew').onclick=()=>{Object.assign(rc,randomParabola(),{step:0});recipeText();};
+recipeText();
+
+// 3 · Solve with the model: fit the vertex and a point, then use symmetry.
+const sv={a:1,h:0,k:0},T={h:-2,k:-3,px:0,py:5};
+const solved=()=>sv.h===T.h&&sv.k===T.k&&Math.abs(f(sv,T.px)-T.py)<.01;
+const solve=new Plane($('#solveCanvas'),p=>{p.dot(T.h,T.k,'#ffffff55',11);p.dot(T.px,T.py,'#ffffff55',11);p.text('lowest point',T.h,T.k,'#c9d2e3',22);p.text('post (0, 5)',T.px,T.py,'#c9d2e3',22);
+  p.curve(x=>f(sv,x),'#e8eaf0');if(solved())p.vline(sv.h,COLORS.axis,'axis of symmetry');handles(p,sv);});
+function solveText(){$('#solveEq').textContent=equation(sv.a,sv.h,sv.k);const v=sv.h===T.h&&sv.k===T.k,pt=Math.abs(f(sv,T.px)-T.py)<.01;
+  $('#solveChecks').innerHTML=`<li class="${v?'ok':'no'}">${v?'✓':'○'} Lowest point at (−2, −3) — drag the pink vertex there</li><li class="${pt?'ok':'no'}">${pt?'✓':'○'} Passes through the post (0, 5) — then drag the yellow dot to change a</li>`+
+   (v&&pt?`<li class="ok">Solved: <b>${equation(sv.a,sv.h,sv.k)}</b>. 2 steps from the vertex rises 4a = 8, so a = 2.</li>`:'');$('#solveMore').hidden=!(v&&pt);}
+draggable(solve,sv,solveText);solveText();
+$('#solveCheck').onclick=()=>{const v=parseFloat($('#solveX').value.replace('−','-'));const ok=Math.abs(v+4)<1e-9;
+  $('#solveFeedback').innerHTML=ok?'<span class="ok">✓ Right. The post at x = 0 is 2 units right of the axis x = −2, so its mirror is 2 units left: x = −4.</span>':'<span class="no">Not quite. How far is the post (x = 0) from the axis x = −2? Go the same distance on the other side.</span>';
+  if(ok){solve.render();solve.dot(-4,5,COLORS.dir,7,'other post (−4, 5)');}};
+
+// 4 · Sketch: freehand drawing graded on the defining features.
+let target=randomParabola(),strokes=[],cur=null,graded=false;
+const sketch=new Plane($('#sketchCanvas'),p=>{if(graded){p.curve(x=>f(target,x),'#8ce99a88',3,[8,6]);features(p,target,{vertex:true,axis:true,step:true});}
+  const g=p.ctx;g.strokeStyle='#74c0fc';g.lineWidth=3;g.lineCap=g.lineJoin='round';for(const s of strokes){g.beginPath();s.forEach(([x,y],i)=>i?g.lineTo(p.X(x),p.Y(y)):g.moveTo(p.X(x),p.Y(y)));g.stroke();}});
+$('#sketchEq').textContent=equation(target.a,target.h,target.k);
+const sc=sketch.c;
+sc.addEventListener('pointerdown',e=>{cur=[sketch.world(e)];strokes.push(cur);sc.setPointerCapture(e.pointerId);e.preventDefault();});
+sc.addEventListener('pointermove',e=>{if(!cur)return;cur.push(sketch.world(e));sketch.render();});
+const endStroke=()=>cur=null;sc.addEventListener('pointerup',endStroke);sc.addEventListener('pointercancel',endStroke);
+function grade(m,pts){
+  if(pts.length<8)return[{ok:false,t:'Draw the curve first.'}];
+  const up=m.a>0,ext=pts.reduce((b,q)=>(up?q[1]<b[1]:q[1]>b[1])?q:b),xs=pts.map(q=>q[0]),lo=Math.min(...xs),hi=Math.max(...xs);
+  const near=x=>{const n=pts.filter(q=>Math.abs(q[0]-x)<.2);return n.length?n.reduce((s,q)=>s+q[1],0)/n.length:null;};
+  const ends=[near(lo+.1),near(hi-.1)],opens=ext[0]>lo+.5&&ext[0]<hi-.5&&ends.every(y=>y!==null&&(up?y>ext[1]+.5:y<ext[1]-.5));
+  const out=[{ok:opens,t:opens?`Opens ${up?'up':'down'} — a = ${num(m.a)} is ${up?'positive':'negative'}.`:`It should open ${up?'up ∪':'down ∩'} with the turning point in the middle, because a = ${num(m.a)} is ${up?'positive':'negative'}.`}];
+  const vok=Math.abs(ext[0]-m.h)<=.5&&Math.abs(ext[1]-m.k)<=.5;
+  out.push({ok:vok,t:vok?`Vertex at (${num(m.h)}, ${num(m.k)}).`:`Your turning point is near (${num(Math.round(ext[0]*2)/2)}, ${num(Math.round(ext[1]*2)/2)}); the vertex should be (${num(m.h)}, ${num(m.k)}). Remember the sign flip on h.`});
+  // Width is measured from the student's own turning point, so a shifted sketch still gets fair shape feedback.
+  for(const d of [1,2]){const rise=m.a*d*d;if(Math.abs(m.k+rise)>sketch.yr-.2)continue;const tol=.45+.2*Math.abs(rise);
+    const bad=[-1,1].map(s=>near(ext[0]+s*d)).filter(y=>y===null||Math.abs(y-ext[1]-rise)>tol);
+    out.push({ok:!bad.length,t:!bad.length?`${d} step${d>1?'s':''} out on both sides: ${up?'up':'down'} ${num(Math.abs(rise))}. Right width, symmetric.`:
+      bad.some(y=>y===null)?`Extend your curve at least ${d} step${d>1?'s':''} each side of the turning point.`:`${d} step${d>1?'s':''} from the vertex it should be ${up?'up':'down'} ${num(Math.abs(m.a*d*d))} (that's ${d===1?'a':'4a'}) — check the width on both sides.`});}
+  return out;}
+$('#sketchCheck').onclick=()=>{const r=grade(target,strokes.flat());graded=strokes.length>0;const all=r.every(x=>x.ok);
+  $('#sketchResult').innerHTML=r.map(x=>`<li class="${x.ok?'ok':'no'}">${x.ok?'✓':'✗'} ${x.t}</li>`).join('')+(graded?`<li class="${all?'ok':'dim'}">${all?'Great sketch — every defining feature is right.':'The dashed green curve shows the answer with its features.'}</li>`:'');sketch.render();};
+$('#sketchClear').onclick=()=>{strokes=[];graded=false;$('#sketchResult').innerHTML='';sketch.render();};
+$('#sketchNew').onclick=()=>{target=randomParabola();$('#sketchEq').textContent=equation(target.a,target.h,target.k);$('#sketchClear').onclick();};
+
+// 5 · Explain
+$('#explainShow').onclick=()=>{$('#explainKey').hidden=false;};
+
+// Test hooks for the headless phone check.
+window.lesson={explore,ex,solve,sv,sketch,setTarget(m){target=m;$('#sketchEq').textContent=equation(m.a,m.h,m.k);$('#sketchClear').onclick();},target:()=>target};
+</script>
+</body>
+</html>

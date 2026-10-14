@@ -53,3 +53,7 @@ The browser tests run headless Chromium at phone sizes, **not iOS Safari**. The 
 Original static concepts are in `mockups/`. The live app is in `app/`. Agentbox runs `server/server.mjs` through the `math-mode.service` user service on localhost port 8732, serving only `app/` plus the authenticated image-recognition API. The `math-mode-tunnel.service` user service exposes it through a Cloudflare quick tunnel. Both are deliberately left available for phone testing. Stop them with `systemctl --user stop math-mode-tunnel.service math-mode.service` when no longer needed. To retrieve the current address: `journalctl --user -u math-mode-tunnel.service --no-pager | grep trycloudflare.com`.
 
 GitHub Pages was not used: this account inherits a custom domain pointing elsewhere. Tailscale's existing routes were not changed: this machine requires elevated privileges to edit its Serve configuration. Source is backed up at github.com/lancejohnson/math-mode-keyboard.
+
+## Lesson prototype (intuition first)
+
+`app/lesson/` (served at `/lesson/`) is a one-topic prototype for the course idea: graphing parabolas in vertex form. It has an interactive model you drag (vertex and shape handles), callouts for each defining feature (vertex, axis of symmetry, direction, the 1-4-9 step pattern, intercepts), a five-move recipe for reproducing the graph by hand, a word problem solved by fitting the model, a freehand sketch graded on those features, and an explain prompt. `tests/test-lesson.py` drives all of it at phone sizes (Chromium, not iOS).
