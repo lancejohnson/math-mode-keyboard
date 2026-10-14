@@ -94,3 +94,15 @@ button.link{background:none;border:0;color:var(--blue);font:inherit;font-size:14
 .cards{display:flex;height:6px;border-radius:3px;overflow:hidden;background:#2c3346;margin-top:2px}
 .cards .automatic{background:var(--green)}.cards .slow{background:var(--amber)}.cards .shaky{background:#ff8787}.cards .new{background:#3d4560}
 .kindsInfo h3{margin:0 0 6px;font-size:16px}.kindsInfo p{margin:8px 0;font-size:14px}
+/* Fact keypad (factpad.js): typed answers for trig facts */
+.factPad .factKeys{grid-template-columns:repeat(4,1fr)}
+.factPad .factKeys button{font:600 24px "Times New Roman",serif;min-height:54px;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.factPad .factKeys button:active{background:#3b4a72}
+.factPad .factKeys .span2{grid-column:span 2}
+.factPad .factKeys [data-k="u"]{font:600 17px system-ui}
+.factPad .factKeys [data-k="π"],.factPad .factKeys [data-k="√"],.factPad .factKeys [data-k="/"],.factPad .factKeys [data-k="−"]{background:#33406a}
+.factPad .factKeys .ok{background:#2f9e44}
+.factPad.locked .factKeys button{opacity:.55}
+.factOut{font:600 30px/1 "Times New Roman",serif;justify-content:center;gap:2px}
+.factOut.copy{border-color:var(--amber)}
+.factOut .ghost,.factOut span.fv.ghost{color:#6b7591}

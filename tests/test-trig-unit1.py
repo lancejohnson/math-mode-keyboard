@@ -44,13 +44,22 @@ def type_pad(page, s):
         page.click(f'#pad button[data-k="{ch}"]')
 
 
+def press_keys(page, s):
+    for k in (['u'] if s == 'undefined' else list(s)): page.click(f'#factPad button[data-k="{k}"]')
+    if page.evaluate("u1.fpad.mode") != 'off': page.click('#factPad button[data-k="✓"]')
+
+
 def answer(page, right, shots):
     page.evaluate('window.warp && warp(20000)')  # 20 s per question on the wall clock
     q = page.evaluate('({type:u1.q().type,t:u1.q().t,ans:u1.q().ans,answer:u1.q().answer})')
     if q['type'] == 'drag':
         drag_to(page, q['t'] if right else q['t'] + math.pi / 2)
         page.click('#check')
-    elif q['type'] in ('choice', 'fact'):
+    elif q['type'] == 'fact':  # fact keypad: real key taps on a wrong answer, the test hook otherwise (speed)
+        typed = page.evaluate('u1.target()' if right else 'u1.wrong()')
+        if right: page.evaluate(f'u1.type({json.dumps(typed)}, true)')
+        else: press_keys(page, typed)
+    elif q['type'] == 'choice':
         i = q['answer'] if right else (q['answer'] + 1) % 4
         page.locator('#choices .choice').nth(i).click()
     else:
@@ -66,9 +75,11 @@ def answer(page, right, shots):
 def nxt(page):
     """Go to the next question: tap Next, or wait for the auto-advance after a fast right quick fact."""
     if page.locator('#done').is_visible(): return
-    if page.evaluate('!!u1.q()?.copy'):  # fact drill, after a miss: tap the right answer to go on
-        assert page.locator('#choices .choice:enabled').count() == 1
-        page.locator('#choices .choice').nth(page.evaluate('u1.q().answer')).click(); return
+    if page.evaluate('!!u1.q()?.copy'):  # fact drill, after a miss: type the right answer to go on
+        assert page.evaluate('u1.fpad.mode') == 'copy' and page.locator('#next').is_hidden()
+        t = page.evaluate('u1.target()'); n = page.evaluate('u1.drill().q')
+        for k in (['u'] if t == 'undefined' else list(t)): page.click(f'#factPad button[data-k="{k}"]')
+        page.wait_for_function(f'u1.drill().q > {n} || !u1.q().copy'); return
     if page.locator('#next').is_visible(): page.click('#next')
     else: page.wait_for_function('!u1.q().done')
 

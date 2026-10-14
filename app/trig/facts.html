@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#12151c">
-<link rel="stylesheet" href="lesson.css?v=8">
+<link rel="stylesheet" href="lesson.css?v=9">
 <style>
 .deck{display:block;width:100%;text-align:left;background:#141926;border:1px solid #3b5bdb;border-radius:12px;padding:12px;margin:10px 0;color:var(--ink);font:inherit}
 .deck b{font-size:17px}.deck small{display:block;color:var(--dim);font-size:13px;margin-top:2px}
@@ -23,7 +23,6 @@
 .legend span::before{content:'';display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;background:var(--c)}
 #prompt{font:600 34px/1.2 "Times New Roman",serif;text-align:center;margin:18px 0 10px;min-height:42px}
 #prompt small{display:block;font:15px system-ui;color:var(--dim);margin-bottom:4px}
-#drill .choices .choice{font:600 22px/1.2 "Times New Roman",serif;padding:16px 6px;min-height:62px}
 .clock{height:6px;border-radius:3px;background:#2c3448;overflow:hidden;margin:4px 0}
 .clock i{display:block;height:100%;width:0;background:var(--green)}
 #result{min-height:96px;font-size:16px}
@@ -40,7 +39,7 @@ details.aid summary{color:var(--blue);cursor:pointer}
   <header>
     <small>Facts to know by heart</small>
     <h1>Make them automatic</h1>
-    <p class="dim">Some trig facts you shouldn't have to work out each time. You learn three at a time. Each one comes back a little later every time you get it right in under 3 seconds; after three in a row (the last a minute or more later) it's <b style="color:var(--green)">automatic</b> and the next fact joins. A miss comes back after a few other questions. Automatic facts come back tomorrow, then further apart.</p>
+    <p class="dim">Some trig facts you shouldn't have to work out each time. You learn three at a time. Each one comes back a little later every time you type it right fast (about 1½ s to remember plus ½ s a key, so 3 s for π/3); after three in a row (the last a minute or more later) it's <b style="color:var(--green)">automatic</b> and the next fact joins. A miss comes back after a few other questions. Automatic facts come back tomorrow, then further apart.</p>
   </header>
   <section id="decks"></section>
   <p class="dim"><button class="link" id="reset">Clear my fact progress</button></p>
@@ -54,7 +53,7 @@ details.aid summary{color:var(--blue);cursor:pointer}
     <details class="aid" id="aid"><summary>How to work it out</summary><div id="aidText"></div></details>
     <div id="prompt"></div>
     <div class="clock"><i id="clock"></i></div>
-    <div class="choices" id="choices"></div>
+    <div id="factPad" hidden></div>
     <div id="result"></div>
     <div class="row"><button class="act" id="next" hidden>Next →</button></div>
   </section>
@@ -71,8 +70,9 @@ details.aid summary{color:var(--blue);cursor:pointer}
 </div>
 
 <script type="module">
-import { DECKS, CARDS, FAST, KEY, radOf, promptFor, choicesFor, choiceText, status, record, deckSummary } from './facts.js?v=3';
-import { startDrill, nextCard, answerCard, shown, coldRecord, drillSummary } from './drill.js?v=1';
+import { DECKS, CARDS, KEY, radOf, promptFor, status, record, deckSummary, target, checkTyped, limitFor, wrongTyped, VALUES } from './facts.js?v=4';
+import { mountFactPad } from './factpad.js?v=1';
+import { startDrill, nextCard, answerCard, shown, coldRecord, drillSummary } from './drill.js?v=2';
 const $ = s => document.querySelector(s);
 let state = {}; try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { } };
@@ -82,7 +82,9 @@ const mix = n => { const tot = Object.values(n).reduce((a, b) => a + b, 0); retu
 const legend = n => ['automatic', 'slow', 'shaky', 'new'].filter(k => n[k]).map(k => `<span style="--c:${COL[k]}">${n[k]} ${NAME[k]}</span>`).join('');
 const show = id => ['home', 'drill', 'done'].forEach(v => $('#' + v).hidden = v !== id);
 const isAngle = c => c.pool === 'rad' || c.pool === 'deg';
-const factText = c => isAngle(c) ? `${c.t}° = ${radOf(c.t)}` : `${promptFor(c, false).replace(/<\/?b>/g, '')} = ${choiceText(c, c.answer)}`;
+const factText = c => isAngle(c) ? `${c.t}° = ${radOf(c.t)}` : `${promptFor(c, false).replace(/<\/?b>/g, '')} = ${VALUES[c.answer].text}`;
+const shownAns = c => target(c) + (c.pool === 'deg' ? '°' : '');
+const fpad = mountFactPad($('#factPad'));
 
 function home() {
   show('home');
@@ -93,7 +95,7 @@ $('#decks').onclick = e => { const b = e.target.closest('.deck'); if (b) start(+
 $('#reset').onclick = () => { if (confirm('Clear progress on all fact decks?')) { state = {}; save(); home(); } };
 
 // One sitting = a dosed drill (drill.js): at most 3 facts being learned at once, misses come back after a short gap.
-let deck, dr, nx, card, choices, t0, touch, timer, answered, copy;
+let deck, dr, nx, card, limit, t0, touch, timer, answered, copy;
 function start(i) {
   deck = DECKS[i]; dr = startDrill(deck.cards, state, { maxQ: 60 });
   $('#deckName').textContent = deck.title; $('#aidText').innerHTML = deck.aid;
@@ -112,40 +114,36 @@ function ask() {
   $('#result').innerHTML = ''; $('#next').hidden = true; cancelAnimationFrame(timer);
   if (nx.kind === 'intro') { // a never-seen fact: show it (both ways), untimed
     answered = true; $('#clock').style.width = '0';
-    $('#prompt').innerHTML = `<small>New fact</small>${factText(card)}`; $('#choices').innerHTML = '';
+    $('#prompt').innerHTML = `<small>New fact</small>${factText(card)}`; $('#factPad').hidden = true; fpad.off();
     $('#result').innerHTML = `<canvas id="mini" width="300" height="300"></canvas><p>${card.why}</p><p class="dim">It comes back in a few questions. Until then, other facts.</p>`;
     mini($('#mini'), card); $('#next').textContent = 'Got it →'; $('#next').hidden = false; return;
   }
   const useRad = !isAngle(card) && Math.random() < .5;
   $('#prompt').innerHTML = (nx.kind === 'review' ? '<small>Review</small>' : isAngle(card) ? '<small>Convert</small>' : '<small>Exact value</small>') + promptFor(card, useRad);
-  choices = choicesFor(card);
-  $('#choices').innerHTML = choices.map((c, j) => `<button class="choice" data-j="${j}">${choiceText(card, c)}</button>`).join('');
+  limit = limitFor(card); $('#factPad').hidden = false;
+  fpad.ask(card, { onSubmit: answer, onFirst: () => { touch ??= performance.now(); } });
   t0 = performance.now();
-  const tick = () => { const s = (performance.now() - t0) / 1000; const c = $('#clock'); c.style.width = Math.min(100, 100 * s / FAST) + '%'; c.style.background = s <= FAST ? 'var(--green)' : 'var(--amber)'; if (!answered) timer = requestAnimationFrame(tick); };
+  const tick = () => { const s = (performance.now() - t0) / 1000; const c = $('#clock'); c.style.width = Math.min(100, 100 * s / limit) + '%'; c.style.background = s <= limit ? 'var(--green)' : 'var(--amber)'; if (!answered) timer = requestAnimationFrame(tick); };
   tick();
 }
-$('#choices').addEventListener('pointerdown', () => { if (!answered && touch == null) touch = performance.now(); });
-$('#choices').onclick = e => {
-  const b = e.target.closest('.choice'); if (!b) return; const c = choices[+b.dataset.j];
-  if (copy) { if (c === card.answer) ask(); return; } // after a miss: tap the right answer to go on
-  if (!answered) answer(c);
-};
 
-function answer(c) {
-  answered = true; const secs = (performance.now() - t0) / 1000, ok = c === card.answer, now = Date.now();
-  state[card.id] = record(state[card.id], ok, secs, now, touch != null ? (touch - t0) / 1000 : null);
-  const out = answerCard(dr, nx, ok, secs, now);
+// A typed answer from the fact keypad. Fast = right within the card's limit (1.5 s + 0.5 s a key).
+function answer(typed) {
+  answered = true; const secs = (performance.now() - t0) / 1000, chk = checkTyped(card, typed), ok = chk.ok, now = Date.now();
+  const note = chk.note ? ` <span class="dim">${chk.note}</span>` : '';
+  state[card.id] = record(state[card.id], ok, secs, now, touch != null ? (touch - t0) / 1000 : null, limit);
+  const out = answerCard(dr, nx, ok, secs, now, limit);
   if (out.cold) for (const id of dr.facts.get(out.cold)) state[id] = coldRecord(state[id], now);
   save(); progress();
-  $('#choices').querySelectorAll('.choice').forEach((b, j) => { b.disabled = !ok && choices[j] !== card.answer ? true : ok; if (choices[j] === card.answer) b.classList.add('right'); else if (choices[j] === c) b.classList.add('wrong'); });
   const s = secs.toFixed(1) + ' s', held = out.held ? '<p class="dim">Several misses just now, so no new facts join until these settle.</p>' : '';
-  if (ok && secs <= FAST) {
-    $('#result').innerHTML = `<p class="big ok">✓ ${s}${out.cold ? ` · ${factText(card)} is automatic now` : ''}</p>` + held;
+  if (ok && secs <= limit) {
+    $('#result').innerHTML = `<p class="big ok">✓ ${s}${note}${out.cold ? ` · ${factText(card)} is automatic now` : ''}</p>` + held;
     const was = nx; setTimeout(() => { if (nx === was) ask(); }, 650);
   } else {
     copy = !ok;
-    $('#result').innerHTML = `<canvas id="mini" width="300" height="300"></canvas><p class="big ${ok ? '' : 'no'}" style="${ok ? 'color:var(--amber)' : ''}">${ok ? `Right, in ${s}. Aim for under ${FAST} s; it comes round again soon.` : `It's ${choiceText(card, card.answer)}. Tap it to go on. It comes back in a few questions.`}</p><p>${card.why}</p>` + held;
+    $('#result').innerHTML = `<canvas id="mini" width="300" height="300"></canvas><p class="big ${ok ? '' : 'no'}" style="${ok ? 'color:var(--amber)' : ''}">${ok ? `Right, in ${s}.${note} Aim for under ${limit} s; it comes round again soon.` : `Not ${typed === 'undefined' ? 'undefined' : typed + (card.pool === 'deg' ? '°' : '')}. It's ${shownAns(card)}.${note} Type it to go on. It comes back in a few questions.`}</p><p>${card.why}</p>` + held;
     mini($('#mini'), card); $('#next').textContent = 'Next →'; $('#next').hidden = !ok;
+    if (!ok) fpad.copy(() => ask());
   }
 }
 $('#next').onclick = () => { if (nx?.kind === 'intro') shown(dr, nx.id, Date.now()); ask(); };
@@ -178,7 +176,7 @@ function done() {
 $('#again').onclick = () => start(DECKS.indexOf(deck));
 $('#quit').onclick = $('#home2').onclick = $('#home3').onclick = home;
 
-window.facts = { state: () => state, card: () => card, kind: () => nx?.kind, drill: () => dr, choices: () => choices, answered: () => answered, copy: () => copy, DECKS, CARDS };
+window.facts = { state: () => state, card: () => card, kind: () => nx?.kind, drill: () => dr, answered: () => answered, copy: () => copy, target: () => target(card), wrong: () => wrongTyped(card), pad: () => fpad, type: (s, enter) => fpad.type(s, enter), DECKS, CARDS };
 home();
 </script>
 </body>

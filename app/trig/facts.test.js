@@ -44,3 +44,31 @@ test('deck summary counts each status', () => {
   st[deck.cards[6].id] = record({}, false, 2, now); st[deck.cards[7].id] = record({}, true, 6, now);
   assert.deepEqual(deckSummary(deck, st), { new: 24, shaky: 1, slow: 1, automatic: 6 });
 });
+
+import { kindOf, CANON, target, complete, limitFor, checkTyped, wrongTyped } from './facts.js';
+test('typed answers: every card\'s answer is typeable and right; a wrong one is wrong', () => {
+  for (const c of Object.values(CARDS)) {
+    const t = target(c); assert.ok(CANON[kindOf(c)].includes(t), c.id);
+    assert.equal(checkTyped(c, t).ok, true, c.id); assert.equal(checkTyped(c, wrongTyped(c)).ok, false, c.id);
+    const lim = limitFor(c); assert.ok(lim >= 2 && lim <= 4.5, `${c.id} ${lim}`);
+  }
+});
+test('typed answers: auto-submit only when nothing longer could follow', () => {
+  assert.ok(complete('rad', 'π/3')); assert.ok(!complete('rad', 'π')); assert.ok(!complete('rad', '2π')); assert.ok(complete('rad', '2π/3'));
+  assert.ok(!complete('deg', '30')); assert.ok(complete('deg', '45')); assert.ok(complete('deg', '300'));
+  assert.ok(!complete('value', '1')); assert.ok(complete('value', '1/2')); assert.ok(!complete('value', '√3')); assert.ok(complete('value', 'undefined'));
+  assert.equal(limitFor(CARDS['d2r:60']), 3); assert.equal(limitFor(CARDS['r2d:30']), 3); assert.equal(limitFor(CARDS['d2r:330']), 4);
+});
+test('typed answers: equal forms count with a note; units mixed up get a hint', () => {
+  assert.deepEqual(checkTyped(CARDS['d2r:60'], '2π/6').ok, true); assert.match(checkTyped(CARDS['d2r:60'], '2π/6').note, /π\/3/);
+  assert.equal(checkTyped(CARDS['tan:30'], '1/√3').ok, true);
+  assert.equal(checkTyped(CARDS['d2r:60'], '60').ok, false); assert.match(checkTyped(CARDS['d2r:60'], '60').note, /degrees/);
+  assert.equal(checkTyped(CARDS['r2d:60'], 'π/3').ok, false);
+  assert.equal(checkTyped(CARDS['tan:90'], 'undefined').ok, true); assert.equal(checkTyped(CARDS['tan:90'], '0').ok, false);
+});
+test('record: fast is judged against the card\'s own limit', () => {
+  let st = record({}, true, 3.5, 0, 1, 4); assert.equal(st.hist[0].f, 1); assert.equal(st.box, 1);
+  st = record({}, true, 3.5, 0, 1, 3); assert.equal(st.hist[0].f, 0); assert.equal(st.box, 0);
+  // Older records without f fall back to FAST.
+  assert.equal(status({ hist: [{ ok: true, s: 1 }, { ok: true, s: 1 }, { ok: true, s: 1 }] }), 'automatic');
+});

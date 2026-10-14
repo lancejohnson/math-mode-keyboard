@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#12151c">
-<link rel="stylesheet" href="lesson.css?v=8">
+<link rel="stylesheet" href="lesson.css?v=9">
 </head>
 <body>
 <div id="listView">
@@ -47,6 +47,7 @@
       <p class="q" id="qText"></p>
       <div class="clock" id="qClock" hidden><i></i></div>
       <div class="choices text" id="choices"></div>
+      <div id="factPad" hidden></div>
       <div id="padWrap" hidden><div class="padOut"><span id="padOut"></span><span class="dim" id="padUnit"></span></div><div class="pad" id="pad"></div></div>
       <div class="row"><button class="act" id="check">Check</button><button class="act" id="next" hidden>Next question</button></div>
       <div id="feedback" aria-live="polite"></div>
@@ -56,8 +57,8 @@
 </div>
 
 <script type="module">
-import { angleIds } from './facts.js?v=3';
-import { runUnit, PI, TAU, D, C, deg, rad, piFrac, dec, options, pick } from './engine.js?v=13';
+import { angleIds } from './facts.js?v=4';
+import { runUnit, PI, TAU, D, C, deg, rad, piFrac, dec, options, pick } from './engine.js?v=14';
 
 const Q = ['', 'a quarter turn', 'two quarter turns (a half turn)', 'three quarter turns', 'a full turn'];
 const PART = { 0: '', 30: 'a third of a quarter turn', 45: 'half of a quarter turn', 60: 'two thirds of a quarter turn' };

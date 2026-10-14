@@ -11,7 +11,7 @@ export function saveFacts(st) { try { localStorage.setItem(KEY, JSON.stringify(s
 // Both directions of the degrees <-> radians cards for these angles.
 export const angleIds = degs => degs.flatMap(d => [`d2r:${d}`, `r2d:${d}`]);
 
-export const FAST = 3;                     // seconds, for tapping 1 of 4 answers on a phone
+export const FAST = 3;                     // seconds, for tapping 1 of 4 answers (typed answers: limitFor)
 export const NEED = 3;                     // fast right answers in a row to count as automatic
 const MIN = 60e3, DAY = 864e5;
 export const INTERVALS = [0, 10 * MIN, DAY, 3 * DAY, 7 * DAY, 21 * DAY, 60 * DAY];
@@ -129,28 +129,65 @@ export function choicesFor(card, rnd = Math.random) {
 export const choiceText = (card, c) => (card.pool === 'rad' || card.pool === 'deg' ? c : VALUES[c].text);
 
 // --- How each card is doing ---
+// A fast answer: under the card's time limit (typed answers, see limitFor), or under FAST for older records.
+const quick = a => a.ok && (a.f != null ? !!a.f : a.s <= FAST);
 export function status(st) {
   if (!st || !st.hist?.length) return 'new';
   const h = st.hist, last = h[h.length - 1];
   if (!last.ok) return 'shaky';
   const lastN = h.slice(-NEED);
-  if (lastN.length === NEED && lastN.every(a => a.ok && a.s <= FAST)) return 'automatic';
-  if (st.cold && last.s <= FAST) return 'automatic'; // went cold in the fact drill (drill.js)
+  if (lastN.length === NEED && lastN.every(quick)) return 'automatic';
+  if (st.cold && quick(last)) return 'automatic'; // went cold in the fact drill (drill.js)
   return 'slow';
 }
 
-// secs = time to answer; start = time to the first touch on an answer (logged, not yet used).
-export function record(st = {}, ok, secs, now = Date.now(), start) {
-  const a = { ok, s: Math.round(secs * 10) / 10 }; if (start != null) a.s0 = Math.round(start * 10) / 10;
+// secs = time to answer; start = time to the first touch (first key); limit = seconds that count as fast.
+export function record(st = {}, ok, secs, now = Date.now(), start, limit = FAST) {
+  const fast = ok && secs <= limit;
+  const a = { ok, s: Math.round(secs * 10) / 10, f: fast ? 1 : 0 }; if (start != null) a.s0 = Math.round(start * 10) / 10;
   const hist = [...(st.hist || []), a].slice(-6);
   let box = st.box || 0;
-  if (ok && secs <= FAST) box = Math.min(box + 1, INTERVALS.length - 1);
+  if (fast) box = Math.min(box + 1, INTERVALS.length - 1);
   else if (!ok) box = 0;
-  const next = { hist, box, seen: now, ...(ok && st.cold ? { cold: st.cold } : {}), due: now + (ok && secs <= FAST ? INTERVALS[box] : 0) };
+  const next = { hist, box, seen: now, ...(ok && st.cold ? { cold: st.cold } : {}), due: now + (fast ? INTERVALS[box] : 0) };
   // Not automatic yet: keep the gap short so it comes back in the next round.
   if (status(next) !== 'automatic') next.due = Math.min(next.due, now + 10 * MIN);
   return next;
 }
+
+// --- Typed answers (the fact keypad, factpad.js) ---
+export const kindOf = c => (c.pool === 'rad' ? 'rad' : c.pool === 'deg' ? 'deg' : 'value');
+// Every answer a card of each kind can have, as typed. The pad submits by itself on one of these when nothing
+// longer starts with it (π/3, 135, √2/2), right or wrong, so that gives nothing away. Otherwise (30 could be 300,
+// 1 could be 1/2) the learner taps ✓.
+export const CANON = { rad: ANGLES.map(radOf), deg: ANGLES.map(String), value: Object.values(VALUES).map(v => v.text) };
+// The answer as typed: π/3, 60 (the pad shows the °), √3/2, −1/2, undefined.
+export const target = c => (c.pool === 'rad' ? c.answer : c.pool === 'deg' ? String(c.t) : VALUES[c.answer].text);
+export const tokens = s => (s === 'undefined' ? ['u'] : [...s]);   // "undefined" is one key
+export const complete = (kind, s) => CANON[kind].includes(s) && !CANON[kind].some(c => c !== s && c.startsWith(s));
+// Seconds that count as fast for a typed answer: 1.5 s to recall plus 0.5 s per key (✓ counts when needed).
+// π/3 → 3 s, 30 + ✓ → 3 s, 11π/6 → 4 s, −√3/2 → 4 s, undefined → 2 s.
+export const limitFor = c => { const t = target(c); return 1.5 + 0.5 * (tokens(t).length + (complete(kindOf(c), t) ? 0 : 1)); };
+
+function typedValue(s) {
+  if (s === 'undefined') return NaN;
+  if (!/^[−\d√π/]+$/.test(s)) return null;
+  const e = s.replace(/−/g, '-').replace(/√(\d+)/g, 'Math.sqrt($1)').replace(/(\d|\))(?=π|M)/g, '$1*').replace(/π/g, 'Math.PI');
+  try { const v = Function(`"use strict";return (${e})`)(); return typeof v === 'number' && isFinite(v) ? v : null; } catch { return null; }
+}
+// Is a typed answer right? Equal but unsimplified forms count (2π/6, 1/√3), with a note giving the simplest form.
+export function checkTyped(c, s) {
+  const want = target(c), kind = kindOf(c);
+  if (s === want) return { ok: true };
+  const v = typedValue(s);
+  if (kind === 'deg' && s.includes('π')) return { ok: false, note: 'That\'s radians; this one wants degrees.' };
+  if (kind === 'rad' && !s.includes('π') && v != null && Math.abs(v - c.t) < 1e-9) return { ok: false, note: `That's the degrees; in radians it's ${want}.` };
+  const w = kind === 'rad' ? c.t * PI / 180 : kind === 'deg' ? c.t : VALUES[c.answer].v;
+  if (v != null && Number.isFinite(w) && Math.abs(v - w) < 1e-9) return { ok: true, note: `Simplest form: ${want}.` };
+  return { ok: false };
+}
+// A wrong answer of the same kind (tests).
+export const wrongTyped = c => { const all = CANON[kindOf(c)], i = all.indexOf(target(c)); return all[(i + 1) % all.length]; };
 
 export function deckSummary(deck, state) {
   const n = { new: 0, shaky: 0, slow: 0, automatic: 0 };

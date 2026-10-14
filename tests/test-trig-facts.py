@@ -1,5 +1,5 @@
 """Trig facts drill on phone-size Chromium (not iOS): dosed sets, timing, misses coming back after a gap, automatic status, persistence."""
-import functools, http.server, pathlib, threading, sys
+import functools, json, http.server, pathlib, threading, sys
 from playwright.sync_api import sync_playwright
 from pwfast import phone, FAST_CLOCK, fail_report  # 2 s waits (local page), compact failure summary
 ROOT = pathlib.Path(__file__).resolve().parent.parent; OUT = ROOT / '.artifacts/live'; OUT.mkdir(parents=True, exist_ok=True)
@@ -8,10 +8,17 @@ http.server.SimpleHTTPRequestHandler.log_message = lambda *a: None
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 URL = f'http://127.0.0.1:{srv.server_port}/trig/facts.html'
 
-def tap(page, right):
-    ch, ans = page.evaluate('facts.choices()'), page.evaluate('facts.card().answer')
-    j = ch.index(ans) if right else next(i for i, c in enumerate(ch) if c != ans)
-    page.locator('#choices .choice').nth(j).click()
+def keys(page, s):
+    for k in (['u'] if s == 'undefined' else list(s)): page.click(f'#factPad button[data-k="{k}"]')
+
+
+def tap(page, right, real=False):
+    """Answer on the fact keypad: real key taps, or the test hook (speed)."""
+    s = page.evaluate('facts.target()' if right else 'facts.wrong()')
+    if real:
+        keys(page, s)
+        if page.evaluate('facts.pad().mode') == 'answer': page.click('#factPad button[data-k="✓"]')
+    else: page.evaluate(f'facts.type({json.dumps(s)}, true)')
 
 STATE = "({w: innerWidth, kind: facts.kind?.(), card: facts.card?.()?.id, q: facts.drill?.()?.q, answered: facts.answered?.(), copy: facts.copy?.(), result: document.querySelector('#result')?.innerText?.slice(0, 160)})"
 
@@ -34,18 +41,22 @@ def one(page, w):
     assert page.evaluate('facts.kind()') == 'intro' and 'New fact' in page.inner_text('#prompt') and page.locator('#mini').count() == 1
     if w == 375: page.screenshot(path=str(OUT / 'facts-intro.png'))
     first = page.evaluate('facts.card().id'); page.click('#next')
-    asked, missed, k = [], None, 0
+    asked, missed, k, shot = [], None, 0, False
     while page.locator('#drill').is_visible() and k < 200:
         k += 1; page.evaluate('warp(20000)')  # 20 s of "thinking time" between questions, so the minute gaps pass
         if page.evaluate('facts.kind()') == 'intro': page.click('#next'); continue
         cid = page.evaluate('facts.card().id'); asked.append(cid)
-        if w == 375 and len(asked) == 1: page.screenshot(path=str(OUT / 'facts-question.png'))
+        t = page.evaluate('facts.target()')
+        if not shot and len(t) > 1:  # once: a half-typed answer by real taps, then ⌫
+            shot = True; keys(page, t[:1]); assert page.inner_text('#factPad .fv').strip() == t[:1] and not page.evaluate('facts.answered()')
+            if w == 375: page.screenshot(path=str(OUT / 'facts-question.png'))
+            page.click('#factPad button[data-k="⌫"]')
         if missed is None and cid != first:
-            missed = cid; at = len(asked); tap(page, False)
-            assert 'Tap it to go on' in page.inner_text('#result') and page.locator('#next').is_hidden() and page.locator('#mini').count() == 1
+            missed = cid; at = len(asked); tap(page, False, real=True)
+            assert 'Type it to go on' in page.inner_text('#result') and page.locator('#next').is_hidden() and page.locator('#mini').count() == 1
             if w == 375: page.screenshot(path=str(OUT / 'facts-wrong.png'))
-            assert page.locator('#choices .choice:enabled').count() == 1 and page.evaluate('facts.copy()')  # only the right answer can be tapped
-            tap(page, True); page.wait_for_function('!facts.answered()'); continue
+            assert page.evaluate('facts.pad().mode') == 'copy' and page.evaluate('facts.copy()')  # type the right answer to go on
+            keys(page, page.evaluate('facts.target()')); page.wait_for_function('!facts.answered()'); continue
         n = page.evaluate('facts.drill().q'); tap(page, True)
         if page.locator('#next').is_visible(): page.click('#next')
         else: page.wait_for_function(f'facts.drill().q > {n} && (!facts.answered() || facts.kind() === "intro") || !document.querySelector("#drill").offsetParent', timeout=3000)
@@ -60,9 +71,9 @@ def one(page, w):
     # A slow right answer: freeze the clock past 3 s.
     page.locator('.deck').nth(0).click(); page.click('#next')  # angles: shown first (never seen here), then asked
     while page.evaluate('facts.kind()') == 'intro': page.click('#next')
-    page.evaluate('() => { const n = performance.now.bind(performance); const t = n(); performance.now = () => n() + 4000; }')
+    page.evaluate('() => { const n = performance.now.bind(performance); const t = n(); performance.now = () => n() + 6000; }')
     tap(page, True)
-    assert 'Aim for under 3' in page.inner_text('#result'), page.inner_text('#result')
+    assert 'Aim for under' in page.inner_text('#result'), page.inner_text('#result')
     if w == 375: page.screenshot(path=str(OUT / 'facts-slow.png'))
     assert not page.errs, page.errs
 
@@ -73,4 +84,4 @@ with sync_playwright() as p:
     page.reload(); assert '1 automatic' in page.inner_text('#decks')
     assert not page.errs, page.errs
     b.close()
-print('PASS: trig facts drill — 3 decks, memory aid, new facts shown first, a miss is copied then comes back after 2+ questions, 3+ facts go cold, fast answers auto-advance, slow answer coached, progress persists; 375/430 px Chromium, not iOS.')
+print('PASS: trig facts drill — 3 decks, typed on the fact keypad, memory aid, new facts shown first, a miss is typed out then comes back after 2+ questions, 3+ facts go cold, fast answers auto-advance, slow answer coached, progress persists; 375/430 px Chromium, not iOS.')

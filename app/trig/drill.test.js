@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DECKS, status, record } from './facts.js?v=3';
+import { DECKS, status, record } from './facts.js?v=4';
 import { DRILL, factOf, startDrill, nextCard, answerCard, shown, coldRecord, drillSummary } from './drill.js';
 
 const ANG = DECKS[0].cards; // d2r:30, r2d:30, d2r:45, …

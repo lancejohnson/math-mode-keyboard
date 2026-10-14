@@ -13,7 +13,7 @@
 // - 4 or more of the last 10 answers wrong: no new fact joins until that clears. A card missed 3 times: the set shrinks to 2.
 // - A fact is the thing remembered: π/3 = 60° is one fact asked both ways (two cards).
 // Cold facts are then reviewed by facts.js spacing, starting 1 day later.
-import { FAST, status } from './facts.js?v=3';
+import { FAST, status } from './facts.js?v=4';
 
 export const DRILL = { set: 3, small: 2, gapQ: [2, 4, 8], gapMs: [10e3, 30e3, 60e3], freezeAt: 4, stuckAt: 3, fast: FAST };
 const DAY = 864e5;
@@ -83,8 +83,8 @@ export function shown(s, id, now = Date.now()) {
 
 // Record an answer. secs = time to answer. Returns { cold: factKey } when a fact just went cold,
 // plus the store updates the caller should save (store records for cold cards get their first review in a day).
-export function answerCard(s, { id, kind }, ok, secs, now = Date.now()) {
-  s.q++; s.last = id; s.lastAsked[id] = s.q; const fast = ok && secs <= DRILL.fast;
+export function answerCard(s, { id, kind }, ok, secs, now = Date.now(), limit = DRILL.fast) {
+  s.q++; s.last = id; s.lastAsked[id] = s.q; const fast = ok && secs <= limit;
   s.log.push({ id, kind, ok, s: secs });
   const out = { ok, fast };
   if (kind === 'review' || kind === 'filler') {

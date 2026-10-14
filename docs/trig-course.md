@@ -41,9 +41,14 @@ by every deck on `facts.html`):
   asked both ways. The next fact joins when one has settled.
 - A fact you've never seen is **shown first** (untimed, with its picture). A fact already met in a lesson is
   asked straight away.
-- A **miss** shows the answer, and you tap it to go on. It comes back after **at least 2 other questions and
+- Answers are **typed on a fact keypad** (`app/trig/factpad.js`), not picked from choices: digits, π and / for
+  angles; 1 2 3 0, √, /, − and an "undefined" key for exact values. It submits by itself on a complete answer that
+  nothing longer starts with (π/3, 135, √2/2), right or wrong; otherwise (30 could be 300, 1 could be 1/2) you tap ✓.
+  Equal unsimplified forms (2π/6, 1/√3) count, with a note giving the simplest form.
+- **Fast** is per card: 1.5 s to remember plus 0.5 s a key (✓ counts when needed), so π/3 → 3 s, 11π/6 → 4 s.
+- A **miss** shows the answer, faintly in the answer box, and you type it to go on. It comes back after **at least 2 other questions and
   10 seconds**, ahead of anything new.
-- Each fast right answer (under 3 s) **widens the gap**: 2 → 4 → 8 questions, and 10 → 30 → 60 seconds;
+- Each fast right answer **widens the gap**: 2 → 4 → 8 questions, and 10 → 30 → 60 seconds;
   both must pass. A right but slow answer repeats the same gap.
 - **Cold (automatic)** = 3 fast right answers in a row at those gaps, the last at least a minute after the one
   before. A fact met in a lesson that is fast at first sight needs 2. The first review is then **a day later**
@@ -53,8 +58,8 @@ by every deck on `facts.html`):
 - **4 or more of the last 10 answers wrong**: no new fact joins until that clears. A card missed 3 times
   shrinks the set to 2 until it is cold.
 - A sitting stops taking new facts after 120 questions in the unit, or 60 on `facts.html`. Progress is saved.
-- Every answer stores the time to answer (`s`) and the time to the first touch on an answer (`s0`), for
-  later use.
+- Every answer stores the time to answer (`s`) and the time to the first key press (`s0`): with typing
+  that is close to pure recall time, for later use.
 
 Simulated learners (`app/trig/drill.test.js`): a learner who is always right and fast gets all 16 angles cold
 in about 5–6 minutes. Weaker learners stop at the question cap with their progress saved.
