@@ -8,10 +8,10 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = ROOT / '.artifacts' / 'live'
 
 
-def drag_to(page, t):
+def drag_to(page, t, a=0):
     page.locator('#wheel').scroll_into_view_if_needed()
-    steps = max(8, int(abs(t) * 12))
-    pts = [page.evaluate(f'u1.wheel.client({t * i / steps})') for i in range(steps + 1)]
+    steps = max(8, int(abs(t - a) * 12))
+    pts = [page.evaluate(f'u1.wheel.client({a + (t - a) * i / steps})') for i in range(steps + 1)]
     page.mouse.move(*pts[0]); page.mouse.down()
     for p in pts[1:]: page.mouse.move(*p)
     page.mouse.up()
@@ -40,6 +40,26 @@ def answer(page, right, shots):
         shots.add(q['type']); page.locator('#topicView').screenshot(path=str(OUT / f'trig1v2-wrong-{q["type"]}.png'))
 
 
+def lesson(page, shot=None):
+    """Step through the lesson; on "your turn" steps, Next stays disabled until the dot is dragged there."""
+    k = 0
+    while page.inner_text('#stepNext') != 'Start practice →' or page.evaluate('!!u1.step().try') and page.locator('#stepNext').is_disabled():
+        st = page.evaluate('u1.step()')
+        if st.get('try'):
+            assert page.locator('#stepNext').is_disabled()
+            w = st['try']['t'] + math.pi / 2
+            drag_to(page, w); assert page.locator('#stepNext').is_disabled(), (st, page.evaluate('u1.wheel.s.cur'), page.inner_text('#tryMsg'))
+            drag_to(page, st['try']['t'], w)
+            assert page.locator('#stepNext').is_enabled(), st
+            if shot and not (OUT / shot).exists(): page.locator('#topicView').screenshot(path=str(OUT / shot))
+            if page.inner_text('#stepNext') == 'Start practice →': break
+        else:
+            page.wait_for_timeout(250)
+        page.click('#stepNext'); k += 1
+    page.click('#stepNext')
+    assert page.locator('#practice').is_visible()
+
+
 def run(page):
     page.set_default_timeout(6000)
     n = page.evaluate('u1.topics.length')
@@ -51,7 +71,8 @@ def run(page):
         assert page.inner_text('#topicTitle') == page.evaluate(f'u1.topics[{ti}].title')
         page.wait_for_timeout(1300)
         if ti in (0, 8): page.locator('#topicView').screenshot(path=str(OUT / f'trig1v2-learn{ti}.png'))
-        page.click('#start')
+        lesson(page, 'trig1v2-yourturn.png')
+        if ti == 6: page.evaluate('u1.ask(1, 90)')  # make sure a typed (pad) question gets a wrong answer
         wrongs = 0
         while page.locator('#done').is_hidden():
             right = not (ti in (0, 2, 4, 6, 9) and wrongs == 0)
@@ -66,7 +87,7 @@ def run(page):
 
 def specific(page):
     # The classic mistakes get specific feedback.
-    page.locator('.topic').nth(0).click(); page.click('#start')
+    page.locator('.topic').nth(0).click(); lesson(page)
     page.evaluate('u1.ask(0, 90)'); drag_to(page, math.pi / 2 - 2 * math.pi); page.click('#check')
     assert 'wrong way' in page.inner_text('#feedback'), page.inner_text('#feedback')
     page.locator('#topicView').screenshot(path=str(OUT / 'trig1v2-wrongway.png'))
@@ -76,6 +97,7 @@ def specific(page):
 
 
 def main():
+    (OUT / 'trig1v2-yourturn.png').unlink(missing_ok=True)
     OUT.mkdir(parents=True, exist_ok=True)
     srv = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(ROOT / 'app')))
     srv.RequestHandlerClass.log_message = lambda *a: None
@@ -90,7 +112,7 @@ def main():
                 page.evaluate('localStorage.clear()'); page.reload()
                 if w == 390: specific(page); run(page)
                 else:
-                    page.locator('.topic').nth(0).click(); page.click('#start')
+                    page.locator('.topic').nth(0).click(); lesson(page)
                 assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'), w
                 assert not errors, errors
                 page.close()

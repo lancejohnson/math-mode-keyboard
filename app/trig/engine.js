@@ -1,6 +1,6 @@
 // Small-topic practice engine for the trigonometry course.
-// A unit is a list of topics. Each topic: one idea (two sentences + an animated example on the circle),
-// then practice until the learner gets GOAL right. Questions are answered by turning the dot,
+// A unit is a list of topics. Each topic: a short stepped lesson (one idea, shown on the circle, with
+// "your turn" drags), then practice until the learner gets GOAL right. Questions are answered by turning the dot,
 // tapping a choice, or typing on a small math pad — never by reading ahead.
 export const PI = Math.PI, TAU = 2 * PI, D = d => d * PI / 180;
 export const C = { pink: '#f783ac', blue: '#74c0fc', green: '#8ce99a', amber: '#ffd43b', violet: '#b197fc', orange: '#ff922b', ink: '#e8eaf0', dim: '#7d879c' };
@@ -131,16 +131,48 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
   $('#topicList').onclick = e => { const b = e.target.closest('.topic'); if (b && !b.disabled) open(+b.dataset.i); };
   $('#back').onclick = () => list();
 
+  let si = 0;
   function open(i) {
     ti = i; right = 0; tries = 0; phase = 'learn'; $('#listView').hidden = true; $('#topicView').hidden = false; scrollTo(0, 0);
-    $('#topicNum').textContent = `Topic ${i + 1} of ${topics.length}`; $('#topicTitle').textContent = T().title;
-    wheel.fit(); $('#learn').innerHTML = T().learn; $('#learn').hidden = false; $('#learnAgain').hidden = true;
-    $('#startRow').hidden = false; $('#practice').hidden = true; $('#done').hidden = true; watch();
+    $('#topicNum').textContent = `Topic ${i + 1} of ${topics.length} · Lesson`; $('#topicTitle').textContent = T().title;
+    wheel.fit(); $('#learn').innerHTML = T().learn; $('#learn').hidden = true; $('#learnAgain').hidden = true;
+    $('#lesson').hidden = false; $('#lessonTop').hidden = false; $('#practice').hidden = true; $('#done').hidden = true; step(0);
   }
-  function watch() { const ex = T().example; wheel.play(ex.t, { grid: T().grid, string: ex.string, curLabel: ex.label }); }
-  $('#watch').onclick = watch;
-  $('#learnAgain').onclick = () => { const h = !$('#learn').hidden; $('#learn').hidden = h; $('#learnAgain').textContent = h ? 'Show the idea again' : 'Hide the idea'; };
-  $('#start').onclick = () => { phase = 'practice'; $('#startRow').hidden = true; $('#learn').hidden = true; $('#learnAgain').hidden = false; $('#learnAgain').textContent = 'Show the idea again'; $('#practice').hidden = false; ask(); };
+  // The lesson: a few short screens, each with the circle showing one thing, and "your turn" steps
+  // where the learner drags the dot and the lesson waits until it is right.
+  function step(k) {
+    const L = T().lesson; si = Math.max(0, Math.min(L.length - 1, k)); const st = L[si], grid = st.grid ?? T().grid;
+    $('#stepDots').innerHTML = L.map((_, j) => `<i class="${j < si ? 'ok' : j === si ? 'now' : ''}"></i>`).join('');
+    $('#say').innerHTML = st.say; $('#tryMsg').innerHTML = ''; $('#stepBack').disabled = si === 0;
+    $('#stepNext').textContent = si === L.length - 1 ? 'Start practice →' : 'Next';
+    $('#replay').hidden = !st.play; wheel.onturn = null; cancelAnimationFrame(wheel.anim);
+    if (st.try) {
+      const tr = st.try; $('#stepNext').disabled = true; $('#replay').hidden = true;
+      wheel.set({ grid, snap: tr.snap ?? T().snap, string: tr.string, cur: 0, drag: true });
+      $('#tryMsg').innerHTML = `<span class="dim">Drag the pink dot.</span>`;
+      wheel.onturn = () => {
+        const c = wheel.s.cur, ok = same(c, tr.t); $('#stepNext').disabled = !ok; wheel.s.curLabel = ok ? tr.label : ''; wheel.render();
+        if (ok) { $('#tryMsg').innerHTML = `<span class="ok">✓ ${tr.done || 'That\'s it.'}</span>`; $('#stepNext').disabled = false; }
+        else if (same(norm(c), norm(tr.t)) && c) $('#tryMsg').innerHTML = `<span class="no">Right spot, but ${Math.sign(c) !== Math.sign(tr.t) ? 'turn the other way' : 'count the full turns'}.</span>`;
+        else $('#tryMsg').innerHTML = `<span class="dim">${tr.hint || 'Keep turning.'}</span>`;
+      };
+    } else {
+      $('#stepNext').disabled = false; play();
+    }
+  }
+  function play() {
+    const st = T().lesson[si], grid = st.grid ?? T().grid;
+    if (st.play) wheel.play(st.play.t, { grid, string: st.play.string, curLabel: st.play.label, show: st.show || [] }, st.play.ms || 1100);
+    else wheel.set({ grid, show: st.show || [], cur: st.cur, curLabel: st.curLabel });
+  }
+  $('#replay').onclick = play;
+  $('#stepBack').onclick = () => step(si - 1);
+  $('#stepNext').onclick = () => { if (si < T().lesson.length - 1) step(si + 1); else startPractice(); };
+  $('#learnAgain').onclick = () => { const h = !$('#learn').hidden; $('#learn').hidden = h; $('#learnAgain').textContent = h ? 'Show the key idea' : 'Hide the key idea'; };
+  function startPractice() {
+    phase = 'practice'; wheel.onturn = null; $('#lesson').hidden = true; $('#lessonTop').hidden = true; $('#topicNum').textContent = `Topic ${ti + 1} of ${topics.length} · Practice`;
+    $('#learnAgain').hidden = false; $('#learnAgain').textContent = 'Show the key idea'; $('#practice').hidden = false; ask(); scrollTo(0, 0);
+  }
 
   function bar() { $('#dots').innerHTML = Array.from({ length: GOAL }, (_, i) => `<i class="${i < right ? 'ok' : ''}"></i>`).join(''); $('#dotsText').textContent = `${right} of ${GOAL} right`; }
   function make(topic, force) {
@@ -200,5 +232,5 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
   $('#reset').onclick = () => { if (confirm('Clear your progress for this unit?')) { prog = { done: [] }; save(); list(); } };
 
   list();
-  return { wheel, topics, q: () => q, right: () => right, open, ask: (gen, v) => ask({ gen, v }), prog: () => prog, parseAns, pad };
+  return { wheel, topics, step: () => T().lesson[si], si: () => si, q: () => q, right: () => right, open, ask: (gen, v) => ask({ gen, v }), prog: () => prog, parseAns, pad };
 }
