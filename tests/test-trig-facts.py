@@ -17,6 +17,8 @@ with sync_playwright() as p:
     for w in (375, 430):
         page = b.new_page(viewport={'width': w, 'height': 800}, device_scale_factor=2, has_touch=True)
         page.on('pageerror', lambda e: errs.append(str(e)))
+        # Skip the 650 ms pause after a fast right answer (test speed only; the auto-advance itself still runs).
+        page.add_init_script('{ const st = window.setTimeout; window.setTimeout = (f, ms, ...a) => st(f, ms === 650 ? 0 : ms, ...a); }')
         page.goto(URL); page.evaluate('localStorage.clear()'); page.reload()
         assert page.locator('.deck').count() == 3
         if w == 375: page.screenshot(path=str(OUT / 'facts-home.png'))
@@ -32,9 +34,9 @@ with sync_playwright() as p:
         page.click('#next')
         while page.locator('#drill').is_visible():
             page.wait_for_function('!facts.answered()')
-            tap(page, True)
+            at = page.evaluate('facts.at()'); tap(page, True)
             if page.locator('#next').is_visible(): page.click('#next')  # slow (shouldn't happen) still works
-            else: page.wait_for_function(f'facts.at() > {page.evaluate("facts.at()")} || !document.querySelector("#drill").offsetParent', timeout=3000)
+            else: page.wait_for_function(f'facts.at() > {at} || !document.querySelector("#drill").offsetParent', timeout=3000)
         assert page.locator('#done').is_visible()
         st = page.evaluate('facts.state()')
         assert st[first]['hist'][0]['ok'] is False and st[first]['hist'][-1]['ok'] is True

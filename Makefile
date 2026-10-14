@@ -1,4 +1,4 @@
-.PHONY: test-eraser test-trig
+.PHONY: test-eraser test-trig test-trig-specific trig-unit1 trig-facts-unit trig-facts trig-map
 
 # Focused headless phone regression; mocked recognition, no screenshots.
 test-eraser:
@@ -8,9 +8,21 @@ test-eraser:
 # (docs-only edits, re-checks before commit). PASS_CACHE=0 make test-trig forces a full run.
 PASS = $(if $(shell command -v pass-cache),pass-cache --in app/trig --in $(1) --,)
 
-# Trig Unit 1 phone run (~30s; instant animations). Debug one path: make test-trig ARGS="--only 390 --topics 3"
+# Trig suite (~40 s; the four steps run in parallel, output grouped per step).
+# While editing one assert, run only its part instead of the whole suite:
+#   make test-trig-specific   targeted wrong-way / swipe / parse checks at 390 (~5 s)
+#   make test-trig ARGS="--part mastery|sizes|specific" or ARGS="--only 390 --topics 3"
 test-trig:
+	@$(MAKE) --no-print-directory -j4 -O trig-unit1 trig-facts-unit trig-facts trig-map
+
+test-trig-specific:
+	uv run -q --with playwright python tests/test-trig-unit1.py --part specific
+
+trig-unit1:
 	$(call PASS,tests/test-trig-unit1.py) uv run -q --with playwright python tests/test-trig-unit1.py $(ARGS)
+trig-facts-unit:
 	$(call PASS,app/trig/facts.test.js) node --test app/trig/facts.test.js
+trig-facts:
 	$(call PASS,tests/test-trig-facts.py) uv run -q --with playwright python tests/test-trig-facts.py
+trig-map:
 	$(call PASS,tests/test-trig-map.py) uv run -q --with playwright python tests/test-trig-map.py

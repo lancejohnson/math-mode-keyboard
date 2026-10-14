@@ -5,7 +5,9 @@ with one deliberate wrong answer per answer type to check the feedback.
 Fast by default: the circle's intro animations are made instant from the test (no production hook) and drags
 move in ~0.33 rad steps, since each mouse move costs one rendered frame. On failure it prints the phase, topic,
 lesson step, wheel state and feedback, and saves .artifacts/live/trig1v2-FAIL.png, so one run tells you why.
-Flags: --only 390 (one phone size), --topics 3 (master only the first N topics), --slow (real animations)."""
+Flags: --only 390 (one phone size), --topics 3 (master only the first N topics), --slow (real animations),
+--part specific (only the targeted wrong-way / swipe / parse checks at 390, ~5 s; use while editing those asserts),
+--part mastery (only the 11-topic mastery run), --part sizes (only the 375/430 layout checks)."""
 import argparse, functools, http.server, json, math, pathlib, sys, threading, time
 from playwright.sync_api import sync_playwright
 
@@ -13,9 +15,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = ROOT / '.artifacts' / 'live'
 
 
-ARGS = argparse.Namespace(only=None, topics=None, slow=False)
+ARGS = argparse.Namespace(only=None, topics=None, slow=False, part=None)
 STATE = {'phase': 'start', 'topic': None}
-FAST_PLAY = """(W => { W.play = function (t, extra = {}) { cancelAnimationFrame(this.anim); this.set({ ...extra, cur: t, curLabel: extra.curLabel }); }; })(Object.getPrototypeOf(u1.wheel))"""
+FAST_PLAY = """(W => { W.play = function (t, extra = {}) { cancelAnimationFrame(this.anim); this.set({ ...extra, cur: t, curLabel: extra.curLabel }); }; })(Object.getPrototypeOf(u1.wheel));
+if (!window.__fastTimers) { window.__fastTimers = 1; const st = window.setTimeout; window.setTimeout = (f, ms, ...a) => st(f, ms === 650 ? 0 : ms, ...a); }"""
+# ^ also skips the 650 ms auto-advance after a fast right quick fact (about 10 s of waiting per run).
 
 
 def fast(page):
@@ -158,6 +162,8 @@ def dump(page):
                    stepNext: v('#stepNext') && { text: v('#stepNext').innerText, disabled: v('#stepNext').disabled }, tryMsg: t('#tryMsg'), feedback: t('#feedback') }; }""")
         page.screenshot(path=str(OUT / 'trig1v2-FAIL.png'), full_page=True)
         print('FAIL STATE', json.dumps({**STATE, **st}, default=str)[:2000], f'\nFAIL SHOT {OUT / "trig1v2-FAIL.png"}', file=sys.stderr)
+        part = 'specific' if 'specific' in STATE['phase'] else 'mastery' if 'mastery' in STATE['phase'] else 'sizes'
+        print(f'RERUN just this part while fixing it: uv run -q --with playwright python tests/test-trig-unit1.py --part {part}', file=sys.stderr)
     except Exception as e:
         print('FAIL STATE unavailable:', e, file=sys.stderr)
 
@@ -167,6 +173,7 @@ def main():
     ap.add_argument('--only', type=int, help='run only this viewport width (375, 390, 430); 390 runs the full mastery path')
     ap.add_argument('--topics', type=int, help='master only the first N topics in the full path (skips the end-of-unit checks)')
     ap.add_argument('--slow', action='store_true', help='real animation timing and pauses (as before)')
+    ap.add_argument('--part', choices=('specific', 'mastery', 'sizes'), help='run one part: specific = targeted checks at 390 (~5 s), mastery = 11-topic run at 390, sizes = 375/430 layout')
     ap.parse_args(namespace=ARGS)
     t0 = time.time()
     for f in ('trig1v2-yourturn.png', 'trig1v2-predict.png'): (OUT / f).unlink(missing_ok=True)
@@ -179,6 +186,7 @@ def main():
             browser = pw.chromium.launch()
             for w, h in [(375, 667), (390, 844), (430, 932)]:
                 if ARGS.only and w != ARGS.only: continue
+                if ARGS.part and (ARGS.part == 'sizes') != (w != 390): continue
                 tw = time.time(); STATE.update(phase=f'{w}px', topic=None)
                 page = browser.new_page(viewport={'width': w, 'height': h}, device_scale_factor=2, has_touch=True)
                 errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
@@ -186,8 +194,8 @@ def main():
                 page.evaluate('localStorage.clear()'); page.reload(); fast(page)
                 try:
                     if w == 390:
-                        STATE['phase'] = '390px specific'; specific(page)
-                        STATE['phase'] = '390px mastery run'; run(page)
+                        if ARGS.part != 'mastery': STATE['phase'] = '390px specific'; specific(page)
+                        if ARGS.part != 'specific': STATE['phase'] = '390px mastery run'; run(page)
                     else:
                         page.locator('.topic').nth(0).click(); lesson(page)
                     assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'), w
@@ -197,8 +205,8 @@ def main():
                 print(f'  {w}px ok in {time.time() - tw:.1f}s', file=sys.stderr)
                 page.close()
             browser.close()
-        print('PASS: trig unit 1 v2 — 11 topics incl. timed by-heart drill + quick-facts review: short lesson then a stretch guess, then mastery through drag / tap / pad, wrong-answer feedback for each type, wrong-way turn caught, unlocks + progress persist; 3 phone sizes, no JS errors. Chromium, not iOS.' if not (ARGS.only or ARGS.topics) else f'PASS (partial: only={ARGS.only} topics={ARGS.topics}) in {time.time() - t0:.1f}s')
-        if not (ARGS.only or ARGS.topics): print(f'  total {time.time() - t0:.1f}s', file=sys.stderr)
+        print('PASS: trig unit 1 v2 — 11 topics incl. timed by-heart drill + quick-facts review: short lesson then a stretch guess, then mastery through drag / tap / pad, wrong-answer feedback for each type, wrong-way turn caught, unlocks + progress persist; 3 phone sizes, no JS errors. Chromium, not iOS.' if not (ARGS.only or ARGS.topics or ARGS.part) else f'PASS (partial: only={ARGS.only} topics={ARGS.topics} part={ARGS.part}) in {time.time() - t0:.1f}s')
+        if not (ARGS.only or ARGS.topics or ARGS.part): print(f'  total {time.time() - t0:.1f}s', file=sys.stderr)
     finally:
         srv.shutdown()
 
