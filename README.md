@@ -57,3 +57,11 @@ GitHub Pages was not used: this account inherits a custom domain pointing elsewh
 ## Lesson prototype (intuition first)
 
 `app/lesson/` (served at `/lesson/`) is a one-topic prototype for the course idea: graphing parabolas in vertex form. It has an interactive model you drag (vertex and shape handles), callouts for each defining feature (vertex, axis of symmetry, direction, the 1-4-9 step pattern, intercepts), a five-move recipe for reproducing the graph by hand, a word problem solved by fitting the model, a freehand sketch graded on those features, and an explain prompt. `tests/test-lesson.py` drives all of it at phone sizes (Chromium, not iOS).
+
+## Trigonometry course (draft)
+
+`app/trig/` is a trigonometry course built in the intuition-first style; the outline is in
+`docs/trig-course.md`. Unit 1, angles and radians (`app/trig/unit1.html`), has six parts:
+predict rounds, a model you drag to turn an angle (negative and multi-turn angles included),
+a degrees-to-radians recipe, a bike-wheel problem, a drawn angle that is graded, and generated
+practice with worked solutions. Test: `uv run -q --with playwright python tests/test-trig-unit1.py`.

@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Unit 1 · Angles and radians</title>
+<link rel="stylesheet" href="lesson.css?v=1">
+</head>
+<body>
+<nav class="crumb"><a href="./">← Trigonometry</a></nav>
+<header>
+  <small>Unit 1 of 12</small>
+  <h1>Angles and radians</h1>
+  <p class="dim">An angle is an amount of turning. Radians measure that turning with the circle's own radius — a piece of string you wrap around the edge.</p>
+</header>
+
+<section id="predict">
+  <h2><b>Start</b>Predict first</h2>
+  <p class="dim">Guess before you look. Being surprised is where the learning happens.</p>
+  <p id="predictQ"></p>
+  <div class="choices text" id="predictChoices"></div>
+  <canvas id="predictCanvas" aria-label="What actually happens"></canvas>
+  <div id="predictAfter" hidden>
+    <p id="predictVerdict" aria-live="polite"></p>
+    <textarea id="predictText" aria-label="Your explanation" placeholder="Why? Say it in your own words first."></textarea>
+    <div class="row"><button class="act alt" id="predictWhy">Show why</button><button class="act" id="predictNext">Next prediction</button></div>
+    <div class="reveal" id="predictKey" hidden></div>
+  </div>
+</section>
+
+<section id="explore">
+  <h2><b>1</b>Turn the angle</h2>
+  <p>Drag the <span style="color:var(--pink)">pink dot</span> around. Turning <b>counterclockwise</b> is positive; keep going past a full turn, or go <b>clockwise</b> past 0 for negative angles.</p>
+  <div class="readout" id="exploreRead" aria-live="polite"></div>
+  <canvas id="exploreCanvas" aria-label="Drag to turn the angle"></canvas>
+  <div class="chips" id="exploreChips"></div>
+  <ul class="facts" id="exploreFacts"></ul>
+</section>
+
+<section id="recipe">
+  <h2><b>2</b>Degrees to radians in your head</h2>
+  <p class="dim">One fact does all the work: a half turn is 180° = π radians. Step through, then try another.</p>
+  <div class="eq" id="recipeEq"></div>
+  <canvas id="recipeCanvas" aria-label="Step-by-step conversion"></canvas>
+  <div class="caption" id="recipeCaption" aria-live="polite"></div>
+  <div class="row"><button class="act alt" id="recipeBack">Back</button><button class="act" id="recipeNext">Next move</button><button class="act alt" id="recipeNew">Another one</button></div>
+</section>
+
+<section id="solve">
+  <h2><b>3</b>Use the model to solve</h2>
+  <p>A bike wheel has radius <b>30 cm</b>. Turn the wheel until the valve (pink dot) has turned <b>2.5 radians</b>. How far has the bike rolled?</p>
+  <div class="readout" id="solveRead"></div>
+  <canvas id="solveCanvas" aria-label="Bike wheel model"></canvas>
+  <ul class="check" id="solveChecks"></ul>
+  <div id="solveMore" hidden>
+    <p>Now without the model: <b>how far does the bike roll in one full turn?</b> (A number in cm, or use π.)</p>
+    <div class="row"><input class="ans" id="solveIn" inputmode="text" autocomplete="off" aria-label="Distance in one full turn"><button class="act" id="solveCheck">Check</button></div>
+    <p id="solveFeedback" aria-live="polite"></p>
+  </div>
+</section>
+
+<section id="sketch">
+  <h2><b>4</b>Draw it yourself</h2>
+  <p>Draw the <b>end side</b> of this angle: a straight line from the centre out toward where the turn finishes. Start at 3 o'clock and think about which way to turn.</p>
+  <div class="eq" id="sketchEq"></div>
+  <canvas id="sketchCanvas" aria-label="Draw the angle here"></canvas>
+  <div class="row"><button class="act" id="sketchCheck">Check my drawing</button><button class="act alt" id="sketchClear">Clear</button><button class="act alt" id="sketchNew">New one</button></div>
+  <ul class="check" id="sketchResult" aria-live="polite"></ul>
+</section>
+
+<section id="practice">
+  <h2><b>5</b>Practice</h2>
+  <p class="dim">Eight mixed questions. Type answers like <b>3π/4</b>, <b>3pi/4</b>, <b>135</b> or <b>2.36</b>.</p>
+  <div class="progress" id="practiceBar"></div>
+  <p class="q" id="practiceQ"></p>
+  <div class="row"><input class="ans" id="practiceIn" inputmode="text" autocomplete="off" aria-label="Your answer"><button class="act" id="practiceCheck">Check</button><button class="act alt" id="practiceNext" hidden>Next</button></div>
+  <div id="practiceFeedback" aria-live="polite"></div>
+</section>
+
+<section id="explain">
+  <h2><b>6</b>Explain it</h2>
+  <p>A full turn is 2π radians on a coin and on the Earth's equator. <b>Why doesn't the size of the circle matter?</b></p>
+  <textarea id="explainText" aria-label="Your explanation"></textarea>
+  <div class="row"><button class="act" id="explainShow">Compare with the key ideas</button></div>
+  <div class="reveal" id="explainKey" hidden>
+    <p>A strong answer says:</p>
+    <ul>
+      <li>Radians count the arc in <i>radius-lengths</i>, so the circle's own size is the unit.</li>
+      <li>The distance around any circle is 2π times its radius, so a full turn is always 2π radius-lengths: 2π radians.</li>
+      <li>Scale the circle up and the arc and the radius grow together; their ratio stays the same.</li>
+    </ul>
+  </div>
+</section>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const PI=Math.PI,TAU=2*PI,C={pink:'#f783ac',blue:'#74c0fc',green:'#8ce99a',amber:'#ffd43b',violet:'#b197fc',orange:'#ff922b',ink:'#e8eaf0',dim:'#566075'};
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+const minus=s=>String(s).replace(/^-/,'−');
+// Exact multiples of π/12 print as fractions of π (3π/4, −π/2); anything else is null.
+function piFrac(t){const k=Math.round(t/(PI/12));if(Math.abs(t-k*PI/12)>1e-6)return null;if(!k)return'0';const g=gcd(Math.abs(k),12),n=k/g,d=12/g;
+  return (n<0?'−':'')+(Math.abs(n)===1?'':Math.abs(n))+'π'+(d===1?'':'/'+d);}
+const deg=t=>Math.round(t*180/PI*10)/10;
+const dec=t=>minus((Math.round(t*100)/100).toString());
+const label=t=>piFrac(t)??dec(t);
+const norm=t=>((t%TAU)+TAU)%TAU;
+const angDiff=(a,b)=>{const d=norm(a-b);return Math.min(d,TAU-d);};
+
+// A circle model: centre, radius R, angles measured counterclockwise from 3 o'clock.
+class Wheel{
+  constructor(canvas,draw){this.c=canvas;this.draw=draw;addEventListener('resize',()=>this.fit());this.fit();}
+  fit(){const st=getComputedStyle(this.c.parentElement),w=Math.min(this.c.parentElement.clientWidth-parseFloat(st.paddingLeft)-parseFloat(st.paddingRight),460),h=Math.round(w*.92),d=devicePixelRatio||1;
+    Object.assign(this.c.style,{width:w+'px',height:h+'px'});this.c.width=w*d;this.c.height=h*d;this.w=w;this.h=h;this.cx=w/2;this.cy=h/2;this.R=w*.33;
+    this.g=this.c.getContext('2d');this.g.setTransform(d,0,0,d,0,0);this.render();}
+  P(t,r=this.R){return[this.cx+r*Math.cos(t),this.cy-r*Math.sin(t)];}
+  client(t,f=1){const b=this.c.getBoundingClientRect(),[x,y]=this.P(t,this.R*f);return[b.left+x,b.top+y];}
+  local(e){const b=this.c.getBoundingClientRect();return[e.clientX-b.left,e.clientY-b.top];}
+  render(){const g=this.g;g.clearRect(0,0,this.w,this.h);this.draw?.(this);}
+  axes(labels=true,R=this.R){const g=this.g;g.strokeStyle='#2a3142';g.lineWidth=1.5;g.beginPath();g.moveTo(8,this.cy);g.lineTo(this.w-8,this.cy);g.moveTo(this.cx,8);g.lineTo(this.cx,this.h-8);g.stroke();
+    g.strokeStyle='#4a5470';g.lineWidth=2;g.beginPath();g.arc(this.cx,this.cy,R,0,TAU);g.stroke();
+    if(labels){g.font='11px system-ui';g.fillStyle='#7d879c';const m=R*.06;
+      g.textAlign='right';g.fillText('0 · 0°',this.cx+R-m,this.cy+14);g.textAlign='left';g.fillText('π · 180°',this.cx-R+m,this.cy+14);
+      g.fillText('π/2 · 90°',this.cx+5,this.cy-R+m+10);g.fillText('3π/2 · 270°',this.cx+5,this.cy+R-m);}}
+  ray(t,color,width=3,dash=[],r=this.R){const g=this.g,[x,y]=this.P(t,r);g.save();g.strokeStyle=color;g.lineWidth=width;g.setLineDash(dash);g.beginPath();g.moveTo(this.cx,this.cy);g.lineTo(x,y);g.stroke();g.restore();}
+  // Radius-lengths of "string" laid along the edge, spiralling outward on extra turns, with a tick at every whole radian.
+  string(t,color,R=this.R,ticks=true){const g=this.g,n=Math.max(2,Math.ceil(Math.abs(t)*40)),rr=s=>R+8*Math.abs(s)/TAU;g.save();g.strokeStyle=color;g.lineWidth=6;g.lineCap='round';g.beginPath();
+    for(let i=0;i<=n;i++){const s=t*i/n,[x,y]=this.P(s,rr(s));i?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();
+    if(ticks){g.fillStyle=color;g.font='600 12px system-ui';g.textAlign='center';for(let i=1;i<=Math.floor(Math.abs(t)+1e-9);i++){const s=Math.sign(t)*i,[a,b]=this.P(s,rr(s)-9),[c,d]=this.P(s,rr(s)+9),[lx,ly]=this.P(s,rr(s)+20);
+      g.strokeStyle='#10131a';g.lineWidth=3;g.beginPath();g.moveTo(a,b);g.lineTo(c,d);g.stroke();g.fillText(i,lx,ly+4);}g.textAlign='left';}g.restore();}
+  turn(t,color,r=this.R*.22){if(Math.abs(t)<.02)return;const g=this.g,n=Math.ceil(Math.abs(t)*30),rr=s=>r+this.R*.07*Math.abs(s)/TAU;g.save();g.strokeStyle=color;g.lineWidth=2.5;g.beginPath();
+    for(let i=0;i<=n;i++){const s=t*i/n,[x,y]=this.P(s,rr(s));i?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();
+    const[x,y]=this.P(t,rr(t)),sg=Math.sign(t),dx=-Math.sin(t)*sg,dy=-Math.cos(t)*sg;g.fillStyle=color;g.beginPath();g.moveTo(x+dx*8,y+dy*8);g.lineTo(x-dx*2+dy*6,y-dy*2-dx*6);g.lineTo(x-dx*2-dy*6,y-dy*2+dx*6);g.fill();g.restore();}
+  dot(t,color,r=8,R=this.R){const g=this.g,[x,y]=this.P(t,R);g.fillStyle=color;g.beginPath();g.arc(x,y,r,0,TAU);g.fill();}
+  ring(t,color,R=this.R){const g=this.g,[x,y]=this.P(t,R);g.strokeStyle=color;g.lineWidth=2;g.beginPath();g.arc(x,y,16,0,TAU);g.stroke();}
+  text(s,x,y,color,size=13){const g=this.g;g.font=`600 ${size}px system-ui`;const w=g.measureText(s).width;x=Math.max(4,Math.min(this.w-w-4,x));y=Math.max(14,Math.min(this.h-6,y));
+    g.fillStyle='#10131acc';g.fillRect(x-3,y-size,w+6,size+5);g.fillStyle=color;g.fillText(s,x,y);}
+  // Drag anywhere to turn; the angle is unwrapped so it can pass a full turn or go negative.
+  draggable(get,set,snap){let prev=null,raw=0;
+    this.c.addEventListener('pointerdown',e=>{const[x,y]=this.local(e);prev=Math.atan2(this.cy-y,x-this.cx);raw=get();this.c.setPointerCapture(e.pointerId);e.preventDefault();});
+    const move=e=>{if(prev===null)return;const[x,y]=this.local(e);if(Math.hypot(x-this.cx,y-this.cy)<this.R*.15)return;const a=Math.atan2(this.cy-y,x-this.cx);
+      let d=a-prev;d=((d+PI)%TAU+TAU)%TAU-PI;raw+=d;prev=a;raw=Math.max(-2*TAU,Math.min(3*TAU,raw));set(snap(raw));this.render();};
+    this.c.addEventListener('pointermove',move);this.c.addEventListener('pointerup',e=>{move(e);prev=null;});this.c.addEventListener('pointercancel',()=>prev=null);}
+}
+const snap15=t=>{const s=Math.round(t/(PI/12))*PI/12;return Math.abs(s-t)<PI/60?s:t;};
+
+// 0 · Predict
+const rounds=[
+  {q:'Take a string as long as the radius and wrap it around the edge. <b>What angle does it make?</b>',opts:['About 30°','About 57°','Exactly 60°','About 90°'],right:1,to:1,
+   why:'At 60° the straight chord across the slice equals the radius (an equilateral triangle). The curved arc is a bit longer than that chord, so the string runs out a little before 60° — at about <b>57.3°</b>. That angle is <b>1 radian</b>.'},
+  {q:'<b>How many radius-length strings</b> fit all the way around the circle?',opts:['Exactly 3','A bit more than 6','Exactly 4','360'],right:1,to:TAU,
+   why:'The distance around a circle is 2π × radius ≈ 6.28 radii. So a full turn is <b>2π radians</b>, a half turn is <b>π</b>, a quarter turn is <b>π/2</b>.'},
+  {q:'The same slice is cut from a small circle and a big one. <b>In radians, which angle is bigger?</b>',opts:['The big circle’s','The small circle’s','They’re equal','It depends on the slice'],right:2,to:1.5,two:true,
+   why:'The big circle\'s arc is longer, but its radius is longer by the same factor. Radians count the arc <i>in radius-lengths</i>, so both are <b>1.5 radians</b>. The size cancels out.'}];
+let round=0,pt=0,anim=0;
+const predict=new Wheel($('#predictCanvas'),w=>{const r=rounds[round];
+  if(r.two){const Rs=w.R*.5;w.axes(false);w.g.strokeStyle='#4a5470';w.g.beginPath();w.g.arc(w.cx,w.cy,Rs,0,TAU);w.g.stroke();
+    w.ray(pt,C.ink,2);w.string(pt,C.blue,w.R);w.string(pt,C.orange,Rs);if(pt>=r.to-1e-6){w.text('1.5 big radii',w.P(.75,w.R+24)[0],w.P(.75,w.R+24)[1],C.blue);w.text('1.5 small radii',w.cx+6,w.cy+18,C.orange);}return;}
+  w.axes();if(pt)w.ray(0,C.blue,3);w.string(pt,C.blue);w.ray(pt,C.ink,2);
+  if(r.to===1&&pt>=1-1e-6){w.ray(PI/3,C.amber,2,[5,5]);const[x,y]=w.P(PI/3,w.R*.75);w.text('60°',x-34,y,C.amber);const[a,b]=w.P(.5,w.R*.55);w.text('1 rad ≈ 57.3°',a,b,C.blue);}
+  if(r.to===TAU&&pt>=TAU-1e-6)w.text('2π ≈ 6.28 radius-lengths',w.cx-80,w.cy-8,C.blue);});
+function showRound(){const r=rounds[round];pt=0;cancelAnimationFrame(anim);predict.render();$('#predictQ').innerHTML=`<b>${round+1} of ${rounds.length}.</b> `+r.q;
+  $('#predictAfter').hidden=true;$('#predictKey').hidden=true;$('#predictText').value='';
+  $('#predictChoices').innerHTML=r.opts.map((t,i)=>`<button class="choice" data-i="${i}">${t}</button>`).join('');}
+$('#predictChoices').onclick=e=>{const b=e.target.closest('.choice');if(!b||b.disabled)return;const r=rounds[round],i=+b.dataset.i,ok=i===r.right;
+  $$('#predictChoices .choice').forEach((c,j)=>{c.disabled=true;if(j===r.right)c.classList.add('right');else if(j===i)c.classList.add('wrong');});
+  const t0=performance.now(),dur=900+500*r.to/PI,step=t=>{const u=Math.min(1,(t-t0)/dur);pt=r.to*(1-(1-u)**2);predict.render();if(u<1)anim=requestAnimationFrame(step);else{pt=r.to;predict.render();}};
+  anim=requestAnimationFrame(step);$('#predictCanvas').scrollIntoView({behavior:'smooth',block:'center'});
+  $('#predictVerdict').innerHTML=ok?'<span class="ok">✓ Your prediction matched. Can you say <i>why</i>?</span>':`<span class="no">Surprise! The answer is “${r.opts[r.right]}”, not “${r.opts[i]}”.</span> Before reading the reason, try to explain it in your own words.`;
+  $('#predictNext').textContent=round===rounds.length-1?'Now turn it yourself ↓':'Next prediction';$('#predictAfter').hidden=false;};
+$('#predictWhy').onclick=()=>{$('#predictKey').innerHTML=rounds[round].why;$('#predictKey').hidden=false;};
+$('#predictNext').onclick=()=>{if(round<rounds.length-1){round++;showRound();$('#predict').scrollIntoView({behavior:'smooth'});}else $('#explore').scrollIntoView({behavior:'smooth'});};
+showRound();
+
+// 1 · Explore
+let et=PI/4;const show={string:true,turn:true,snap:true};
+const chips=[['string','Radius strings',C.blue],['turn','Turn arrow',C.violet],['snap','Snap to 15°',C.amber]];
+$('#exploreChips').innerHTML=chips.map(([k,t,c])=>`<button class="chip" data-k="${k}" style="--c:${c}" aria-pressed="${show[k]}"><i></i>${t}</button>`).join('');
+const explore=new Wheel($('#exploreCanvas'),w=>{w.axes();w.ray(0,'#7d879c',2);if(show.string)w.string(et,C.blue);if(show.turn)w.turn(et,et>=0?C.violet:C.orange);
+  w.ray(et,C.ink,3);w.dot(et,C.pink,9);w.ring(et,C.pink);});
+function exploreText(){const t=et,f=piFrac(t),d=deg(t),std=norm(t);
+  $('#exploreRead').innerHTML=`${minus(d)}° = ${f?f+' rad':''}${f&&f!=='0'?' ≈ ':''}${f==='0'?'':dec(t)+' rad'}<small>${minus(Math.round(t/TAU*1000)/1000)} of a full turn</small>`;
+  const facts=[[C.blue,`<b>${dec(Math.abs(t))} radius-lengths</b> of string around the edge, so the angle is ${dec(t)} radians. One full turn is 2π ≈ 6.28 of them.`],
+    [t>=0?C.violet:C.orange,t>=0?'<b>Positive</b> — turning counterclockwise from 3 o\'clock.':'<b>Negative</b> — turning clockwise from 3 o\'clock.'],
+    [C.amber,`<b>${minus(d)}° = ${minus(Math.round(d/180*1000)/1000)} half turns</b>, and a half turn is π, so it's ${f??dec(t/PI)+'π'} radians.`]];
+  if(t<0||t>=TAU-1e-9)facts.push([C.green,`<b>Same end position as ${label(std)}</b> (${deg(std)}°): ${t<0?'add':'take away'} whole turns of 2π. Angles that end in the same place are called <b>coterminal</b>.`]);
+  $('#exploreFacts').innerHTML=facts.map(([c,s])=>`<li style="--c:${c}">${s}</li>`).join('');}
+$('#exploreChips').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;show[b.dataset.k]=!show[b.dataset.k];b.setAttribute('aria-pressed',show[b.dataset.k]);explore.render();};
+explore.draggable(()=>et,t=>{et=t;exploreText();},t=>show.snap?snap15(t):t);exploreText();
+
+// 2 · Recipe: degrees → fraction of a half turn → times π.
+const rc={d:135,step:0};
+function recipeParts(d){const g=gcd(Math.abs(d),180);return{n:d/g,den:180/g,t:d*PI/180};}
+const recipe=new Wheel($('#recipeCanvas'),w=>{const{n,den,t}=recipeParts(rc.d),s=rc.step,sg=Math.sign(rc.d),g=w.g;w.axes(false);w.ray(0,'#7d879c',2);
+  if(s>=0){g.save();g.strokeStyle=C.amber;g.lineWidth=5;g.beginPath();g.arc(w.cx,w.cy,w.R,0,-PI*sg,sg>0);g.stroke();g.restore();w.text('half turn = 180° = π',w.cx-70,sg>0?w.cy+22:w.cy-12,C.amber);}
+  if(s>=1){const k=Math.max(den,Math.abs(n));for(let i=1;i<=k;i++)w.ray(sg*i*PI/den,i<=den?'#ffd43b88':'#ffd43b44',1.5,[4,4]);}
+  if(s>=2){for(let i=0;i<Math.abs(n);i++){const a=sg*i*PI/den,b=sg*(i+1)*PI/den;g.fillStyle=i%2?'#f783ac55':'#f783ac88';g.beginPath();g.moveTo(w.cx,w.cy);g.arc(w.cx,w.cy,w.R*.8,-a,-b,sg>0);g.closePath();g.fill();}
+    w.ray(t,C.ink,3);w.turn(t,C.violet);w.dot(t,C.pink,7);}
+  if(s>=3)w.string(t,C.blue);});
+function recipeText(){const d=rc.d,{n,den,t}=recipeParts(d),f=piFrac(t),N=Math.abs(n),sl=den===1?'π':`π/${den}`;
+  const caps=[`Convert <b>${minus(d)}°</b> to radians. The anchor: a <b style="color:${C.amber}">half turn is 180° = π radians</b>. Remember that and nothing else.`,
+    `<b>How much of a half turn?</b> ${Math.abs(d)}/180 = <b>${N}/${den}</b>. So cut the half turn into ${den} equal slice${den>1?'s':''} — each one is ${sl}.`,
+    `<b>Take ${N} slice${N>1?'s':''}</b>${d<0?', turning clockwise because the angle is negative':''}: ${minus(d)}° = ${n<0?'−':''}${N} × ${sl} = <b>${f}</b>.`,
+    `<b>Check the size.</b> π ≈ 3.14, so ${f} ≈ ${dec(t)}: about ${dec(Math.abs(t))} <span style="color:${C.blue}">radius-lengths of string</span> around the edge. Does the picture agree?`];
+  $('#recipeEq').textContent=`${minus(d)}° = ?`;$('#recipeCaption').innerHTML=caps[rc.step];$('#recipeBack').disabled=rc.step===0;$('#recipeNext').disabled=rc.step===3;recipe.render();}
+$('#recipeNext').onclick=()=>{rc.step=Math.min(3,rc.step+1);recipeText();};
+$('#recipeBack').onclick=()=>{rc.step=Math.max(0,rc.step-1);recipeText();};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+$('#recipeNew').onclick=()=>{let d;do d=pick([30,45,60,120,150,210,225,240,270,300,315,330,-45,-60,-120,-150]);while(d===rc.d);Object.assign(rc,{d,step:0});recipeText();};
+recipeText();
+
+// 3 · Solve: arc length is radius-lengths × radius.
+let st=0;const R_CM=30,GOAL=2.5;
+const solve=new Wheel($('#solveCanvas'),w=>{w.axes(false);const g=w.g;g.strokeStyle='#39425a';g.lineWidth=1.5;for(let i=0;i<12;i++)w.ray(st+i*PI/6,'#2f3647',1.5,[],w.R);
+  w.string(st,C.blue);w.turn(st,C.violet);w.ray(st,C.ink,2);w.dot(0,'#ffffff44',6);w.dot(st,C.pink,9);w.ring(st,C.pink);
+  g.strokeStyle='#4a5470';g.lineWidth=3;g.beginPath();g.moveTo(w.cx-w.R*1.4,w.cy+w.R+4);g.lineTo(w.cx+w.R*1.4,w.cy+w.R+4);g.stroke();w.text('ground',w.cx+w.R*1.1,w.cy+w.R+20,'#7d879c',11);});
+const solved=()=>Math.abs(st-GOAL)<.051;
+function solveText(){$('#solveRead').innerHTML=`Turned ${dec(st)} rad<small>valve moved ${dec(st)} × 30 = ${Math.round(st*R_CM)} cm along the rim</small>`;
+  const ok=solved();$('#solveChecks').innerHTML=`<li class="${ok?'ok':'no'}">${ok?'✓':'○'} Turn the valve 2.5 radians counterclockwise — count the ticks on the string</li>`+
+   (ok?`<li class="ok">Solved: the rim laid <b>2.5 radius-lengths</b> on the ground, and each is 30 cm, so the bike rolled <b>2.5 × 30 = 75 cm</b>. That's the arc-length rule: <b>arc = radius × angle in radians</b>.</li>`:'');
+  $('#solveMore').hidden=!ok;}
+solve.draggable(()=>st,t=>{st=t;solveText();},t=>Math.round(t*10)/10);solveText();
+function parseAns(s){s=String(s).trim().replace(/°|degrees?|deg|cm|radians?|rad/gi,'').replace(/[−–]/g,'-').replace(/pi/gi,'π').replace(/×/g,'*').replace(/÷/g,'/').trim();
+  if(!s||!/^[\d.+\-*/()\sπ]+$/.test(s))return NaN;s=s.replace(/(\d|\)|π)\s*(?=[π(])/g,'$1*').replace(/π\s*(?=[\d])/g,'π*').replace(/π/g,'(Math.PI)');
+  try{const v=Function('"use strict";return ('+s+')')();return typeof v==='number'&&isFinite(v)?v:NaN;}catch{return NaN;}}
+$('#solveCheck').onclick=()=>{const v=parseAns($('#solveIn').value),ok=Math.abs(v-60*PI)<.6;
+  $('#solveFeedback').innerHTML=isNaN(v)?'<span class="no">Type a number, like 188 or 60π.</span>':ok?'<span class="ok">✓ Right: a full turn is 2π radians, so 2π × 30 = <b>60π ≈ 188.5 cm</b>. That\'s the circumference.</span>':
+    Math.abs(v-30*PI)<.6?'<span class="no">That\'s a half turn (π radians). A full turn is 2π radians.</span>':Math.abs(v-360*30)<1?'<span class="no">That used 360 as if it were radians. Arc = radius × angle <i>in radians</i>; a full turn is 2π radians.</span>':
+    '<span class="no">Not quite. How many radians is one full turn? Multiply that by the radius.</span>';};
+
+// 4 · Draw it yourself: grade the end side's direction.
+const targets=[3*PI/4,-PI/3,7*PI/6,5*PI/3,3*PI/2,-5*PI/4,9*PI/4,2*PI/3,-PI/2,5*PI/6];
+let target=3*PI/4,strokes=[],cur=null,graded=false;
+const sketch=new Wheel($('#sketchCanvas'),w=>{w.axes();w.ray(0,'#7d879c',2);if(graded){w.ray(target,C.green,3,[8,6]);w.turn(target,'#8ce99a',w.R*.3);w.dot(target,C.green,6);}
+  const g=w.g;g.strokeStyle=C.blue;g.lineWidth=3.5;g.lineCap=g.lineJoin='round';for(const s of strokes){g.beginPath();s.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.stroke();}});
+function setTarget(t){target=t;$('#sketchEq').textContent='θ = '+piFrac(t);strokes=[];graded=false;$('#sketchResult').innerHTML='';sketch.render();}
+const sc=sketch.c;
+sc.addEventListener('pointerdown',e=>{cur=[sketch.local(e)];strokes.push(cur);sc.setPointerCapture(e.pointerId);e.preventDefault();});
+sc.addEventListener('pointermove',e=>{if(!cur)return;cur.push(sketch.local(e));sketch.render();});
+const endStroke=e=>{if(cur&&e.type==='pointerup')cur.push(sketch.local(e));cur=null;sketch.render();};sc.addEventListener('pointerup',endStroke);sc.addEventListener('pointercancel',endStroke);
+function gradeSketch(){const w=sketch,pts=strokes.flat();if(!pts.length)return[{ok:false,t:'Draw a line from the centre first.'}];
+  const far=pts.reduce((b,p)=>Math.hypot(p[0]-w.cx,p[1]-w.cy)>Math.hypot(b[0]-w.cx,b[1]-w.cy)?p:b);if(Math.hypot(far[0]-w.cx,far[1]-w.cy)<w.R*.4)return[{ok:false,t:'Make the line longer — draw it from the centre out toward the circle.'}];
+  const a=Math.atan2(w.cy-far[1],far[0]-w.cx),f=piFrac(target),TOL=PI/12,std=norm(target),wraps=target<0||target>=TAU;
+  if(angDiff(a,target)<=TOL){const out=[{ok:true,t:`Right direction: ${f} ends at ${deg(std)}°${wraps?` — the same place as ${piFrac(std)}`:''}.`}];
+    if(target>=TAU)out.push({ok:true,t:`${f} is one full turn (2π) plus ${piFrac(target-TAU)}, so it lands where ${piFrac(target-TAU)} does.`});
+    if(target<0)out.push({ok:true,t:`Negative, so it turns clockwise: ${deg(-target)}° below the start.`});return out;}
+  if(angDiff(a,-target)<=TOL)return[{ok:false,t:`You turned the wrong way. ${target<0?'Negative angles turn clockwise.':'Positive angles turn counterclockwise'} from 3 o'clock.`}];
+  if(angDiff(a,PI-target)<=TOL)return[{ok:false,t:'It looks like you measured from 9 o\'clock. Angles start at 3 o\'clock (the positive x-axis).'}];
+  const sl=Math.abs(target/PI);return[{ok:false,t:`Your line points to about ${Math.round(deg(norm(a)))}°; ${f} ends at ${deg(std)}°. Try: ${f} is ${dec(sl)} half turns (π each)${target<0?', clockwise':''}.`}];}
+$('#sketchCheck').onclick=()=>{const r=gradeSketch();graded=strokes.length>0;$('#sketchResult').innerHTML=r.map(x=>`<li class="${x.ok?'ok':'no'}">${x.ok?'✓':'✗'} ${x.t}</li>`).join('')+(graded&&!r[0].ok?'<li class="dim">The dashed green line shows where it ends.</li>':'');sketch.render();};
+$('#sketchClear').onclick=()=>{strokes=[];graded=false;$('#sketchResult').innerHTML='';sketch.render();};
+$('#sketchNew').onclick=()=>{let t;do t=pick(targets);while(t===target);setTarget(t);};
+setTarget(target);
+
+// 5 · Practice: generated questions with worked solutions.
+const DEG=[30,45,60,90,120,135,150,180,210,225,240,270,300,315,330];
+const gens={
+  toRad(){const d=pick(DEG),t=d*PI/180,{n,den}=recipeParts(d);return{q:`Write <b>${d}°</b> in radians.`,ans:t,
+    wrongHint:v=>Math.abs(v-d)<.6?'That\'s still in degrees. Use π: a half turn is π.':null,
+    sol:`${d}/180 = ${n}/${den} of a half turn, so ${d}° = <b>${piFrac(t)}</b>.`};},
+  toDeg(){const d=pick(DEG),t=d*PI/180;return{q:`Write <b>${piFrac(t)}</b> in degrees.`,ans:d,tol:.6,
+    wrongHint:v=>Math.abs(v-t)<.02?'That\'s the radian value as a decimal. Replace π with 180°.':null,
+    sol:`π is 180°, so ${piFrac(t)} = ${dec(t/PI)} × 180° = <b>${d}°</b>.`};},
+  coterm(){const d=pick(DEG.filter(x=>x<360)),base=d*PI/180,m=pick([1,-1,2]),t=base+m*TAU;return{q:`Find the angle between 0 and 2π that ends in the same place as <b>${piFrac(t)}</b>.`,ans:base,
+    wrongHint:v=>Math.abs(norm(v)-base)<.02?'That ends in the right place, but give the one between 0 and 2π.':null,
+    sol:`Whole turns don't change where it ends: ${piFrac(t)} ${m>0?'−':'+'} ${Math.abs(m)*2}π = <b>${piFrac(base)}</b>.`};},
+  arc(){const r=pick([2,3,4,5,10]),t=pick([PI/2,PI/3,3*PI/4,2*PI/3,3*PI/2,2,1.5]);return{q:`A circle has radius <b>${r} cm</b>. How long is the arc for an angle of <b>${label(t)}</b> radians?`,ans:r*t,
+    wrongHint:v=>Math.abs(v-r*deg(t))<1?'That multiplied by degrees. Arc = radius × angle in <i>radians</i>.':null,
+    sol:`Each radian is one radius of arc, so arc = ${r} × ${label(t)} = <b>${piFrac(r*t)??dec(r*t)}${piFrac(r*t)?' ≈ '+dec(r*t):''} cm</b>.`};}};
+const ORDER=['toRad','toDeg','coterm','arc','toRad','toDeg','arc','coterm'];
+let pq=null,pi=0,results=[];
+function practiceShow(){if(pi>=ORDER.length){const n=results.filter(Boolean).length;$('#practiceQ').innerHTML=`<b>${n} of ${ORDER.length}</b> right. ${n>=7?'Unit 1 mastered — ready for right triangles.':'Try another set; the questions change each time.'}`;
+    $('#practiceIn').hidden=$('#practiceCheck').hidden=true;$('#practiceNext').hidden=false;$('#practiceNext').textContent='Practice again';$('#practiceFeedback').innerHTML='';bar();return;}
+  pq=gens[ORDER[pi]]();$('#practiceQ').innerHTML=`${pi+1}. ${pq.q}`;$('#practiceIn').value='';$('#practiceIn').hidden=$('#practiceCheck').hidden=false;$('#practiceNext').hidden=true;$('#practiceFeedback').innerHTML='';bar();}
+function bar(){$('#practiceBar').innerHTML=ORDER.map((_,i)=>`<i class="${i<results.length?(results[i]?'ok':'no'):i===pi?'now':''}"></i>`).join('');}
+$('#practiceCheck').onclick=()=>{const v=parseAns($('#practiceIn').value);if(isNaN(v)){$('#practiceFeedback').innerHTML='<p class="no">Type a number or an expression with π, like 3π/4.</p>';return;}
+  const ok=Math.abs(v-pq.ans)<=(pq.tol??.011*Math.max(1,Math.abs(pq.ans)));results.push(ok);
+  $('#practiceFeedback').innerHTML=ok?`<p class="ok">✓ Right. ${pq.sol}</p>`:`<p class="no">✗ Not quite.${pq.wrongHint(v)?' '+pq.wrongHint(v):''}</p><p>${pq.sol}</p>`;
+  $('#practiceCheck').hidden=true;$('#practiceNext').hidden=false;$('#practiceNext').textContent=pi===ORDER.length-1?'See result':'Next';bar();};
+$('#practiceIn').addEventListener('keydown',e=>{if(e.key==='Enter')(!$('#practiceCheck').hidden?$('#practiceCheck'):$('#practiceNext')).click();});
+$('#practiceNext').onclick=()=>{if(pi>=ORDER.length){pi=0;results=[];}else pi++;practiceShow();};
+practiceShow();
+
+// 6 · Explain
+$('#explainShow').onclick=()=>{$('#explainKey').hidden=false;};
+
+// Test hooks for the headless phone check.
+window.u1={explore,solve,sketch,predict,et:()=>et,st:()=>st,pt:()=>pt,setTarget,parseAns,pq:()=>pq};
+</script>
+</body>
+</html>
