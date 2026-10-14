@@ -70,3 +70,5 @@ button.link{background:none;border:0;color:var(--blue);font:inherit;font-size:14
 #predChoices{margin-top:4px}
 .tryMsg{font-size:15px}
 .say{min-height:4.5em}
+.factsLink{display:block;background:#1f3326;border:1px solid #2f6f45;border-radius:12px;padding:12px;margin:12px 0;color:var(--ink);text-decoration:none}
+.factsLink small{display:block;color:var(--dim);font-size:13px;margin-top:2px}

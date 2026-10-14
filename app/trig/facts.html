@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Trig facts to know by heart</title>
+<link rel="stylesheet" href="lesson.css?v=6">
+<style>
+.deck{display:block;width:100%;text-align:left;background:#141926;border:1px solid #3b5bdb;border-radius:12px;padding:12px;margin:10px 0;color:var(--ink);font:inherit}
+.deck b{font-size:17px}.deck small{display:block;color:var(--dim);font-size:13px;margin-top:2px}
+.mix{display:flex;height:8px;border-radius:4px;overflow:hidden;background:#2c3448;margin:8px 0 4px}
+.mix i{display:block;height:100%}
+.legend{font-size:13px;color:var(--dim)}.legend span{margin-right:10px;white-space:nowrap}
+.legend span::before{content:'';display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;background:var(--c)}
+#prompt{font:600 34px/1.2 "Times New Roman",serif;text-align:center;margin:18px 0 10px;min-height:42px}
+#prompt small{display:block;font:15px system-ui;color:var(--dim);margin-bottom:4px}
+#drill .choices .choice{font:600 22px/1.2 "Times New Roman",serif;padding:16px 6px;min-height:62px}
+.clock{height:6px;border-radius:3px;background:#2c3448;overflow:hidden;margin:4px 0}
+.clock i{display:block;height:100%;width:0;background:var(--green)}
+#result{min-height:96px;font-size:16px}
+#result .big{font-size:18px;font-weight:600}
+#mini{width:150px;height:150px;float:right;margin:0 0 4px 8px;background:#10131a;border-radius:10px}
+.counts{display:flex;justify-content:space-between;font-size:13px;color:var(--dim)}
+details.aid{background:#141926;border-radius:10px;padding:8px 12px;margin:8px 0}
+details.aid summary{color:var(--blue);cursor:pointer}
+</style>
+</head>
+<body>
+<div id="home">
+  <nav class="crumb"><a href="./">← Trigonometry</a></nav>
+  <header>
+    <small>Facts to know by heart</small>
+    <h1>Make them automatic</h1>
+    <p class="dim">Some trig facts you shouldn't have to work out each time. Each card counts as <b style="color:var(--green)">automatic</b> once you get it right in under 3 seconds three times in a row. Automatic cards come back less and less often; a miss brings a card back right away.</p>
+  </header>
+  <section id="decks"></section>
+  <p class="dim"><button class="link" id="reset">Clear my fact progress</button></p>
+</div>
+
+<div id="drill" hidden>
+  <nav class="crumb"><button class="link" id="quit">← All decks</button></nav>
+  <section>
+    <div class="counts"><span id="deckName"></span><span id="roundPos"></span></div>
+    <div class="progress" id="roundBar"></div>
+    <details class="aid" id="aid"><summary>How to work it out</summary><div id="aidText"></div></details>
+    <div id="prompt"></div>
+    <div class="clock"><i id="clock"></i></div>
+    <div class="choices" id="choices"></div>
+    <div id="result"></div>
+    <div class="row"><button class="act" id="next" hidden>Next →</button></div>
+  </section>
+</div>
+
+<div id="done" hidden>
+  <nav class="crumb"><button class="link" id="home2">← All decks</button></nav>
+  <section>
+    <h2>Round done</h2>
+    <p id="doneText"></p>
+    <div class="mix" id="doneMix"></div><div class="legend" id="doneLegend"></div>
+    <div class="row"><button class="act" id="again">Another round</button><button class="act alt" id="home3">All decks</button></div>
+  </section>
+</div>
+
+<script type="module">
+import { DECKS, CARDS, FAST, radOf, promptFor, choicesFor, choiceText, status, record, buildRound, requeue, deckSummary } from './facts.js?v=1';
+const $ = s => document.querySelector(s);
+const KEY = 'trig-facts-v1';
+let state = {}; try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { } };
+const COL = { automatic: 'var(--green)', slow: 'var(--amber)', shaky: '#ff8787', new: '#4a5470' };
+const NAME = { automatic: 'automatic', slow: 'right but slow', shaky: 'missed last time', new: 'not seen' };
+const mix = n => { const tot = Object.values(n).reduce((a, b) => a + b, 0); return ['automatic', 'slow', 'shaky', 'new'].map(k => `<i style="width:${100 * n[k] / tot}%;background:${COL[k]}"></i>`).join(''); };
+const legend = n => ['automatic', 'slow', 'shaky', 'new'].filter(k => n[k]).map(k => `<span style="--c:${COL[k]}">${n[k]} ${NAME[k]}</span>`).join('');
+const show = id => ['home', 'drill', 'done'].forEach(v => $('#' + v).hidden = v !== id);
+
+function home() {
+  show('home');
+  $('#decks').innerHTML = DECKS.map((d, i) => { const n = deckSummary(d, state);
+    return `<button class="deck" data-i="${i}"><b>${d.title}</b><small>${d.blurb} ${d.cards.length} cards · taught in ${d.after}</small><div class="mix">${mix(n)}</div><div class="legend">${legend(n)}</div></button>`; }).join('');
+}
+$('#decks').onclick = e => { const b = e.target.closest('.deck'); if (b) start(+b.dataset.i); };
+$('#reset').onclick = () => { if (confirm('Clear progress on all fact decks?')) { state = {}; save(); home(); } };
+
+let deck, round, at, card, choices, t0, timer, answered, log;
+function start(i) {
+  deck = DECKS[i]; round = buildRound(deck, state); at = 0; log = [];
+  $('#deckName').textContent = deck.title; $('#aidText').innerHTML = deck.aid;
+  // Open the memory aid while most of the deck is still new.
+  $('#aid').open = deckSummary(deck, state).new > deck.cards.length / 2;
+  show('drill'); ask();
+}
+function ask() {
+  card = round[at]; answered = false;
+  const useRad = card.pool !== 'rad' && card.pool !== 'deg' && Math.random() < .5;
+  $('#prompt').innerHTML = (card.pool === 'rad' || card.pool === 'deg' ? '<small>Convert</small>' : '<small>Exact value</small>') + promptFor(card, useRad);
+  choices = choicesFor(card);
+  $('#choices').innerHTML = choices.map((c, j) => `<button class="choice" data-j="${j}">${choiceText(card, c)}</button>`).join('');
+  $('#result').innerHTML = ''; $('#next').hidden = true;
+  $('#roundPos').textContent = `${at + 1} of ${round.length}`;
+  $('#roundBar').innerHTML = round.map((_, k) => `<i class="${k < at ? (log[k] ? 'ok' : 'no') : k === at ? 'now' : ''}"></i>`).join('');
+  t0 = performance.now(); cancelAnimationFrame(timer);
+  const tick = () => { const s = (performance.now() - t0) / 1000; const c = $('#clock'); c.style.width = Math.min(100, 100 * s / FAST) + '%'; c.style.background = s <= FAST ? 'var(--green)' : 'var(--amber)'; if (!answered) timer = requestAnimationFrame(tick); };
+  tick();
+}
+$('#choices').onclick = e => { const b = e.target.closest('.choice'); if (b && !answered) answer(choices[+b.dataset.j]); };
+
+function answer(c) {
+  answered = true; const secs = (performance.now() - t0) / 1000, ok = c === card.answer;
+  const before = status(state[card.id]);
+  state[card.id] = record(state[card.id], ok, secs); save(); log[at] = ok;
+  const now = status(state[card.id]);
+  $('#choices').querySelectorAll('.choice').forEach((b, j) => { b.disabled = true; if (choices[j] === card.answer) b.classList.add('right'); else if (choices[j] === c) b.classList.add('wrong'); });
+  const s = secs.toFixed(1) + ' s';
+  if (ok && secs <= FAST) {
+    $('#result').innerHTML = `<p class="big ok">✓ ${s}${now === 'automatic' && before !== 'automatic' ? ' · now automatic' : ''}</p>`;
+    setTimeout(next, 650);
+  } else {
+    if (!ok) round = requeue(round, at, card);
+    $('#result').innerHTML = `<canvas id="mini" width="300" height="300"></canvas><p class="big ${ok ? '' : 'no'}" style="${ok ? 'color:var(--amber)' : ''}">${ok ? `Right, in ${s}. Aim for under ${FAST} s.` : `It's ${choiceText(card, card.answer)}.${round.length > log.length + 1 ? ' It will come back in a moment.' : ''}`}</p><p>${card.why}</p>`;
+    mini($('#mini'), card); $('#next').hidden = false;
+  }
+}
+const next = () => { at++; at < round.length ? ask() : done(); };
+$('#next').onclick = next;
+
+// Small picture after a slow or wrong answer: the angle, and for value cards the point (cos θ, sin θ).
+function mini(cv, c) {
+  const g = cv.getContext('2d'), W = cv.width, R = W * .36, cx = W / 2, cy = W / 2, t = c.t * Math.PI / 180;
+  g.clearRect(0, 0, W, W); g.lineWidth = 3; g.strokeStyle = '#39425a';
+  g.beginPath(); g.arc(cx, cy, R, 0, 2 * Math.PI); g.stroke();
+  g.beginPath(); g.moveTo(cx - R * 1.2, cy); g.lineTo(cx + R * 1.2, cy); g.moveTo(cx, cy - R * 1.2); g.lineTo(cx, cy + R * 1.2); g.stroke();
+  g.strokeStyle = '#b197fc'; g.beginPath(); g.arc(cx, cy, R * .25, 0, -t, true); g.stroke();
+  const x = cx + R * Math.cos(t), y = cy - R * Math.sin(t);
+  g.strokeStyle = '#e8eaf0'; g.lineWidth = 4; g.beginPath(); g.moveTo(cx, cy); g.lineTo(x, y); g.stroke();
+  if (c.f) {
+    g.setLineDash([8, 6]); g.lineWidth = 4;
+    g.strokeStyle = '#74c0fc'; g.beginPath(); g.moveTo(cx, cy); g.lineTo(x, cy); g.stroke();   // cos: across
+    g.strokeStyle = '#f783ac'; g.beginPath(); g.moveTo(x, cy); g.lineTo(x, y); g.stroke();     // sin: up
+    g.setLineDash([]); g.font = '600 24px system-ui'; g.fillStyle = '#74c0fc'; if (Math.abs(x - cx) > 30) g.fillText('cos', Math.min(W - 50, Math.max(4, (cx + x) / 2 - 18)), cy + (Math.sin(t) >= 0 ? 26 : -10));
+    g.fillStyle = '#f783ac'; if (Math.abs(y - cy) > 30) g.fillText('sin', Math.min(W - 44, Math.max(4, x + (Math.cos(t) >= 0 ? 6 : -44))), (cy + y) / 2 + 8);
+  }
+  g.fillStyle = '#f783ac'; g.beginPath(); g.arc(x, y, 8, 0, 2 * Math.PI); g.fill();
+  g.font = '600 24px system-ui'; g.fillStyle = '#e8eaf0'; g.fillText(`${c.t}° = ${radOf(c.t)}`, 8, W - 10);
+}
+
+function done() {
+  show('done'); const right = log.filter(Boolean).length, n = deckSummary(deck, state);
+  $('#doneText').innerHTML = `${right} of ${log.length} right. <b>${n.automatic} of ${deck.cards.length}</b> cards in this deck are automatic.` + (n.shaky + n.slow ? ' Another round will start with the ones that need work.' : n.new ? ' Another round adds new cards.' : ' The whole deck is automatic. Come back tomorrow to keep it that way.');
+  $('#doneMix').innerHTML = mix(n); $('#doneLegend').innerHTML = legend(n);
+}
+$('#again').onclick = () => start(DECKS.indexOf(deck));
+$('#quit').onclick = $('#home2').onclick = $('#home3').onclick = home;
+
+window.facts = { state: () => state, card: () => card, round: () => round, at: () => at, choices: () => choices, answered: () => answered, DECKS, CARDS };
+home();
+</script>
+</body>
+</html>
