@@ -1,6 +1,7 @@
 """Hand-editing typed math on the writing line: tap to edit, scribble to delete,
 write inside to insert, pinch to zoom, ✎ on previous lines. Mocked OCR, Chromium NOT iOS."""
-import functools,http.server,json,pathlib,threading
+import functools,http.server,json,pathlib,threading,sys
+from ink_diagnostics import run_diagnostics, print_report, check_with_diagnostics
 from playwright.sync_api import sync_playwright
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 def run_edit_checks(page):
@@ -91,6 +92,16 @@ if __name__=='__main__':
             exe=next(pathlib.Path.home().glob('.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell'))
             browser=p.chromium.launch(executable_path=str(exe));page=browser.new_page(viewport={'width':390,'height':844},device_scale_factor=2,is_mobile=True,has_touch=True)
             errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-            page.goto(f'http://127.0.0.1:{server.server_port}',wait_until='networkidle');page.wait_for_timeout(400)
-            run_edit_checks(page);assert not errors,errors;browser.close()
+            url=f'http://127.0.0.1:{server.server_port}'
+            try:
+                if '--diagnose' in sys.argv:
+                    report=run_diagnostics(browser,url)
+                    print_report(report,ROOT/'.artifacts/ink-diagnostics.json')
+                    assert report['ok'], 'Ink diagnostic probes failed'
+                else:
+                    page.goto(url,wait_until='networkidle');page.wait_for_timeout(400)
+                    def checks():
+                        run_edit_checks(page);assert not errors,errors
+                    check_with_diagnostics(browser,url,checks,ROOT/'.artifacts/ink-diagnostics.json')
+            finally:browser.close()
     finally:server.shutdown();server.server_close();thread.join();print('Stopped the temporary editing test server.')
