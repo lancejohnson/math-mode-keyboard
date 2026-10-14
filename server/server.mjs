@@ -1,6 +1,7 @@
 import http from 'node:http';
 import {createReadStream} from 'node:fs';
-import {readFile,writeFile,mkdir,stat,realpath} from 'node:fs/promises';
+import {readFile,writeFile,appendFile,mkdir,stat,realpath} from 'node:fs/promises';
+import {homedir} from 'node:os';
 import {resolve,extname,dirname} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {randomBytes,createHmac,timingSafeEqual} from 'node:crypto';
@@ -10,9 +11,9 @@ const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'../app');
 const MAX_BODY=2900000;
 const equal=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.woff2':'font/woff2','.txt':'text/plain; charset=utf-8'};
-export function createServer({token,recognize,careful,root=ROOT,secureCookies=true,perHour=600}={}){
+export function createServer({token,recognize,careful,root=ROOT,secureCookies=true,perHour=600,traceDir=process.env.MATH_MODE_TRACE_DIR||resolve(homedir(),'.local/share/math-mode/traces')}={}){
   if(!token||!recognize)throw new Error('Recognition server needs private configuration');
-  let active=0,budget=[];const attempts=new Map();
+  let active=0,budget=[],traces=[];const attempts=new Map();
   const sign=s=>createHmac('sha256',token).update(s).digest('hex');
   function authorized(req){const raw=req.headers.cookie?.split(';').map(s=>s.trim()).find(s=>s.startsWith('mathModeAccess='))?.slice(15);if(!raw)return false;const parts=raw.split('.');return parts.length===3&&Number(parts[0])>Date.now()&&Number(parts[0])<Date.now()+31*86400000&&equal(parts[2],sign(parts.slice(0,2).join('.')));}
   function json(res,status,data,headers={}){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers});res.end(JSON.stringify(data));}
@@ -24,6 +25,14 @@ export function createServer({token,recognize,careful,root=ROOT,secureCookies=tr
       if(url.pathname.startsWith('/api/')){
         if(req.headers.origin){let origin;try{origin=new URL(req.headers.origin).host;}catch{}if(origin!==req.headers.host)return json(res,403,{error:'Origin not allowed'});}
         if(req.method==='GET'&&url.pathname==='/api/status')return json(res,200,{recognition:true,authorized:authorized(req),provider:recognize.provider||'Anthropic',careful:!!careful,carefulProvider:careful?.provider||null});
+        // Trig wheel drag traces (finger positions only), sent after a drag answer reads wrong, to debug turning on real phones.
+        if(req.method==='POST'&&url.pathname==='/api/trace'){
+          const now=Date.now();traces=traces.filter(t=>now-t<3600000);if(traces.length>=120)return json(res,429,{error:'Too many traces'});
+          if(Number(req.headers['content-length'])>65536)return json(res,413,{error:'Trace too large'});
+          const data=await body(req);if(!Array.isArray(data.trace)||data.trace.length>2000)return json(res,400,{error:'Bad trace'});traces.push(now);
+          await mkdir(traceDir,{recursive:true});await appendFile(resolve(traceDir,'wheel.jsonl'),JSON.stringify({at:new Date(now).toISOString(),ua:String(req.headers['user-agent']||'').slice(0,200),...data})+'\n');
+          return json(res,200,{ok:true});
+        }
         if(req.method==='POST'&&url.pathname==='/api/session'){
           const ip=req.socket.remoteAddress;const now=Date.now();const count=attempts.get(ip)||{count:0,time:now};if(now-count.time>60000){count.count=0;count.time=now;}if(++count.count>30)return json(res,429,{error:'Too many attempts'});attempts.set(ip,count);
           const data=await body(req);if(!equal(data.invite,token))return json(res,401,{error:'Private recognition link required'});

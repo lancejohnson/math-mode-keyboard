@@ -49,3 +49,12 @@ test('model failure leaves client a safe retry response; budgets bound authentic
  assert.equal((await fetch(limited.url+'/api/recognize',{method:'POST',headers:headers(limited.cookie),body:JSON.stringify({image})})).status,200);
  assert.equal((await fetch(limited.url+'/api/recognize',{method:'POST',headers:headers(limited.cookie),body:JSON.stringify({image})})).status,429);
 });
+test('wheel drag traces are appended as JSON lines, with size and shape limits',async t=>{
+ const {mkdtemp,readFile}=await import('node:fs/promises');const dir=await mkdtemp('/tmp/mm-trace-');
+ const server=createServer({token:'a'.repeat(48),recognize:async()=>recognized,secureCookies:false,traceDir:dir});await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>new Promise(r=>server.close(r)));
+ const url='http://127.0.0.1:'+server.address().port+'/api/trace',post=b=>fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+ assert.equal((await post({topic:'thirty',target:5.2,got:-1,trace:[[0,1,2,0,'d',0]]})).status,200);
+ assert.equal((await post({trace:'nope'})).status,400);
+ assert.equal((await post({trace:Array(3000).fill(0)})).status,400);assert.equal((await post({trace:Array(9000).fill(12345678)})).status,413);
+ const lines=(await readFile(dir+'/wheel.jsonl','utf8')).trim().split('\n');assert.equal(lines.length,1);assert.equal(JSON.parse(lines[0]).topic,'thirty');
+});

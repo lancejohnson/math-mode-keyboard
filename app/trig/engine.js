@@ -37,25 +37,30 @@ import { CARDS, FAST, radOf, promptFor, choicesFor, choiceText, record, status, 
 export class Wheel {
   constructor(canvas) {
     this.c = canvas; this.s = {}; addEventListener('resize', () => this.fit()); this.fit();
-    // raw = total turning so far. pos (topics before negative angles): the dot just goes where the finger is,
-    // read as 0°–360° counterclockwise, so the short clockwise drag to 300° still means 300°.
-    let prev = null, raw = 0, lastD = 0;
+    // raw = total turning so far. Only the finger that started the drag counts (a second touch would make the
+    // angle jump around). trace keeps the last drag's finger path so a wrong-looking result can be debugged.
+    let prev = null, raw = 0, lastD = 0, id = null, t0 = 0;
+    this.trace = [];
     const loc = e => { const b = this.c.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
     const move = e => {
-      if (prev === null) return; const [x, y] = loc(e); if (Math.hypot(x - this.cx, y - this.cy) < this.R * .15) return;
+      if (prev === null || e.pointerId !== id) return; const [x, y] = loc(e);
+      const near = Math.hypot(x - this.cx, y - this.cy) < this.R * .15;
+      if (this.trace.length < 1500) this.trace.push([Math.round(e.timeStamp - t0), Math.round(x - this.cx), Math.round(this.cy - y), +raw.toFixed(3), e.type[7] || 'm', near ? 1 : 0]);
+      if (near) return;
       const a = Math.atan2(this.cy - y, x - this.cx); let d = a - prev; d = ((d + PI) % TAU + TAU) % TAU - PI;
       // A jump this big means the finger cut across the middle (or iOS skipped events): which way it went is
       // ambiguous, so keep the direction the finger was already turning instead of flipping.
       if (Math.abs(d) > .6 * PI && lastD && Math.sign(d) !== Math.sign(lastD)) d += Math.sign(lastD) * TAU;
       raw += d; prev = a; if (Math.abs(d) > .01) lastD = d;
-      const sn = this.s.snap || PI / 12;
-      if (this.s.pos) { if (raw < -sn / 2) raw += TAU; else if (raw > TAU + sn / 2) raw -= TAU; }
-      raw = Math.max(-1.5 * TAU, Math.min(2.5 * TAU, raw)); this.s.cur = Math.round(raw / sn) * sn; this.render(); this.onturn?.();
+      raw = Math.max(-1.5 * TAU, Math.min(2.5 * TAU, raw)); const sn = this.s.snap || PI / 12; this.s.cur = Math.round(raw / sn) * sn; this.render(); this.onturn?.();
     };
-    this.c.addEventListener('pointerdown', e => { if (!this.s.drag) return; const [x, y] = loc(e); prev = Math.atan2(this.cy - y, x - this.cx); raw = this.s.cur; lastD = 0; this.c.setPointerCapture(e.pointerId); e.preventDefault(); });
+    this.c.addEventListener('pointerdown', e => {
+      if (!this.s.drag || prev !== null) return; const [x, y] = loc(e); prev = Math.atan2(this.cy - y, x - this.cx); raw = this.s.cur; lastD = 0; id = e.pointerId; t0 = e.timeStamp;
+      this.trace.push([0, Math.round(x - this.cx), Math.round(this.cy - y), +raw.toFixed(3), 'd', 0]); this.c.setPointerCapture(e.pointerId); e.preventDefault();
+    });
     this.c.addEventListener('pointermove', move);
-    this.c.addEventListener('pointerup', e => { move(e); prev = null; });
-    this.c.addEventListener('pointercancel', () => prev = null);
+    this.c.addEventListener('pointerup', e => { move(e); if (e.pointerId === id) prev = null; });
+    this.c.addEventListener('pointercancel', e => { if (e.pointerId === id) { prev = null; this.trace.push([Math.round(e.timeStamp - t0), 0, 0, +raw.toFixed(3), 'c', 0]); } });
   }
   fit() {
     const p = this.c.parentElement; if (!p.clientWidth) return; const st = getComputedStyle(p), w = Math.min(p.clientWidth - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight), 460),
@@ -142,6 +147,14 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
     return { type: 'fact', card, prompt: promptFor(card, useRad).replace(/^<b>(.*)<\/b>(.*)$/, (m, a, b) => `<b>${a}</b>${b}?`), choices: ch.map(c => choiceText(card, c)), answer: ch.indexOf(card.answer), why: card.why };
   }
 
+  // A drag that reads wrong sends its finger path (positions only) to the server, to find turning bugs on real phones.
+  function sendTrace(info) {
+    if (/HeadlessChrome/.test(navigator.userAgent) && !window.__sendTraces) return;
+    const b = wheel.c.getBoundingClientRect();
+    fetch('/api/trace', { method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+      body: JSON.stringify({ ...info, R: Math.round(wheel.R), size: [Math.round(b.width), Math.round(b.height)], dpr: devicePixelRatio, trace: wheel.trace.slice(-1500) }) }).catch(() => { });
+  }
+
   function list() {
     $('#topicView').hidden = true; $('#listView').hidden = false; cancelAnimationFrame(wheel.anim);
     $('#topicList').innerHTML = topics.map((t, i) => {
@@ -187,7 +200,7 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
       };
     } else if (st.try) {
       const tr = st.try; $('#stepNext').disabled = true; $('#replay').hidden = true;
-      wheel.set({ grid, snap: tr.snap ?? T().snap, string: tr.string, pos: T().pos, cur: 0, drag: true });
+      wheel.set({ grid, snap: tr.snap ?? T().snap, string: tr.string, cur: 0, drag: true }); wheel.trace = [];
       // No live "that's it": the learner commits with Check, like a real answer.
       const ask = '<span class="dim">Drag the pink dot, then tap Check.</span>';
       $('#tryMsg').innerHTML = ask; $('#tryCheck').hidden = false; $('#tryCheck').disabled = true;
@@ -198,6 +211,7 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
           wheel.set({ ...wheel.s, drag: false, curLabel: tr.label }); wheel.onturn = null;
           $('#tryMsg').innerHTML = `<span class="ok">✓ ${tr.done || 'That\'s it.'}</span>`; $('#tryCheck').hidden = true; $('#stepNext').disabled = false;
         } else {
+          sendTrace({ where: 'lesson', topic: T().id, target: tr.t, got: c });
           const msg = same(norm(c), norm(tr.t)) && c ? `Right spot, but ${Math.sign(c) !== Math.sign(tr.t) ? 'turn the other way' : 'count the full turns'}.` : `Not quite. ${tr.hint || 'Try again.'}`;
           $('#tryMsg').innerHTML = `<span class="no">✗ ${msg}</span> <span class="dim">Move the dot and check again.</span>`; $('#tryCheck').disabled = true;
         }
@@ -244,7 +258,7 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
     clock(q.type === 'fact');
     if (q.type === 'choice') $('#choices').innerHTML = q.choices.map((c, i) => `<button class="choice" data-i="${i}">${c}</button>`).join('');
     if (q.type === 'pad') { pad.value = ''; $('#padUnit').textContent = q.unit || ''; }
-    wheel.set(q.type === 'drag' ? { grid: q.grid ?? topic.grid, snap: q.snap ?? topic.snap, string: q.string, pos: q.pos ?? topic.pos, cur: 0, drag: true } : { grid: q.grid ?? topic.grid, show: q.show ? [q.show] : [] });
+    wheel.set(q.type === 'drag' ? { grid: q.grid ?? topic.grid, snap: q.snap ?? topic.snap, string: q.string, cur: 0, drag: true } : { grid: q.grid ?? topic.grid, show: q.show ? [q.show] : [] }); wheel.trace = [];
     bar();
   }
   function grade(ok, msg, html) {
@@ -270,6 +284,7 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
         if (same(norm(a), norm(t))) msg = Math.sign(a) !== Math.sign(t) ? `That ends in the right place but you turned the wrong way: that's ${q.fmt(a)}. ${t > 0 ? 'Positive angles turn counterclockwise ↺.' : 'Negative angles turn clockwise ↻.'}` : `That ends in the right place, but this one needs ${Math.abs(t) > Math.abs(a) ? 'another' : 'one less'} full turn.`;
         else msg = a === 0 ? 'Drag the pink dot around the circle first.' : `You stopped at ${q.fmt(a)}.`;
         wheel.set({ ...wheel.s, drag: false, target: t, targetLabel: q.fmt(t), curLabel: a ? q.fmt(a) : '' });
+        sendTrace({ where: 'practice', topic: q.topic?.id, target: t, got: a });
       } else wheel.set({ ...wheel.s, drag: false, curLabel: q.fmt(t) });
       grade(ok, msg);
     } else if (q.type === 'pad') {
