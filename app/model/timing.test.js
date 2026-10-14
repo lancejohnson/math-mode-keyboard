@@ -54,7 +54,7 @@ test('levels: a simulated learner climbs recognize -> explain -> fluent -> autom
   for (let n = 0; n < 20; n++) {
     const noise = Math.exp((n < 10 ? 0.35 : 0.1) * gauss(r)); // consistency improves too
     const seconds = expectedTime({ floor, start: 45, rate: 0.3, n }) * noise;
-    att.push({ correct: true, seconds, firstStroke: seconds * 0.3, restarts: n < 2 ? 2 : 0 });
+    att.push({ correct: true, seconds, firstStroke: seconds * 0.3, restarts: 3 }); // restarts are ignored
     seen.push(levelEvidence(att, opts));
   }
   assert.equal(seen[0], 'recognize');

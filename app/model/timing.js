@@ -14,11 +14,11 @@ export const DEFAULTS = Object.freeze({
 // Mastery levels, lowest to highest. Ratios are measured against the floor.
 export const LEVELS = Object.freeze([
   { id: 'recognize', label: 'Recognize', rule: 'Correct. Time ignored.' },
-  { id: 'explain', label: 'Explain & sketch', rule: 'Correct; first stroke within 2x the start floor; at most 1 restart.' },
+  { id: 'explain', label: 'Explain & sketch', rule: 'Correct; first stroke within 2x the start floor.' },
   { id: 'fluent', label: 'Fluent', rule: 'Last 3 correct answers, median total time within 1.5x the floor.' },
   { id: 'automatic', label: 'Automatic', rule: 'Last 5 correct, median within 1.2x the floor and log-time spread at most 0.25.' },
 ]);
-export const TARGETS = Object.freeze({ explainStart: 2, maxRestarts: 1, fluent: 1.5, automatic: 1.2, automaticSpread: 0.25 });
+export const TARGETS = Object.freeze({ explainStart: 2, fluent: 1.5, automatic: 1.2, automaticSpread: 0.25 });
 
 const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
 const median = (xs) => { const s = [...xs].sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
@@ -83,7 +83,8 @@ export function levelEvidence(attempts, { floor, firstStrokeFloor = floor * 0.3,
   const adj = a => a.seconds / forgettingFactor(a.R ?? 1, forgetK);
   let level = 'recognize';
   const last = ok[ok.length - 1];
-  if (last.firstStroke != null && last.firstStroke <= TARGETS.explainStart * firstStrokeFloor && (last.restarts ?? 0) <= TARGETS.maxRestarts) level = 'explain';
+  if (last.firstStroke != null && last.firstStroke <= TARGETS.explainStart * firstStrokeFloor) level = 'explain';
+  // Restarts are logged but not used: on a phone, erasing is mostly fat-finger and recognition fixes, not confusion.
   const l3 = ok.slice(-3).map(adj);
   if (l3.length === 3 && median(l3) <= TARGETS.fluent * floor) level = 'fluent';
   const l5 = ok.slice(-5).map(adj);
