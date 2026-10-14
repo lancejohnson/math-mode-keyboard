@@ -41,6 +41,8 @@ Authentication, origin checks, image dimensions, payload size, concurrent reques
 node --test app/core.test.js server/server.test.mjs
 uv run --with playwright python test-phone.py
 uv run --with playwright python tests/test-inline-math.py
+# Focused eraser behavior + toolbar fit at three phone widths; no screenshots:
+make test-eraser
 # Requires the live service and a local private invite; calls real models:
 uv run --with playwright python tests/test-current-line.py
 uv run --with playwright python tests/test-live-recognition.py
