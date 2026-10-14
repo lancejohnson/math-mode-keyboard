@@ -10,6 +10,7 @@ Flags: --only 390 (one phone size), --topics 3 (master only the first N topics),
 --part mastery (only the 11-topic mastery run), --part sizes (only the 375/430 layout checks)."""
 import argparse, functools, http.server, json, math, pathlib, sys, threading, time
 from playwright.sync_api import sync_playwright
+from pwfast import phone, fail_report, TIMEOUT  # short waits (local page), compact failure summary
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = ROOT / '.artifacts' / 'live'
@@ -101,7 +102,6 @@ def lesson(page, shot=None):
 
 
 def run(page):
-    page.set_default_timeout(6000)
     n = page.evaluate('u1.topics.length')
     assert page.locator('.topic').count() == n and page.locator('.topic:disabled').count() == n - 1
     page.screenshot(path=str(OUT / 'trig1v2-list.png'))
@@ -199,8 +199,7 @@ def main():
                 if ARGS.only and w != ARGS.only: continue
                 if ARGS.part and (ARGS.part == 'sizes') != (w != 390): continue
                 tw = time.time(); STATE.update(phase=f'{w}px', topic=None)
-                page = browser.new_page(viewport={'width': w, 'height': h}, device_scale_factor=2, has_touch=True)
-                errors = []; page.on('pageerror', lambda e: errors.append(str(e)))
+                page = phone(browser, w, h, timeout=None if not ARGS.slow else max(TIMEOUT, 6000)); errors = page.errs
                 page.goto(f'http://127.0.0.1:{srv.server_port}/trig/'); page.click('text=Angles and radians')
                 page.evaluate('localStorage.clear()'); page.reload(); fast(page)
                 try:
@@ -212,7 +211,7 @@ def main():
                     assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'), w
                     assert not errors, errors
                 except Exception:
-                    dump(page); raise
+                    dump(page); fail_report(page, 'trig1v2', shot=False); raise SystemExit(1)
                 print(f'  {w}px ok in {time.time() - tw:.1f}s', file=sys.stderr)
                 page.close()
             browser.close()

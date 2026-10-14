@@ -1,13 +1,14 @@
 """Knowledge map for trig Unit 1: data matches the unit, graph draws, progress and fact cards show, tapping opens the topic."""
 import json, subprocess, sys, time, socket, pathlib
 from playwright.sync_api import sync_playwright
+from pwfast import phone, fail_report
 ROOT = pathlib.Path(__file__).resolve().parents[1]; OUT = ROOT / '.artifacts/live'; OUT.mkdir(parents=True, exist_ok=True)
 s = socket.socket(); s.bind(('127.0.0.1', 0)); port = s.getsockname()[1]; s.close()
 srv = subprocess.Popen([sys.executable, '-m', 'http.server', str(port), '-d', str(ROOT / 'app')], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 try:
     time.sleep(0.6); base = f'http://127.0.0.1:{port}/trig/'
     with sync_playwright() as p:
-        b = p.chromium.launch(); page = b.new_page(viewport={'width': 390, 'height': 844}, device_scale_factor=2)
+        b = p.chromium.launch(); page = phone(b, 390, 844, has_touch=False)
         page.goto(base + 'unit1.html'); page.wait_for_function('window.u1')
         unit = page.evaluate('u1.topics.map(t => ({id: t.id, title: t.title, facts: t.facts || null}))')
         page.goto(base + 'map.html'); page.wait_for_function('window.map')

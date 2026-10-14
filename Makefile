@@ -6,9 +6,11 @@ test-eraser:
 
 # pass-cache (~/.pi/agent/bin): a step that already passed on the same app/trig + test file is skipped
 # (docs-only edits, re-checks before commit). PASS_CACHE=0 make test-trig forces a full run.
-PASS = $(if $(shell command -v pass-cache),pass-cache --in app/trig --in $(1) --,)
+PASS = $(if $(shell command -v pass-cache),pass-cache --in app/trig --in tests/pwfast.py --in $(1) --,)
 
-# Trig suite (~40 s; the four steps run in parallel, output grouped per step).
+# Trig suite (~40 s; the four steps run in parallel, output grouped per step). Browser steps use
+# tests/pwfast.py: 2 s waits (PW_TIMEOUT=ms to change), a failing step stops in ~4 s and its last
+# stderr lines name the test line, error, page errors, state and a FAIL screenshot.
 # While editing one assert, run only its part instead of the whole suite:
 #   make test-trig-specific   targeted wrong-way / swipe / parse checks at 390 (~5 s)
 #   make test-trig ARGS="--part mastery|sizes|specific" or ARGS="--only 390 --topics 3"
