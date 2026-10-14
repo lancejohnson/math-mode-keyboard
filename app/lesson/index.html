@@ -277,7 +277,7 @@ const rounds=[
 let round=0,shown=BASE,anim=0;
 const predict=new Plane($('#predictCanvas'),p=>{p.curve(x=>f(BASE,x),'#ffffff40',2,[6,5]);p.curve(x=>f(shown,x),'#e8eaf0');p.dot(shown.h,shown.k,COLORS.vertex,6);
   if(shown===BASE)p.text('y = x²  (now)',1.5,f(BASE,1.5),'#c9d2e3',0);});
-function thumb(c,m){const W=150,H=100,d=devicePixelRatio||1;c.width=W*d;c.height=H*d;const g=c.getContext('2d');g.setTransform(d,0,0,d,0,0);const u=W/12,X=x=>W/2+x*u,Y=y=>H*.62-y*u;
+function thumb(c,m){const W=150,H=100,d=devicePixelRatio||1;c.width=W*d;c.height=H*d;const g=c.getContext('2d');g.setTransform(d,0,0,d,0,0);const u=W/12,X=x=>W/2+x*u,Y=y=>H*.55-y*u;
   g.strokeStyle='#39425a';g.lineWidth=1;g.beginPath();g.moveTo(0,Y(0));g.lineTo(W,Y(0));g.moveTo(X(0),0);g.lineTo(X(0),H);g.stroke();
   for(const [mm,col,dash] of [[BASE,'#ffffff40',[4,4]],[m,'#74c0fc',[]]]){g.strokeStyle=col;g.setLineDash(dash);g.lineWidth=2.5;g.beginPath();for(let px=0;px<=W;px+=2){const y=f(mm,(px-W/2)/u);px?g.lineTo(px,Y(y)):g.moveTo(px,Y(y));}g.stroke();}g.setLineDash([]);}
 function showRound(){const r=rounds[round];shown=BASE;cancelAnimationFrame(anim);predict.render();$('#predictQ').innerHTML=`<b>${round+1} of ${rounds.length}.</b> `+r.q;$('#predictAfter').hidden=true;$('#predictKey').hidden=true;$('#predictText').value='';
