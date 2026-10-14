@@ -40,7 +40,7 @@ practice and as a short spaced review on the unit's topic list. `facts.html` sho
    on the circle traces the graph next to it); period, amplitude, zeros, peaks.
 6. **Transformed sinusoids.** y = A·sin(B(x − C)) + D: predict-first rounds like the parabola
    lesson; the features you need to sketch one (midline, amplitude, period, start point,
-   the five key points); graded sketches; modelling tides, Ferris wheels, daylight.
+   the five key points); graded sketches; modeling tides, Ferris wheels, daylight.
 7. **Tangent and the reciprocal functions.** tan as slope of the radius; asymptotes;
    graphs of tan, sec, csc, cot.
 8. **Inverse functions.** Why the domain must be restricted; arcsin, arccos, arctan;

@@ -104,7 +104,7 @@ export function promptFor(card, useRad) {
   return `<b>${card.f} ${useRad ? radOf(card.t) : card.t + '°'}</b>`;
 }
 
-// Four choices: the answer plus near misses (neighbouring angles, sign flips, sin/cos swaps).
+// Four choices: the answer plus near misses (neighboring angles, sign flips, sin/cos swaps).
 export function choicesFor(card, rnd = Math.random) {
   const shuffle = a => a.map(v => [rnd(), v]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
   let near;
