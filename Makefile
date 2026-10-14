@@ -13,7 +13,7 @@ PASS = $(if $(shell command -v pass-cache),pass-cache --in app/trig --in $(1) --
 #   make test-trig-specific   targeted wrong-way / swipe / parse checks at 390 (~5 s)
 #   make test-trig ARGS="--part mastery|sizes|specific" or ARGS="--only 390 --topics 3"
 test-trig:
-	@$(MAKE) --no-print-directory -j4 -O trig-unit1 trig-facts-unit trig-facts trig-map
+	@$(MAKE) --no-print-directory -j5 -O trig-unit1 trig-facts-unit trig-facts trig-map trig-nav
 
 test-trig-specific:
 	uv run -q --with playwright python tests/test-trig-unit1.py --part specific
