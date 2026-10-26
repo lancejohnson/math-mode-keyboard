@@ -25,4 +25,17 @@
   nav.innerHTML = TABS.map(([label, href, c, is]) => `<a href="${href}"${is(here) ? ' class="on" aria-current="page"' : ''}><i class="c-${c}"></i>${label}</a>`).join('');
   const mount = () => { document.head.append(css); document.body.append(nav); };
   document.body ? mount() : addEventListener('DOMContentLoaded', mount);
+
+  // The iPhone app keeps one page alive for days and has no pull-to-refresh. When you come back to it after
+  // 30 s or more, fetch this page's HTML again; if it changed (a release bumps the ?v= of the scripts), reload.
+  // Progress lives in localStorage, so a reload loses nothing. Never while the keyboard is up or mid-sitting.
+  const html = () => fetch(location.pathname, { cache: 'no-store' }).then(r => r.ok ? r.text() : null).catch(() => null);
+  let first = html(), hiddenAt = 0;
+  document.addEventListener('visibilitychange', async () => {
+    if (document.hidden) { hiddenAt = Date.now(); return; }
+    if (Date.now() - hiddenAt < 30000) return;
+    const [a, b] = await Promise.all([first, html()]);
+    const busy = document.querySelector('#kb:not([hidden]), [data-hide-tabs]:not([hidden])');
+    if (a && b && a !== b && !busy) location.reload(); else if (!a && b) first = Promise.resolve(b);
+  });
 })();
