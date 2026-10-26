@@ -2,6 +2,7 @@ import { MathfieldElement } from './vendor/mathlive.min.mjs';
 import { ComputeEngine } from './vendor/compute/compute-engine.js';
 import { evaluate, curveExpression, snapStroke } from './core.js?v=9';
 import { createInkRecognition, unlockRecognition } from './recognition.js?v=9';
+import { createKeyboard } from './kb.js?v=1';
 MathfieldElement.fontsDirectory = new URL('./vendor/fonts', import.meta.url).href;
 MathfieldElement.soundsDirectory = null;
 MathfieldElement.keypressSound = null;
@@ -9,7 +10,7 @@ MathfieldElement.plonkSound = null;
 const ce = new ComputeEngine();
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
-const colors = ['#4dabf7','#e599f7','#69db7c','#ffd43b'];
+const colors = ['#4dabf7','#e599f7','#69db7c','#91a7ff'];
 const uid = () => crypto.randomUUID();
 let state;
 try { state = JSON.parse(localStorage.getItem('mathmode-v1')); } catch {}
@@ -19,7 +20,7 @@ let problem = state.problems.find(p=>p.id===state.current) || state.problems[0];
 let mode = state.tab || 'steps', active=null, activeLine=null, saveTimer, toastTimer, pen='#7dd3fc', inkPan=0, inkPanX=0, inkZoom=1;
 let inkWidth=390,inkHeight=400, inkStroke=null, inkGesture=null;
 let graph={scale:32,cx:0,cy:0,axes:true,mode:'move',gesture:null,stroke:null,points:new Map()};
-let qOpen=false, pointerMap=new Map(), keysPage='numbers';
+let qOpen=false, pointerMap=new Map();
 function toast(s){$('#toast').textContent=s;$('#toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').hidden=true,2400);}
 function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{state.current=problem.id;state.tab=mode;try{localStorage.setItem('mathmode-v1',JSON.stringify(state));}catch{toast('Storage full — export your work before closing.');}},150);}
 function flush(){clearTimeout(saveTimer);state.current=problem.id;state.tab=mode;try{localStorage.setItem('mathmode-v1',JSON.stringify(state));}catch{}}
@@ -52,45 +53,10 @@ function switchMode(m){if(m!==mode)inkRecognition.cancel();mode=m;active=null;ac
 const operand=$('#operand');operand.mathVirtualKeyboardPolicy='manual';operand.popoverPolicy='off';operand.menuItems=[];operand.addEventListener('focus',()=>{active=operand;$('#kb').hidden=false;if(!$('#kb .k.down'))renderKB();});
 $$('[data-op]').forEach(b=>b.onclick=()=>{const l=activeLine||problem.lines.at(-1);try{const ex=ce.parse(l.latex),num=ce.parse(operand.value);const n=evaluate(num.json);if(!Number.isFinite(n)||n===0)throw new Error('Use a finite nonzero number.');if(ex.operator!=='Equal')throw new Error('Select an equation with = first.');const op=b.dataset.op;const left=ce.box([op,ex.op1.json,num.json]).simplify(),right=ce.box([op,ex.op2.json,num.json]).simplify();const index=problem.lines.indexOf(l);problem.lines.splice(index+1,0,{id:uid(),latex:left.latex+'='+right.latex,why:({Add:'+',Subtract:'−',Multiply:'×',Divide:'÷'})[op]+' '+operand.getValue('ascii-math')});renderLines();save();focusLine(index+1);}catch(err){toast(err.message||'That operation is not supported yet.');}});
 
-// Custom touch-first keyboard: digits get the space, not a QWERTY alphabet.
-const key=(label,value=label,cls='',alt=null)=>({label,value,cls,alt});
-const cmd=(label,value,cls='s')=>key(label,'@'+value,cls);
-function renderKB(){if(!active)return;const kb=$('#kb');kb.replaceChildren();
-const bar=document.createElement('div');bar.className='kbbar';
-for(const [id,label]of [['numbers','123'],['functions','ƒ(x)'],['letters','abc']]){const b=document.createElement('button');b.textContent=label;b.classList.toggle('on',keysPage===id);b.onpointerdown=e=>e.preventDefault();b.onclick=()=>{keysPage=id;renderKB();};bar.append(b);}
-const sp=document.createElement('span');sp.className='sp';bar.append(sp);
-const layout=document.createElement('button');layout.textContent=state.layout==='big'?'4 wide':'5 compact';layout.title='Switch numpad layout';layout.onpointerdown=e=>e.preventDefault();layout.onclick=()=>{state.layout=state.layout==='big'?'compact':'big';renderKB();save();};bar.append(layout);
-const hide=document.createElement('button');hide.textContent='⌄';hide.title='Hide keyboard';hide.onpointerdown=e=>e.preventDefault();hide.onclick=()=>{active?.blur();$('#kb').hidden=true;};bar.append(hide);kb.append(bar);
-const templates=[key('<span class="tex">▢ / ▢</span>','\\frac{#@}{#?}','s'),key('<span class="tex">x<sup>▢</sup></span>','^{#?}','s'),key('√▢','\\sqrt{#?}','s'),key('( )','\\left(#?\\right)','s'),cmd('↶','undo')];
-addKeyRow(templates,5,42);
-if(keysPage==='numbers'){
-addKeyRow([...(state.layout==='big'?[key('x','x','s','^{2}'),key('y','y','s','^{3}')]:[key('x²','x^{2}','s'),key('y²','y^{2}','s')]),key('π','\\pi','s'),cmd('←','moveToPreviousChar'),cmd('→ / out','moveToNextChar')],5,40);
-if(state.layout==='big'){
-addKeyRow([key('7'),key('8'),key('9'),key('÷','\\frac{#@}{#?}','op'),key('4'),key('5'),key('6'),key('×','\\cdot','op'),key('1'),key('2'),key('3'),key('−','-','op'),key('0'),key('.'),key('='),key('+','+','op')],4,58);
-addKeyRow([cmd('⌫','deleteBackward'),cmd('←','moveToPreviousChar'),cmd('→ / out','moveToNextChar'),key('↵ step','@next','b')],4,46);
-}else{
-addKeyRow([key('7'),key('8'),key('9'),key('x','x','op','^{2}'),cmd('⌫','deleteBackward'),key('4'),key('5'),key('6'),key('×','\\cdot','op'),key('y','y','s','^{3}'),key('1'),key('2'),key('3'),key('−','-','op'),cmd('←','moveToPreviousChar'),key('0'),key('.'),key('='),key('+','+','op'),key('↵','@next','b')],5,58);
-}
-}else if(keysPage==='functions'){
-addKeyRow([key('sin','\\sin\\left(#?\\right)','s'),key('cos','\\cos\\left(#?\\right)','s'),key('tan','\\tan\\left(#?\\right)','s'),key('ln','\\ln\\left(#?\\right)','s'),key('log','\\log_{#?}\\left(#?\\right)','s'),key('eˣ','e^{#?}','s'),key('∫','\\int_{#?}^{#?} #? \\, dx','s'),key('d/dx','\\frac{d}{dx}','s'),key('∑','\\sum_{n=#?}^{#?} #?','s'),key('lim','\\lim_{x\\to #?} #?','s'),key('|x|','\\left|#?\\right|','s'),key('∞','\\infty','s'),key('θ','\\theta','s'),key('≤','\\le','s'),key('≥','\\ge','s'),key('±','\\pm','s'),key('x₂','_{#?}','s'),key('!','!','s'),cmd('⌫','deleteBackward'),cmd('→ / out','moveToNextChar')],4,48);
-addKeyRow([key('123','@numbers','s'),cmd('←','moveToPreviousChar'),key('↵ next step','@next','b')],3,44);
-}else{
-addKeyRow('abcdefghijklmnopqrstuvwx'.split('').map(v=>key(v,v)),6,46);
-addKeyRow([key('y'),key('z'),key('θ','\\theta'),key('α','\\alpha'),key('β','\\beta'),cmd('⌫','deleteBackward')],6,46);
-addKeyRow([key('123','@numbers','s'),cmd('←','moveToPreviousChar'),cmd('→','moveToNextChar'),key('↵ step','@next','b')],4,46);
-}
-function addKeyRow(items,cols,h){const grid=document.createElement('div');grid.className='kgrid';grid.style.setProperty('--cols',cols);grid.style.setProperty('--h',h+'px');for(const k of items){const b=document.createElement('button');b.className='k '+k.cls;b.setAttribute('aria-label',k.label.replace(/<[^>]+>/g,''));const span=document.createElement('span');span.innerHTML=k.label;b.append(span);if(k.alt){const alt=document.createElement('sup');alt.textContent=k.alt==='^{2}'?'²':'³';b.append(alt);}bindKey(b,k);grid.append(b);}kb.append(grid);}
-requestAnimationFrame(()=>{if((mode==='steps'||mode==='moves')&&active)active.closest('.line')?.scrollIntoView({block:'nearest'});resizeCanvases();});
-}
-function bindKey(b,k){let start=null,repeat=null,bubble=null,flick=false;
-const isReturn=k.value==='@next';
-const showCopy=()=>{if(!start)return;flick=performance.now()-start.time>=350&&start.y-start.lastY>24;b.classList.toggle('flick',flick);if(bubble)bubble.textContent=flick?'Copy line ↓':'Slide ↑ to copy';};
-const clean=()=>{clearTimeout(repeat);b.classList.remove('down','flick');bubble?.remove();bubble=null;};
-b.addEventListener('pointerdown',e=>{e.preventDefault();start={x:e.clientX,y:e.clientY,lastY:e.clientY,time:performance.now()};flick=false;b.setPointerCapture(e.pointerId);b.classList.add('down');if(k.value==='@deleteBackward'){applyKey(k.value);const again=()=>{applyKey(k.value);repeat=setTimeout(again,85);};repeat=setTimeout(again,420);}else{bubble=document.createElement('div');bubble.className='bubble';bubble.innerHTML=isReturn?'Blank line ↓':k.label;const r=b.getBoundingClientRect();bubble.style.left=r.left+r.width/2+'px';bubble.style.top=r.top+'px';document.body.append(bubble);if(isReturn)repeat=setTimeout(showCopy,350);}});
-b.addEventListener('pointermove',e=>{if(!start)return;start.lastY=e.clientY;if(isReturn){showCopy();return;}if(!k.alt)return;flick=start.y-e.clientY>18;b.classList.toggle('flick',flick);if(bubble)bubble.textContent=flick?(k.alt==='^{2}'?'x²':'y³'):k.label;});
-b.addEventListener('pointerup',e=>{e.preventDefault();if(!start)return;if(isReturn){start.lastY=e.clientY;showCopy();}if(k.value!=='@deleteBackward')applyKey(isReturn&&flick?'@copyNext':flick?k.value+k.alt:k.value);start=null;clean();});b.addEventListener('pointercancel',()=>{start=null;clean();});
-}
-function applyKey(v){if(v==='@numbers'){keysPage='numbers';renderKB();return;}if((v==='@next'||v==='@copyNext')&&mode==='ink'){const fields=$$('#view-ink math-field');const next=fields[fields.indexOf(active)+1];if(next)next.focus();else{active?.blur();$('#kb').hidden=true;}return;}if(v==='@next'){nextLine();return;}if(v==='@copyNext'){nextLine(false);return;}if(!active||!active.isConnected)return;const f=active;f.focus();if(v.startsWith('@'))f.executeCommand(v.slice(1));else f.insert(v,{format:'latex',focus:true,selectionMode:v.includes('#?')?'placeholder':'after',feedback:false});f.dispatchEvent(new Event('input',{bubbles:true}));}
+// Custom touch-first keyboard (kb.js), shared with the courses.
+const keyboard=createKeyboard($('#kb'),{active:()=>active,getLayout:()=>state.layout,setLayout:l=>{state.layout=l;save();},afterRender:()=>{if((mode==='steps'||mode==='moves')&&active)active.closest('.line')?.scrollIntoView({block:'nearest'});resizeCanvases();},
+special:v=>{if((v==='@next'||v==='@copyNext')&&mode==='ink'){const fields=$$('#view-ink math-field');const next=fields[fields.indexOf(active)+1];if(next)next.focus();else{active?.blur();$('#kb').hidden=true;}return true;}if(v==='@next'){nextLine();return true;}if(v==='@copyNext'){nextLine(false);return true;}return false;}});
+const renderKB=keyboard.render;
 
 // Question capture stays local; only cropped handwriting has a recognition endpoint.
 $('#qToggle').onclick=()=>{qOpen=!qOpen;$('#qpane').hidden=!qOpen;$('#qToggle').classList.toggle('on',qOpen);requestAnimationFrame(resizeCanvases);};

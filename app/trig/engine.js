@@ -2,8 +2,9 @@
 // A unit is a list of topics. Each topic: a short stepped lesson (one idea, shown on the circle, with
 // "your turn" drags), then practice until the learner gets GOAL right. Questions are answered by turning the dot,
 // tapping a choice, or typing on a small math pad — never by reading ahead.
+export const WRITE_EXTRA = 4;   // seconds added to a fact's time limit when the answer is handwritten
 export const PI = Math.PI, TAU = 2 * PI, D = d => d * PI / 180;
-export const C = { pink: '#f783ac', blue: '#74c0fc', green: '#8ce99a', amber: '#ffd43b', violet: '#b197fc', orange: '#ff922b', ink: '#e8eaf0', dim: '#7d879c' };
+export const C = { pink: '#f783ac', blue: '#74c0fc', green: '#8ce99a', amber: '#91a7ff', violet: '#b197fc', orange: '#f783ac', ink: '#e8eaf0', dim: '#8b93a5' };
 const $ = s => document.querySelector(s);
 const gcd = (a, b) => b ? gcd(b, a % b) : a;
 export const minus = s => String(s).replace(/^-/, '−');
@@ -34,6 +35,7 @@ export function parseAns(s) {
 // The circle. Angles are counterclockwise from 3 o'clock; `cur` is unwrapped so it can go negative or past a full turn.
 import { CARDS, radOf, promptFor, record, status, loadFacts, saveFacts, target, checkTyped, limitFor, wrongTyped } from './facts.js?v=4';
 import { mountFactPad } from './factpad.js?v=1';
+import { mountWrite, latexToPlain } from '../ink-answer.js?v=2';
 import { startDrill, nextCard, answerCard, coldRecord, drillSummary, factOf } from './drill.js?v=2';
 
 export class Wheel {
@@ -130,6 +132,9 @@ export function mountPad(el, out, onEnter) {
 
 export function runUnit({ unit, topics, storeKey, nextHref }) {
   const GOAL = 4, wheel = new Wheel($('#wheel')), pad = mountPad($('#pad'), $('#padOut')), fpad = mountFactPad($('#factPad'));
+  // Write instead of type: the same answer goes through the same checks. Writing takes longer, so a written fact gets 4 s more.
+  const factWrite = mountWrite($('#factPad'), { onLatex: l => { const s = latexToPlain(l).replace(/^\((.*)\)$/, '$1'); if (fpad.mode === 'copy') { if (s === target(q.card)) ask(); } else if (fpad.mode === 'answer' && q?.type === 'fact') { fpad.off(); q.limit += WRITE_EXTRA; answerFact(s); } } });
+  const padWrite = mountWrite($('#padWrap'), { onLatex: l => { pad.value = latexToPlain(l).replace(/√/g, ''); }, hint: 'Write the number, tap Read, then Check.' });
   let prog = {}; try { prog = JSON.parse(localStorage.getItem(storeKey)) || {}; } catch { }
   prog.done ||= [];
   const save = () => { try { localStorage.setItem(storeKey, JSON.stringify(prog)); } catch { } };
@@ -148,7 +153,7 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
   }
   function doseDone() {
     const sm = drillSummary(dr); right = sm.cold; bar(); q = null; clock(false);
-    $('#choices').hidden = true; $('#factPad').hidden = true; fpad.off(); $('#check').hidden = true; $('#next').hidden = true; $('#qText').innerHTML = ''; $('#feedback').innerHTML = '';
+    $('#choices').hidden = true; $('#factPad').hidden = true; fpad.off(); factWrite.show(false); padWrite.show(false); $('#check').hidden = true; $('#next').hidden = true; $('#qText').innerHTML = ''; $('#feedback').innerHTML = '';
     $('#done').hidden = false;
     if (sm.cold >= sm.total) {
       if (!prog.done.includes(T().id)) prog.done.push(T().id); save();
@@ -284,6 +289,7 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
     if (fact) { fpad.ask(q.card, { onSubmit: answerFact, onFirst: () => { q.touch ??= performance.now(); } }); wheel.set({ grid: D(30) }); } else fpad.off();
     $('#feedback').innerHTML = ''; $('#next').hidden = true; $('#check').hidden = q.type === 'choice'; $('#check').disabled = false;
     $('#choices').hidden = q.type !== 'choice'; $('#factPad').hidden = q.type !== 'fact'; $('#padWrap').hidden = q.type !== 'pad'; $('#check').hidden ||= q.type === 'fact';
+    factWrite.show(q.type === 'fact'); padWrite.show(q.type === 'pad'); factWrite.clear(); padWrite.clear();
     clock(q.type === 'fact');
     if (q.type === 'choice') $('#choices').innerHTML = q.choices.map((c, i) => `<button class="choice" data-i="${i}">${c}</button>`).join('');
     if (q.type === 'pad') { pad.value = ''; $('#padUnit').textContent = q.unit || ''; }

@@ -1,0 +1,20 @@
+/* Math Mode design tokens (v4, approved 2026-10-26).
+ * Every colour comes from the math keyboard (style.css #kb): the shell and the keys are one palette.
+ * No orange, cream or yellow. Green is kept only for "right". */
+@font-face { font-family: "Jost"; font-weight: 700; font-display: swap; src: url("/fonts/jost-700.woff2") format("woff2"); }
+@font-face { font-family: "Karla"; font-weight: 400 700; font-display: swap; src: url("/fonts/karla.woff2") format("woff2"); }
+:root {
+  color-scheme: dark;
+  --color-paper: #0f1115; --color-paper-2: #1a1d24; --color-paper-3: #2b303b;
+  --color-key: #3a3f4b; --color-key-op: #2f3a5c; --color-key-down: #6c7487;
+  --color-ink: #e8eaf0; --color-ink-2: #c9cfdc; --color-muted: #8b93a5; --color-rule: #2a2f3a;
+  --color-accent: #3b5bdb; --color-accent-down: #5c7cfa; --color-accent-hi: #74c0fc; --color-accent-2: #f783ac; --color-accent-3: #24566f;
+  --color-accent-ink: #ffffff; --color-focus: #74c0fc;
+  --color-right: #8ce99a; --color-right-bg: #1d2e24; --color-wrong: #f783ac; --color-wrong-bg: #33202a; --color-slow: #91a7ff;
+  --color-violet: #b197fc;
+  --radius-key: 9px; --shadow-key: 0 1px 0 #0008;
+  --font-display: "Jost", "Futura", sans-serif; --font-body: "Karla", -apple-system, system-ui, sans-serif; --font-math: "Times New Roman", serif;
+  --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px; --space-lg: 24px; --space-xl: 40px;
+  --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.2rem; --text-xl: 1.44rem; --text-2xl: 1.728rem; --text-3xl: 2.074rem;
+  --tabs-h: 64px;
+}

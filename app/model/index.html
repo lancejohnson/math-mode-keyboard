@@ -8,13 +8,13 @@
 <link rel="icon" href="/icon.svg?v=2" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon-180.png?v=2">
 <meta name="apple-mobile-web-app-title" content="Math Mode">
-<script src="/nav.js?v=2" defer></script>
+<script src="/nav.js?v=3" defer></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="theme-color" content="#12151c">
+<meta name="theme-color" content="#0f1115">
 <style>
-:root{color-scheme:dark;--bg:#12151c;--card:#1b2030;--ink:#e8eaf0;--dim:#9aa4b8;--blue:#74c0fc;--pink:#f783ac;--green:#8ce99a;--amber:#ffd43b;--violet:#b197fc;--red:#ff8787}
+:root{color-scheme:dark;--bg:#12151c;--card:#1b2030;--ink:#e8eaf0;--dim:#9aa4b8;--blue:#74c0fc;--pink:#f783ac;--green:#8ce99a;--amber:#91a7ff;--violet:#b197fc;--red:#f783ac}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,system-ui,sans-serif;padding:0 12px calc(40px + env(safe-area-inset-bottom))}
 main{max-width:760px;margin:0 auto}
@@ -247,7 +247,7 @@ function drawCurve() {
   for (let i = 0; i <= 4; i++) { const t = ymax * i / 4; g.beginPath(); g.moveTo(L, y(t)); g.lineTo(W - Rm, y(t)); g.stroke(); g.fillText(fmt(t, 0) + 's', 4, y(t) + 8); }
   for (let n = 0; n <= N; n += 5) g.fillText(n, Math.min(x(n) - 6, W - 30), H - 12);
   const hline = (t, col, lab) => { g.strokeStyle = col; g.setLineDash([2, 4]); g.beginPath(); g.moveTo(L, y(t)); g.lineTo(W - Rm, y(t)); g.stroke(); g.setLineDash([]); g.fillStyle = col; g.font = '18px system-ui'; g.fillText(lab, L + 8, lab === 'floor' ? y(t) + 18 : y(t) - 4); g.font = '22px system-ui'; };
-  hline(floor * 1.5, '#b197fc', 'fluent 1.5×'); hline(floor * 1.2, '#8ce99a', 'automatic 1.2×'); hline(floor, '#ffd43b', 'floor');
+  hline(floor * 1.5, '#b197fc', 'fluent 1.5×'); hline(floor * 1.2, '#8ce99a', 'automatic 1.2×'); hline(floor, '#91a7ff', 'floor');
   const line = (f, col, dash) => { g.strokeStyle = col; g.lineWidth = 4; g.setLineDash(dash || []); g.beginPath(); for (let i = 0; i <= 200; i++) { const n = N * i / 200; i ? g.lineTo(x(n), y(f(n))) : g.moveTo(x(n), y(f(n))); } g.stroke(); g.setLineDash([]); };
   line(n => M.powerLawTime({ floor, start, n }), '#9aa4b8', [6, 5]);
   line(n => M.expectedTime({ floor, start, rate, n }), '#74c0fc');
@@ -270,7 +270,7 @@ bind([['cFloor', 'oFloor', v => v + ' s'], ['cStart', 'oStart', v => fmt(v) + '�
 function drawFloor() {
   const f = M.floorTime({ words: +$('fWords').value, steps: +$('fSteps').value, symbols: +$('fSym').value, secPerSymbol: +$('fSps').value });
   const seg = (v, col, lab) => v > 0 ? `<span style="flex:${v};background:${col}">${lab} ${fmt(v)}s</span>` : '';
-  $('floorBar').innerHTML = seg(f.read, '#ffd43b', 'read') + seg(f.think, '#b197fc', 'think') + seg(f.write, '#74c0fc', 'write');
+  $('floorBar').innerHTML = seg(f.read, '#91a7ff', 'read') + seg(f.think, '#b197fc', 'think') + seg(f.write, '#74c0fc', 'write');
   $('floorOut').innerHTML = `Floor <b>${fmt(f.total)} s</b>. Fluent needs ≤ <b>${fmt(f.total * 1.5)} s</b>, automatic ≤ <b>${fmt(f.total * 1.2)} s</b>. A beginner’s first try is expected around <b>${fmt(f.total * 4, 0)} s</b>. First stroke floor ${fmt(f.firstStroke)} s. A wrong answer under <b>${fmt(f.write / 2)} s</b> is flagged as rushed.`;
 }
 bind([['fWords', 'oWords'], ['fSteps', 'oSteps'], ['fSym', 'oSym'], ['fSps', 'oSps', v => fmt(v, 2)]], drawFloor);

@@ -11,55 +11,72 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="theme-color" content="#12151c">
+<meta name="theme-color" content="#0f1115">
 <script>
 // The private handwriting link used to be /#recognition=…; the workspace now lives at /workspace/.
 const toWorkspace = () => { if (/^#recognition=/.test(location.hash)) location.replace('/workspace/' + location.hash); };
 toWorkspace(); addEventListener('hashchange', toWorkspace);
 </script>
-<script src="/nav.js?v=2" defer></script>
-<link rel="stylesheet" href="/trig/lesson.css?v=9">
+<script src="/nav.js?v=3" defer></script>
+<link rel="stylesheet" href="/trig/lesson.css?v=11">
 <style>
-.hero{display:flex;gap:14px;align-items:center;margin:22px 0 6px}
-.hero img{width:56px;height:56px;border-radius:13px}
-.hero h1{margin:0;font-size:26px}
-.hero p{margin:2px 0 0}
-.home h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin:26px 0 8px}
-.home a.card{display:block;background:var(--card);border:1px solid #2a3248;border-radius:14px;padding:14px 16px;margin:0 0 10px;color:var(--ink);text-decoration:none}
-.home a.card b{display:block;font-size:17px}
-.home a.card small{display:block;color:var(--dim);margin-top:3px;font-size:14px}
-.home a.card.main{border-color:var(--pink)}
-.home a.card .go{float:right;color:var(--pink);font-weight:600;font-size:14px}
-.home .pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.home .pair a.card{margin:0}
+.dial{grid-template-columns:minmax(0,1fr) 132px;margin-top:var(--space-lg);align-items:center}
+.dial svg{width:100%;height:auto}
+.acts{display:grid;gap:var(--space-xs);margin-top:var(--space-lg)}
+h1{font-size:2.6rem}
 </style>
 </head>
 <body class="home">
-<div class="hero"><img src="/icon-180.png?v=2" alt=""><div><h1>Math Mode</h1><p class="dim">Intuition-first math, practiced until it sticks.</p></div></div>
-
-<h2>Trigonometry</h2>
-<a class="card main" id="continue" href="/trig/unit1.html"><span class="go">Start →</span><b>Unit 1: Angles and radians</b><small id="u1progress">11 small topics · practice until you get 4 right</small></a>
-<div class="pair">
-  <a class="card" href="/trig/facts.html"><b>Facts</b><small>Timed rounds until they're automatic</small></a>
-  <a class="card" href="/trig/map.html"><b>Knowledge map</b><small>What leads to what, and your progress</small></a>
+<header class="top"><b>Math Mode</b><small id="unitOf">Unit 1 of 12</small></header>
+<main>
+<small class="dim" id="nextKind" style="display:block;margin-top:var(--space-lg)">Next lesson</small>
+<h1 id="nextTitle">Angles are turns</h1>
+<p class="lead" id="nextLead">Read a little, make one guess, then get four right in a row.</p>
+<div class="cells dial">
+  <div><span class="fig" id="u1fig">0/11</span><span class="cap" id="u1progress">Unit 1 topics done</span></div>
+  <svg viewBox="0 0 150 150" aria-hidden="true"><g stroke="var(--color-key)" stroke-width="3" fill="none"><circle cx="75" cy="75" r="56"/><line x1="75" y1="75" x2="131" y2="75"/></g>
+    <path id="u1arc" d="" fill="none" stroke="var(--color-accent-hi)" stroke-width="6" stroke-linecap="round"/><line id="u1ray" x1="75" y1="75" x2="131" y2="75" stroke="var(--color-accent-hi)" stroke-width="5" stroke-linecap="round"/></svg>
 </div>
-<a class="card" href="/trig/" style="margin-top:10px"><b>All 12 units</b><small>The full course outline</small></a>
-
-<h2>Tools</h2>
-<a class="card" href="/workspace/"><b>Math workspace</b><small>Big number pad, step-by-step work, handwriting, graphs</small></a>
-
-<h2>Earlier prototypes</h2>
-<a class="card" href="/lesson/"><b>Graphing parabolas</b><small>The first intuition-first lesson</small></a>
-<a class="card" href="/model/"><b>How reviews read the clock</b><small>How fact reviews use your answer time</small></a>
-
-<script>
-try {
-  const done = (JSON.parse(localStorage.getItem('trig-unit1-v2') || '{}').done || []).length;
-  if (done) {
-    document.getElementById('u1progress').textContent = `${done} of 11 topics mastered`;
-    document.querySelector('#continue .go').textContent = done >= 11 ? 'Review →' : 'Continue →';
-  }
-} catch {}
+<div class="cells" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-top:6px">
+  <a href="/trig/facts.html"><span class="fig" id="factsNew">32</span><span class="cap">degree and radian facts not seen yet</span></a>
+  <a href="/trig/facts.html"><span class="fig" id="factsDue">0</span><span class="cap">facts due for review</span></a>
+</div>
+<div class="acts"><a class="btn btn--primary" id="continue" href="/trig/unit1.html#turns">Start lesson</a><a class="btn" href="/trig/facts.html">Practise facts</a></div>
+<nav class="list" aria-label="More">
+  <h2>Courses</h2>
+  <a href="/trig/">Trigonometry <small>12 units</small></a>
+  <a href="/kelly/">The Kelly criterion <small>how much to bet</small></a>
+  <a href="/trig/map.html">Knowledge map <small>what leads to what</small></a>
+  <h2 style="margin-top:var(--space-lg)">Earlier prototypes</h2>
+  <a href="/lesson/">Graphing parabolas <small>first lesson</small></a>
+  <a href="/model/">How reviews read the clock <small>fact timing</small></a>
+</nav>
+</main>
+<script type="module">
+import { DECKS, loadFacts, deckSummary } from '/trig/facts.js?v=4';
+// Unit 1 topics in order (ids match trig/unit1.html).
+const TOPICS = [['turns', 'Angles are turns'], ['thirty', 'Steps of 30°'], ['negative', 'Negative angles turn clockwise'], ['pi', 'Radians: π is a half turn'],
+  ['quarters', 'Steps of π/4'], ['sixths', 'Steps of π/6 and π/3'], ['convert', 'Switching degrees and radians'], ['by-heart', 'Know the 16 angles by heart'],
+  ['wrap', 'More than a full turn'], ['why-pi', 'Where π comes from'], ['arc', 'Arc length']];
+const $ = s => document.querySelector(s);
+let done = []; try { done = JSON.parse(localStorage.getItem('trig-unit1-v2') || '{}').done || []; } catch {}
+const n = TOPICS.filter(([id]) => done.includes(id)).length, next = TOPICS.find(([id]) => !done.includes(id));
+$('#u1fig').textContent = `${n}/11`;
+if (next) {
+  $('#nextTitle').textContent = next[1]; $('#continue').href = '/trig/unit1.html#' + next[0];
+  $('#continue').textContent = n ? 'Continue' : 'Start lesson'; $('#u1progress').textContent = n ? `${n} of 11 topics mastered` : 'Unit 1 topics done';
+} else {
+  $('#nextKind').textContent = 'Unit 1 done'; $('#nextTitle').textContent = 'Angles and radians';
+  $('#nextLead').textContent = 'All 11 topics mastered. Keep the facts sharp, or try the Kelly course.';
+  $('#continue').textContent = 'Review'; $('#continue').href = '/trig/unit1.html'; $('#u1progress').textContent = '11 of 11 topics mastered';
+}
+// The dial turns by the share of topics done, like the angles it teaches.
+const t = 2 * Math.PI * n / 11, x = 75 + 56 * Math.cos(t), y = 75 - 56 * Math.sin(t);
+$('#u1ray').setAttribute('x2', x.toFixed(1)); $('#u1ray').setAttribute('y2', y.toFixed(1));
+if (n) $('#u1arc').setAttribute('d', n >= 11 ? 'M131 75 A56 56 0 1 0 19 75 A56 56 0 1 0 131 75' : `M131 75 A56 56 0 ${t > Math.PI ? 1 : 0} 0 ${x.toFixed(1)} ${y.toFixed(1)}`);
+const fs = loadFacts(), deck = DECKS[0], sum = deckSummary(deck, fs), now = Date.now();
+$('#factsNew').textContent = sum.new;
+$('#factsDue').textContent = deck.cards.filter(c => fs[c.id] && (fs[c.id].due ?? 0) <= now).length;
 </script>
 </body>
 </html>

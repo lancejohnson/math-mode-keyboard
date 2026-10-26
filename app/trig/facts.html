@@ -8,28 +8,28 @@
 <link rel="icon" href="/icon.svg?v=2" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon-180.png?v=2">
 <meta name="apple-mobile-web-app-title" content="Math Mode">
-<script src="/nav.js?v=2" defer></script>
+<script src="/nav.js?v=3" defer></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="theme-color" content="#12151c">
-<link rel="stylesheet" href="lesson.css?v=9">
+<meta name="theme-color" content="#0f1115">
+<link rel="stylesheet" href="lesson.css?v=11">
 <style>
-.deck{display:block;width:100%;text-align:left;background:#141926;border:1px solid #3b5bdb;border-radius:12px;padding:12px;margin:10px 0;color:var(--ink);font:inherit}
+.deck{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--color-rule);border-radius:0;padding:12px;margin:0;color:var(--ink);font:inherit;padding:14px 0}
 .deck b{font-size:17px}.deck small{display:block;color:var(--dim);font-size:13px;margin-top:2px}
-.mix{display:flex;height:8px;border-radius:4px;overflow:hidden;background:#2c3448;margin:8px 0 4px}
+.mix{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--color-paper-3);margin:8px 0 4px}
 .mix i{display:block;height:100%}
 .legend{font-size:13px;color:var(--dim)}.legend span{margin-right:10px;white-space:nowrap}
 .legend span::before{content:'';display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;background:var(--c)}
-#prompt{font:600 34px/1.2 "Times New Roman",serif;text-align:center;margin:18px 0 10px;min-height:42px}
-#prompt small{display:block;font:15px system-ui;color:var(--dim);margin-bottom:4px}
-.clock{height:6px;border-radius:3px;background:#2c3448;overflow:hidden;margin:4px 0}
+#prompt{font:700 3.4rem/1.05 var(--font-display);text-align:center;margin:18px 0 10px;min-height:42px}
+#prompt small{display:block;font:600 15px var(--font-body);color:var(--dim);margin-bottom:4px}
+.clock{height:6px;border-radius:3px;background:var(--color-paper-3);overflow:hidden;margin:4px 0}
 .clock i{display:block;height:100%;width:0;background:var(--green)}
 #result{min-height:96px;font-size:16px}
 #result .big{font-size:18px;font-weight:600}
-#mini{width:150px;height:150px;float:right;margin:0 0 4px 8px;background:#10131a;border-radius:10px}
+#mini{width:150px;height:150px;float:right;margin:0 0 4px 8px;background:var(--color-paper-2);border-radius:var(--radius-key)}
 .counts{display:flex;justify-content:space-between;font-size:13px;color:var(--dim)}
-details.aid{background:#141926;border-radius:10px;padding:8px 12px;margin:8px 0}
+details.aid{background:var(--color-paper-2);border-radius:var(--radius-key);padding:8px 12px;margin:8px 0}
 details.aid summary{color:var(--blue);cursor:pointer}
 </style>
 </head>
@@ -72,11 +72,13 @@ details.aid summary{color:var(--blue);cursor:pointer}
 <script type="module">
 import { DECKS, CARDS, KEY, radOf, promptFor, status, record, deckSummary, target, checkTyped, limitFor, wrongTyped, VALUES } from './facts.js?v=4';
 import { mountFactPad } from './factpad.js?v=1';
+import { mountWrite, latexToPlain } from '../ink-answer.js?v=2';
+import { WRITE_EXTRA } from './engine.js?v=15';
 import { startDrill, nextCard, answerCard, shown, coldRecord, drillSummary } from './drill.js?v=2';
 const $ = s => document.querySelector(s);
 let state = {}; try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { } };
-const COL = { automatic: 'var(--green)', slow: 'var(--amber)', shaky: '#ff8787', new: '#4a5470' };
+const COL = { automatic: 'var(--green)', slow: 'var(--amber)', shaky: 'var(--pink)', new: 'var(--color-key)' };
 const NAME = { automatic: 'automatic', slow: 'right but slow', shaky: 'missed last time', new: 'not seen' };
 const mix = n => { const tot = Object.values(n).reduce((a, b) => a + b, 0); return ['automatic', 'slow', 'shaky', 'new'].map(k => `<i style="width:${100 * n[k] / tot}%;background:${COL[k]}"></i>`).join(''); };
 const legend = n => ['automatic', 'slow', 'shaky', 'new'].filter(k => n[k]).map(k => `<span style="--c:${COL[k]}">${n[k]} ${NAME[k]}</span>`).join('');
@@ -85,6 +87,9 @@ const isAngle = c => c.pool === 'rad' || c.pool === 'deg';
 const factText = c => isAngle(c) ? `${c.t}° = ${radOf(c.t)}` : `${promptFor(c, false).replace(/<\/?b>/g, '')} = ${VALUES[c.answer].text}`;
 const shownAns = c => target(c) + (c.pool === 'deg' ? '°' : '');
 const fpad = mountFactPad($('#factPad'));
+// Write instead of type: same checks, 4 s more on the clock for the pen.
+const write = mountWrite($('#factPad'), { onLatex: l => { const s = latexToPlain(l).replace(/^\((.*)\)$/, '$1');
+  if (fpad.mode === 'copy') { if (s === target(card)) ask(); } else if (fpad.mode === 'answer') { fpad.off(); limit += WRITE_EXTRA; answer(s); } } });
 
 function home() {
   show('home');
@@ -114,16 +119,16 @@ function ask() {
   $('#result').innerHTML = ''; $('#next').hidden = true; cancelAnimationFrame(timer);
   if (nx.kind === 'intro') { // a never-seen fact: show it (both ways), untimed
     answered = true; $('#clock').style.width = '0';
-    $('#prompt').innerHTML = `<small>New fact</small>${factText(card)}`; $('#factPad').hidden = true; fpad.off();
+    $('#prompt').innerHTML = `<small>New fact</small>${factText(card)}`; $('#factPad').hidden = true; fpad.off(); write.show(false);
     $('#result').innerHTML = `<canvas id="mini" width="300" height="300"></canvas><p>${card.why}</p><p class="dim">It comes back in a few questions. Until then, other facts.</p>`;
     mini($('#mini'), card); $('#next').textContent = 'Got it →'; $('#next').hidden = false; return;
   }
   const useRad = !isAngle(card) && Math.random() < .5;
   $('#prompt').innerHTML = (nx.kind === 'review' ? '<small>Review</small>' : isAngle(card) ? '<small>Convert</small>' : '<small>Exact value</small>') + promptFor(card, useRad);
-  limit = limitFor(card); $('#factPad').hidden = false;
+  limit = limitFor(card); $('#factPad').hidden = false; write.show(true); write.clear();
   fpad.ask(card, { onSubmit: answer, onFirst: () => { touch ??= performance.now(); } });
   t0 = performance.now();
-  const tick = () => { const s = (performance.now() - t0) / 1000; const c = $('#clock'); c.style.width = Math.min(100, 100 * s / limit) + '%'; c.style.background = s <= limit ? 'var(--green)' : 'var(--amber)'; if (!answered) timer = requestAnimationFrame(tick); };
+  const tick = () => { const s = (performance.now() - t0) / 1000; const c = $('#clock'); c.style.width = Math.min(100, 100 * s / limit) + '%'; c.style.background = s <= limit ? 'var(--green)' : 'var(--color-slow)'; if (!answered) timer = requestAnimationFrame(tick); };
   tick();
 }
 
@@ -141,7 +146,7 @@ function answer(typed) {
     const was = nx; setTimeout(() => { if (nx === was) ask(); }, 650);
   } else {
     copy = !ok;
-    $('#result').innerHTML = `<canvas id="mini" width="300" height="300"></canvas><p class="big ${ok ? '' : 'no'}" style="${ok ? 'color:var(--amber)' : ''}">${ok ? `Right, in ${s}.${note} Aim for under ${limit} s; it comes round again soon.` : `Not ${typed === 'undefined' ? 'undefined' : typed + (card.pool === 'deg' ? '°' : '')}. It's ${shownAns(card)}.${note} Type it to go on. It comes back in a few questions.`}</p><p>${card.why}</p>` + held;
+    $('#result').innerHTML = `<canvas id="mini" width="300" height="300"></canvas><p class="big ${ok ? 'slow' : 'no'}">${ok ? `Right, in ${s}.${note} Aim for under ${limit} s; it comes round again soon.` : `Not ${typed === 'undefined' ? 'undefined' : typed + (card.pool === 'deg' ? '°' : '')}. It's ${shownAns(card)}.${note} Type it to go on. It comes back in a few questions.`}</p><p>${card.why}</p>` + held;
     mini($('#mini'), card); $('#next').textContent = 'Next →'; $('#next').hidden = !ok;
     if (!ok) fpad.copy(() => ask());
   }
@@ -151,7 +156,7 @@ $('#next').onclick = () => { if (nx?.kind === 'intro') shown(dr, nx.id, Date.now
 // Small picture after a slow or wrong answer: the angle, and for value cards the point (cos θ, sin θ).
 function mini(cv, c) {
   const g = cv.getContext('2d'), W = cv.width, R = W * .36, cx = W / 2, cy = W / 2, t = c.t * Math.PI / 180;
-  g.clearRect(0, 0, W, W); g.lineWidth = 3; g.strokeStyle = '#39425a';
+  g.clearRect(0, 0, W, W); g.lineWidth = 3; g.strokeStyle = '#3a3f4b';
   g.beginPath(); g.arc(cx, cy, R, 0, 2 * Math.PI); g.stroke();
   g.beginPath(); g.moveTo(cx - R * 1.2, cy); g.lineTo(cx + R * 1.2, cy); g.moveTo(cx, cy - R * 1.2); g.lineTo(cx, cy + R * 1.2); g.stroke();
   g.strokeStyle = '#b197fc'; g.beginPath(); g.arc(cx, cy, R * .25, 0, -t, true); g.stroke();
@@ -161,11 +166,11 @@ function mini(cv, c) {
     g.setLineDash([8, 6]); g.lineWidth = 4;
     g.strokeStyle = '#74c0fc'; g.beginPath(); g.moveTo(cx, cy); g.lineTo(x, cy); g.stroke();   // cos: across
     g.strokeStyle = '#f783ac'; g.beginPath(); g.moveTo(x, cy); g.lineTo(x, y); g.stroke();     // sin: up
-    g.setLineDash([]); g.font = '600 24px system-ui'; g.fillStyle = '#74c0fc'; if (Math.abs(x - cx) > 30) g.fillText('cos', Math.min(W - 50, Math.max(4, (cx + x) / 2 - 18)), cy + (Math.sin(t) >= 0 ? 26 : -10));
+    g.setLineDash([]); g.font = '600 24px Karla, system-ui'; g.fillStyle = '#74c0fc'; if (Math.abs(x - cx) > 30) g.fillText('cos', Math.min(W - 50, Math.max(4, (cx + x) / 2 - 18)), cy + (Math.sin(t) >= 0 ? 26 : -10));
     g.fillStyle = '#f783ac'; if (Math.abs(y - cy) > 30) g.fillText('sin', Math.min(W - 44, Math.max(4, x + (Math.cos(t) >= 0 ? 6 : -44))), (cy + y) / 2 + 8);
   }
   g.fillStyle = '#f783ac'; g.beginPath(); g.arc(x, y, 8, 0, 2 * Math.PI); g.fill();
-  g.font = '600 24px system-ui'; g.fillStyle = '#e8eaf0'; g.fillText(`${c.t}° = ${radOf(c.t)}`, 8, W - 10);
+  g.font = '600 24px Karla, system-ui'; g.fillStyle = '#e8eaf0'; g.fillText(`${c.t}° = ${radOf(c.t)}`, 8, W - 10);
 }
 
 function done() {

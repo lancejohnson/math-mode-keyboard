@@ -8,13 +8,13 @@
 <link rel="icon" href="/icon.svg?v=2" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon-180.png?v=2">
 <meta name="apple-mobile-web-app-title" content="Math Mode">
-<script src="/nav.js?v=2" defer></script>
+<script src="/nav.js?v=3" defer></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="theme-color" content="#12151c">
+<meta name="theme-color" content="#0f1115">
 <style>
-:root{color-scheme:dark;--bg:#12151c;--card:#1b2030;--ink:#e8eaf0;--dim:#9aa4b8;--blue:#74c0fc;--pink:#f783ac;--green:#8ce99a;--amber:#ffd43b;--violet:#b197fc}
+:root{color-scheme:dark;--bg:#12151c;--card:#1b2030;--ink:#e8eaf0;--dim:#9aa4b8;--blue:#74c0fc;--pink:#f783ac;--green:#8ce99a;--amber:#e599f7;--violet:#b197fc}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,system-ui,sans-serif;padding:0 12px calc(40px + env(safe-area-inset-bottom))}
 header{padding:18px 4px 6px}
@@ -40,14 +40,14 @@ button.act:disabled{opacity:.4}
 .caption{min-height:70px;background:#141926;border-radius:10px;padding:10px;font-size:15px}
 .check li{list-style:none;margin:4px 0}
 .check{padding:0;margin:8px 0}
-.ok{color:var(--green)}.no{color:#ff8787}
+.ok{color:var(--green)}.no{color:var(--pink)}
 input.num{width:90px;font-size:18px;padding:8px;border-radius:8px;border:1px solid #39425a;background:#10131a;color:var(--ink)}
 textarea{width:100%;min-height:90px;font:inherit;padding:10px;border-radius:10px;border:1px solid #39425a;background:#10131a;color:var(--ink)}
 .reveal{background:#141926;border-radius:10px;padding:10px;margin-top:8px}
 .choices{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
 .choice{background:#232a3d;border:2px solid #39425a;border-radius:12px;padding:6px;color:var(--ink);font-size:14px;min-height:44px}
 .choice canvas{margin:0 auto 4px;width:100%;height:auto;aspect-ratio:3/2;background:#10131a}
-.choice.right{border-color:var(--green);background:#1f3326}.choice.wrong{border-color:#ff8787;background:#3a2226}
+.choice.right{border-color:var(--green);background:#1f3326}.choice.wrong{border-color:var(--pink);background:#33202a}
 .choice:disabled{color:var(--ink);opacity:1}
 </style>
 </head>
@@ -74,7 +74,7 @@ textarea{width:100%;min-height:90px;font:inherit;padding:10px;border-radius:10px
 
 <section id="explore">
   <h2><b>1</b>Explore</h2>
-  <p>Drag the <span style="color:var(--pink)">pink dot</span> to move the parabola. Drag the <span style="color:var(--amber)">yellow dot</span> to change its shape. Watch what changes in the equation, and what doesn't.</p>
+  <p>Drag the <span style="color:var(--pink)">pink dot</span> to move the parabola. Drag the <span style="color:var(--amber)">purple dot</span> to change its shape. Watch what changes in the equation, and what doesn't.</p>
   <div class="eq" id="exploreEq" aria-live="polite"></div>
   <canvas id="exploreCanvas" aria-label="Interactive parabola"></canvas>
   <div class="chips" id="exploreChips"></div>
@@ -129,7 +129,7 @@ textarea{width:100%;min-height:90px;font:inherit;padding:10px;border-radius:10px
 
 <script>
 const $=s=>document.querySelector(s);
-const COLORS={vertex:'#f783ac',axis:'#b197fc',dir:'#8ce99a',step:'#ffd43b',yint:'#74c0fc',xint:'#ff922b'};
+const COLORS={vertex:'#f783ac',axis:'#b197fc',dir:'#8ce99a',step:'#e599f7',yint:'#74c0fc',xint:'#91a7ff'};
 const num=v=>{const r=Math.round(v*100)/100;return (r<0?'−':'')+Math.abs(r);};
 function equation(a,h,k){
   const A=Math.round(a*100)/100;let s='y = '+(A===1?'':A===-1?'−':num(A));
@@ -233,7 +233,7 @@ const solved=()=>sv.h===T.h&&sv.k===T.k&&Math.abs(f(sv,T.px)-T.py)<.01;
 const solve=new Plane($('#solveCanvas'),p=>{p.dot(T.h,T.k,'#ffffff55',11);p.dot(T.px,T.py,'#ffffff55',11);p.text('lowest point',T.h,T.k,'#c9d2e3',22);p.text('post (0, 5)',T.px,T.py,'#c9d2e3',22);
   p.curve(x=>f(sv,x),'#e8eaf0');if(solved())p.vline(sv.h,COLORS.axis,'axis of symmetry');handles(p,sv);});
 function solveText(){$('#solveEq').textContent=equation(sv.a,sv.h,sv.k);const v=sv.h===T.h&&sv.k===T.k,pt=Math.abs(f(sv,T.px)-T.py)<.01;
-  $('#solveChecks').innerHTML=`<li class="${v?'ok':'no'}">${v?'✓':'○'} Lowest point at (−2, −3) — drag the pink vertex there</li><li class="${pt?'ok':'no'}">${pt?'✓':'○'} Passes through the post (0, 5) — then drag the yellow dot to change a</li>`+
+  $('#solveChecks').innerHTML=`<li class="${v?'ok':'no'}">${v?'✓':'○'} Lowest point at (−2, −3) — drag the pink vertex there</li><li class="${pt?'ok':'no'}">${pt?'✓':'○'} Passes through the post (0, 5) — then drag the purple dot to change a</li>`+
    (v&&pt?`<li class="ok">Solved: <b>${equation(sv.a,sv.h,sv.k)}</b>. 2 steps from the vertex rises 4a = 8, so a = 2.</li>`:'');$('#solveMore').hidden=!(v&&pt);}
 draggable(solve,sv,solveText);solveText();
 $('#solveCheck').onclick=()=>{const v=parseFloat($('#solveX').value.replace('−','-'));const ok=Math.abs(v+4)<1e-9;

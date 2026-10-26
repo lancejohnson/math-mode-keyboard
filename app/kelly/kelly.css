@@ -1,0 +1,41 @@
+/* Kelly course: lesson.css look; the keyboard (kb.css) is the workspace keyboard, pinned to the bottom. */
+#kb{position:fixed;left:0;right:0;bottom:0;z-index:30}
+body:has(#kb:not([hidden])){padding-bottom:440px}
+.parts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:12px 0 4px}
+.parts a{display:flex;flex-direction:column;gap:6px;padding:8px 6px 6px;border-radius:var(--radius-key);background:var(--color-paper-2);color:var(--dim);font:600 12px/1.1 var(--font-body);text-decoration:none}
+.parts a i{display:block;height:4px;border-radius:2px;background:var(--color-key)}
+.parts a.done i{background:var(--color-right)}
+.parts a.on{background:var(--color-paper-3);color:var(--ink)}
+.parts a.on i{background:var(--color-accent)}
+.parts a.on.done i{background:var(--color-right)}
+#part h1{font-size:2rem;margin-top:var(--space-md)}
+.block{border-top:1px solid var(--color-rule);padding:var(--space-md) 0;margin:0}
+.block:first-of-type{border-top:0}
+.block p{margin:.5em 0;line-height:1.5}
+.eq{font:400 21px/1.4 var(--font-math);text-align:center;padding:10px 6px;background:var(--color-paper-2);border-radius:var(--radius-key);overflow-x:auto}
+.key{border:1px solid var(--color-accent);background:var(--color-paper-2);padding:12px 14px;border-radius:var(--radius-key)}
+.ask{font-weight:600;color:var(--ink)}
+.opts.choices{grid-template-columns:1fr;gap:6px;margin:10px 0}
+.opts .choice{text-align:left;padding:12px 14px}
+.choice.picked{border-color:var(--blue);background:var(--color-key-op)}
+.ansRow{display:flex;align-items:center;gap:8px;margin:8px 0}
+.ansRow .lbl{font:400 21px var(--font-math);white-space:nowrap}
+.ansRow math-field{flex:1;min-width:0;min-height:54px;font-size:24px;background:var(--color-paper-2);color:var(--ink);border:2px solid var(--color-accent-3);border-radius:var(--radius-key);padding:6px 10px;--caret-color:var(--color-accent-hi);--selection-background-color:#3b5bdb66;--primary-color:var(--color-accent-hi)}
+.ansRow math-field:focus-within{border-color:var(--color-accent);outline:none}
+math-field::part(virtual-keyboard-toggle),math-field::part(menu-toggle){display:none}
+.fb .ok{color:var(--color-right)} .fb .no{color:var(--color-wrong)}
+.fb{min-height:0}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.simBox canvas{display:block;width:100%;height:220px;background:var(--color-paper-2);border-radius:var(--radius-key);touch-action:pan-y}
+.ctl{display:grid;grid-template-columns:auto minmax(0,1fr) 4.5em;align-items:center;gap:10px;margin:10px 0;font-weight:600}
+.ctl output{text-align:right;font-variant-numeric:tabular-nums}
+.ctl input{width:100%;accent-color:var(--color-accent)}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px}
+.stats>div{background:var(--color-paper-2);border-radius:var(--radius-key);padding:10px}
+.stats b{display:block;font:700 1.35rem/1.1 var(--font-display);font-variant-numeric:tabular-nums}
+.stats small{color:var(--dim);font-size:12px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--dim);margin-top:6px}
+.legend i{display:inline-block;width:14px;height:4px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.next{margin-top:var(--space-lg)}
+.ansRow.typeOff~.acts .chk{display:none}
