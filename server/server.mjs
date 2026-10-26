@@ -11,7 +11,7 @@ const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'../app');
 const MAX_BODY=2900000;
 // Bug reports go to the Relay daemon on this machine, which keeps the rolling recording (~/.relay/recordings)
 // and starts the agent session; the desktop token is the owner's own device token there.
-const MATH_MODE_REPO='/Users/work/Projects/math-mode-keyboard',RELAY_REPO='/Users/work/relay';
+const MATH_MODE_REPO='/Users/work/Projects/math-mode-keyboard',RELAY_REPO='/Users/work/Projects/Personal/relay';
 export function relayLink(base=process.env.RELAY_URL||'http://127.0.0.1:7373',tokenFile=resolve(homedir(),'.relay/desktop-token')){let token;return {base,token:async()=>token??=(await readFile(tokenFile,'utf8')).trim()};}
 export function bugPrompt({text,client,at,page,viewport,app}){
   const lines=['Math Mode bug, reported from '+(app?'the iPhone app':'the web')+(page?' on '+page:'')+(viewport?' ('+viewport+')':'')+':','',text.trim(),''];
