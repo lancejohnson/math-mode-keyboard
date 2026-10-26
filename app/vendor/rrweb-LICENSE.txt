@@ -1,0 +1,2 @@
+@rrweb/record 2.1.7 (https://github.com/rrweb-io/rrweb), MIT License, Copyright (c) 2018 Contributors (https://github.com/rrweb-io/rrweb/graphs/contributors) and SmartX Inc.
+Vendored from dist/record.umd.min.cjs; sets window.rrwebRecord.

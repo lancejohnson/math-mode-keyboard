@@ -9,11 +9,22 @@ import {createRecognizer,validateImage} from './recognizer.mjs';
 import {createLocalRecognizer} from './local-recognizer.mjs';
 const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'../app');
 const MAX_BODY=2900000;
+// Bug reports go to the Relay daemon on this machine, which keeps the rolling recording (~/.relay/recordings)
+// and starts the agent session; the desktop token is the owner's own device token there.
+const MATH_MODE_REPO='/Users/work/Projects/math-mode-keyboard',RELAY_REPO='/Users/work/relay';
+export function relayLink(base=process.env.RELAY_URL||'http://127.0.0.1:7373',tokenFile=resolve(homedir(),'.relay/desktop-token')){let token;return {base,token:async()=>token??=(await readFile(tokenFile,'utf8')).trim()};}
+export function bugPrompt({text,client,at,page,viewport,app}){
+  const lines=['Math Mode bug, reported from '+(app?'the iPhone app':'the web')+(page?' on '+page:'')+(viewport?' ('+viewport+')':'')+':','',text.trim(),''];
+  if(client&&at)lines.push('Start with the recording, before reading code:','','```bash','node '+RELAY_REPO+'/daemon/src/cli/recording.ts latest --client '+client+' --at '+at+' --out .artifacts/bug-recording/'+at,'```','','- Read `timeline.md`: the numbered steps in the 3 minutes before the bug (T0).','- Open `frames/NN_T0_BUG.png`: the screen when the bug button was tapped.','- Reproduce it with Playwright at the recording\'s viewport, then fix it in a worktree with a test and land it.','');
+  else lines.push('No recording came with this report (the recorder was not running on that page).','');
+  return lines.join('\n').trimEnd();
+}
+const bugTitle=text=>{const line=text.trim().split('\n')[0].replace(/\s+/g,' ');return 'Math Mode bug: '+(line.length>48?line.slice(0,47)+'…':line);};
 const equal=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.webmanifest':'application/manifest+json','.woff2':'font/woff2','.txt':'text/plain; charset=utf-8'};
-export function createServer({token,recognize,careful,root=ROOT,secureCookies=true,perHour=600,traceDir=process.env.MATH_MODE_TRACE_DIR||resolve(homedir(),'.local/share/math-mode/traces')}={}){
+export function createServer({token,recognize,careful,root=ROOT,secureCookies=true,perHour=600,relay=relayLink(),traceDir=process.env.MATH_MODE_TRACE_DIR||resolve(homedir(),'.local/share/math-mode/traces')}={}){
   if(!token||!recognize)throw new Error('Recognition server needs private configuration');
-  let active=0,budget=[],traces=[];const attempts=new Map();
+  let active=0,budget=[],traces=[],bugs=[];const attempts=new Map();
   const sign=s=>createHmac('sha256',token).update(s).digest('hex');
   function authorized(req){const raw=req.headers.cookie?.split(';').map(s=>s.trim()).find(s=>s.startsWith('mathModeAccess='))?.slice(15);if(!raw)return false;const parts=raw.split('.');return parts.length===3&&Number(parts[0])>Date.now()&&Number(parts[0])<Date.now()+31*86400000&&equal(parts[2],sign(parts.slice(0,2).join('.')));}
   function json(res,status,data,headers={}){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers});res.end(JSON.stringify(data));}
@@ -32,6 +43,26 @@ export function createServer({token,recognize,careful,root=ROOT,secureCookies=tr
           const data=await body(req);if(!Array.isArray(data.trace)||data.trace.length>2000)return json(res,400,{error:'Bad trace'});traces.push(now);
           await mkdir(traceDir,{recursive:true});await appendFile(resolve(traceDir,'wheel.jsonl'),JSON.stringify({at:new Date(now).toISOString(),ua:String(req.headers['user-agent']||'').slice(0,200),...data})+'\n');
           return json(res,200,{ok:true});
+        }
+        // The rolling bug recording: rrweb chunks from the owner's own browser, passed to Relay unchanged.
+        if(req.method==='POST'&&url.pathname==='/api/recording'){
+          if(!authorized(req))return json(res,403,{error:'Recording is for the owner only'});
+          if(Number(req.headers['content-length'])>16<<20)return json(res,413,{error:'Chunk too large'});
+          let size=0,chunks=[];for await(const chunk of req){size+=chunk.length;if(size>16<<20)return json(res,413,{error:'Chunk too large'});chunks.push(chunk);}
+          try{const r=await fetch(relay.base+'/api/recording'+url.search,{method:'POST',headers:{authorization:'Bearer '+await relay.token(),'content-type':req.headers['content-type']||'application/json'},body:Buffer.concat(chunks),signal:AbortSignal.timeout(20000)});return json(res,r.ok?200:502,{ok:r.ok});}
+          catch{return json(res,502,{error:'Relay unavailable'});}
+        }
+        // The bug button: starts a Relay session in this repo with the report and where the recording is.
+        if(req.method==='POST'&&url.pathname==='/api/bug'){
+          if(!authorized(req))return json(res,403,{error:'Bug reports are for the owner only'});
+          const now=Date.now();bugs=bugs.filter(t=>now-t<3600000);if(bugs.length>=20)return json(res,429,{error:'Too many reports this hour'});
+          const data=await body(req),text=typeof data.text==='string'?data.text.slice(0,4000):'';if(!text.trim())return json(res,400,{error:'Say what went wrong'});
+          const id=v=>typeof v==='string'&&/^[A-Za-z0-9_-]{4,64}$/.test(v)?v:null,at=Number.isSafeInteger(data.at)?data.at:null;
+          const str=(v,n)=>typeof v==='string'?v.replace(/[^\w ./×x:#?=&%-]/g,'').slice(0,n):'';
+          const prompt=bugPrompt({text,client:id(data.client),at,page:str(data.page,200),viewport:str(data.viewport,20),app:!!data.app});bugs.push(now);
+          try{const r=await fetch(relay.base+'/api/sessions',{method:'POST',headers:{authorization:'Bearer '+await relay.token(),'content-type':'application/json'},body:JSON.stringify({harness:'pi',cwd:MATH_MODE_REPO,title:bugTitle(text),project:'Bugs',prompt}),signal:AbortSignal.timeout(20000)});
+            if(!r.ok)return json(res,502,{error:'Relay did not start the session'});const out=await r.json();return json(res,200,{ok:true,session:out.session?.sessionId??null});}
+          catch{return json(res,502,{error:'Relay unavailable'});}
         }
         if(req.method==='POST'&&url.pathname==='/api/session'){
           const ip=req.socket.remoteAddress;const now=Date.now();const count=attempts.get(ip)||{count:0,time:now};if(now-count.time>60000){count.count=0;count.time=now;}if(++count.count>30)return json(res,429,{error:'Too many attempts'});attempts.set(ip,count);
