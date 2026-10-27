@@ -35,7 +35,7 @@ export function parseAns(s) {
 // The circle. Angles are counterclockwise from 3 o'clock; `cur` is unwrapped so it can go negative or past a full turn.
 import { CARDS, radOf, promptFor, record, status, loadFacts, saveFacts, target, checkTyped, limitFor, wrongTyped } from './facts.js?v=4';
 import { mountFactPad } from './factpad.js?v=1';
-import { mountWrite, latexToPlain } from '../ink-answer.js?v=2';
+import { mountWrite, latexToPlain } from '../ink-answer.js?v=3';
 import { startDrill, nextCard, answerCard, coldRecord, drillSummary, factOf } from './drill.js?v=2';
 
 export class Wheel {
@@ -134,7 +134,7 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
   const GOAL = 4, wheel = new Wheel($('#wheel')), pad = mountPad($('#pad'), $('#padOut')), fpad = mountFactPad($('#factPad'));
   // Write instead of type: the same answer goes through the same checks. Writing takes longer, so a written fact gets 4 s more.
   const factWrite = mountWrite($('#factPad'), { onLatex: l => { const s = latexToPlain(l).replace(/^\((.*)\)$/, '$1'); if (fpad.mode === 'copy') { if (s === target(q.card)) ask(); } else if (fpad.mode === 'answer' && q?.type === 'fact') { fpad.off(); q.limit += WRITE_EXTRA; answerFact(s); } } });
-  const padWrite = mountWrite($('#padWrap'), { onLatex: l => { pad.value = latexToPlain(l).replace(/√/g, ''); }, hint: 'Write the number, tap Read, then Check.' });
+  const padWrite = mountWrite($('#padWrap'), { onLatex: l => { pad.value = latexToPlain(l).replace(/√/g, ''); }, hint: 'Write the number, double-tap or tap Convert, then Check.' });
   let prog = {}; try { prog = JSON.parse(localStorage.getItem(storeKey)) || {}; } catch { }
   prog.done ||= [];
   const save = () => { try { localStorage.setItem(storeKey, JSON.stringify(prog)); } catch { } };

@@ -1,4 +1,4 @@
-.PHONY: test-eraser test-trig test-trig-specific trig-unit1 trig-facts-unit trig-facts trig-map trig-nav kelly-unit kelly bug
+.PHONY: kelly-answer test-eraser test-trig test-trig-specific trig-unit1 trig-facts-unit trig-facts trig-map trig-nav kelly-unit kelly kelly-answer bug
 
 # Focused headless phone regression; mocked recognition, no screenshots.
 test-eraser:
@@ -15,7 +15,7 @@ PASS = $(if $(shell command -v pass-cache),pass-cache --in app/trig --in app/kel
 #   make test-trig-specific   targeted wrong-way / swipe / parse checks at 390 (~5 s)
 #   make test-trig ARGS="--part mastery|sizes|specific" or ARGS="--only 390 --topics 3"
 test-trig:
-	@$(MAKE) --no-print-directory -j7 -O trig-unit1 trig-facts-unit trig-facts trig-map trig-nav kelly-unit kelly bug
+	@$(MAKE) --no-print-directory -j7 -O trig-unit1 trig-facts-unit trig-facts trig-map trig-nav kelly-unit kelly kelly-answer bug
 
 test-trig-specific:
 	uv run -q --with playwright python tests/test-trig-unit1.py --part specific
@@ -34,6 +34,8 @@ kelly-unit:
 	$(call PASS,app/kelly/kelly.test.js) node --test app/kelly/kelly.test.js
 kelly:
 	$(call PASS,tests/test-kelly.py) uv run -q --with playwright python tests/test-kelly.py
+kelly-answer:
+	$(call PASS,tests/test-kelly-answer.py) uv run -q --with playwright python tests/test-kelly-answer.py
 
 # Bug button + rolling recording (app/bug.js, server /api/recording + /api/bug) against a fake Relay daemon.
 bug:

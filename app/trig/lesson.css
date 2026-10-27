@@ -118,7 +118,7 @@ button.link{background:none;border:0;color:var(--blue);font:600 14px var(--font-
 .typeOff{display:none!important}
 .writePane .read{min-height:1.6em;margin:4px 0;font-size:15px}
 .writePane .read b{font:600 22px var(--font-math)}
-.writeInk{width:100%;height:180px;margin:4px 0;color:var(--color-ink);background:var(--color-paper-2);border:2px solid var(--color-accent-3)}
+.writeInk{width:100%;height:clamp(220px,36dvh,340px);margin:4px 0;color:var(--color-ink);background:#12151b;border:2px solid var(--color-accent-3)}
 .writePane.locked{opacity:.55}
 .slow{color:var(--color-slow)}
 /* Today page */

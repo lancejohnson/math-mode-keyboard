@@ -98,7 +98,7 @@
     css.textContent = `#bugBtn{position:fixed;z-index:60;bottom:calc(var(--tabs-h) + env(safe-area-inset-bottom) + 12px);right:12px;width:36px;height:36px;border-radius:18px;display:grid;place-items:center;
       background:var(--color-paper-2);color:var(--color-muted);border:1px solid var(--color-rule);opacity:.7;padding:0}
     #bugBtn::after{content:'';position:absolute;inset:-4px}
-    body:has(#kb:not([hidden])) #bugBtn,body:has([data-hide-tabs]:not([hidden]):not(#bugSheet)) #bugBtn{bottom:auto;top:30vh;right:0;width:30px;border-radius:18px 0 0 18px;border-right:0}
+    body:has(#kb:not([hidden])) #bugBtn,body:has([data-hide-tabs]:not([hidden]):not(#bugSheet)) #bugBtn{bottom:auto;top:min(30vh,120px);right:0;width:30px;border-radius:18px 0 0 18px;border-right:0}
     #bugSheet{position:fixed;inset:0;z-index:70;display:flex;align-items:flex-end;background:#0009}
     #bugSheet[hidden]{display:none}
     #bugSheet form{width:100%;max-width:560px;margin:0 auto;background:var(--color-paper-2);border-top:4px solid var(--color-accent-2);padding:var(--space-md) var(--space-md) calc(var(--space-md) + env(safe-area-inset-bottom));

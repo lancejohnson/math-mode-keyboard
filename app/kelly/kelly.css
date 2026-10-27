@@ -1,6 +1,8 @@
 /* Kelly course: lesson.css look; the keyboard (kb.css) is the workspace keyboard, pinned to the bottom. */
 #kb{position:fixed;left:0;right:0;bottom:0;z-index:30}
 body:has(#kb:not([hidden])){padding-bottom:440px}
+/* Write: a real writing area (ink-answer.js), most of a phone screen tall. */
+.writeInk{height:clamp(260px,50dvh,440px)}
 .parts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:12px 0 4px}
 .parts a{display:flex;flex-direction:column;gap:6px;padding:8px 6px 6px;border-radius:var(--radius-key);background:var(--color-paper-2);color:var(--dim);font:600 12px/1.1 var(--font-body);text-decoration:none}
 .parts a i{display:block;height:4px;border-radius:2px;background:var(--color-key)}
@@ -38,4 +40,3 @@ math-field::part(virtual-keyboard-toggle),math-field::part(menu-toggle){display:
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--dim);margin-top:6px}
 .legend i{display:inline-block;width:14px;height:4px;border-radius:2px;margin-right:5px;vertical-align:middle}
 .next{margin-top:var(--space-lg)}
-.ansRow.typeOff~.acts .chk{display:none}

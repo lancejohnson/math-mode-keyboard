@@ -8,12 +8,12 @@
 <link rel="icon" href="/icon.svg?v=2" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon-180.png?v=2">
 <meta name="apple-mobile-web-app-title" content="Math Mode">
-<script src="/nav.js?v=6" defer></script>
+<script src="/nav.js?v=7" defer></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#0f1115">
-<link rel="stylesheet" href="lesson.css?v=11">
+<link rel="stylesheet" href="lesson.css?v=12">
 <style>
 .deck{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--color-rule);border-radius:0;padding:12px;margin:0;color:var(--ink);font:inherit;padding:14px 0}
 .deck b{font-size:17px}.deck small{display:block;color:var(--dim);font-size:13px;margin-top:2px}
@@ -72,8 +72,8 @@ details.aid summary{color:var(--blue);cursor:pointer}
 <script type="module">
 import { DECKS, CARDS, KEY, radOf, promptFor, status, record, deckSummary, target, checkTyped, limitFor, wrongTyped, VALUES } from './facts.js?v=4';
 import { mountFactPad } from './factpad.js?v=1';
-import { mountWrite, latexToPlain } from '../ink-answer.js?v=2';
-import { WRITE_EXTRA } from './engine.js?v=15';
+import { mountWrite, latexToPlain } from '../ink-answer.js?v=3';
+import { WRITE_EXTRA } from './engine.js?v=17';
 import { startDrill, nextCard, answerCard, shown, coldRecord, drillSummary } from './drill.js?v=2';
 const $ = s => document.querySelector(s);
 let state = {}; try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { }

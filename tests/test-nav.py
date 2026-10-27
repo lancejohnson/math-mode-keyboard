@@ -16,7 +16,9 @@ try:
             page.goto(base + path); page.wait_for_selector('#siteNav')
             assert page.inner_text('#siteNav a.on').strip() == name, (path, page.inner_text('#siteNav a.on'))
             assert [t.strip() for t in page.locator('#siteNav a').all_inner_texts()] == ['Today', 'Course', 'Facts', 'Workspace']
-            box = page.locator('#siteNav').bounding_box(); assert box['x'] <= 0.5 and box['width'] >= 374, box
+            # The workspace opens its keyboard just after load (tabs hide behind it): close it before measuring, or this races it.
+            if path == '/workspace/': page.wait_for_selector('#kb:not([hidden])'); page.click('#kb button[title="Hide keyboard"]'); page.wait_for_selector('#siteNav', state='visible')
+            box = page.locator('#siteNav').bounding_box(); assert box['x'] <= 0.5 and box['width'] >= 374, (path, box)
             assert abs(box['y'] + box['height'] - 812) <= 1, (path, 'tabs sit at the bottom', box)
             assert page.evaluate('document.documentElement.scrollWidth') <= 375, 'nav must not widen the page'
             if path == '/': page.screenshot(path=str(OUT / 'home.png'), full_page=True)

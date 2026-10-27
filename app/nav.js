@@ -34,7 +34,7 @@
   const mount = () => { document.head.append(css); document.body.append(nav); };
   document.body ? mount() : addEventListener('DOMContentLoaded', mount);
   // The bug button and rolling recording (owner only; bug.js checks).
-  const bug = document.createElement('script'); bug.src = '/bug.js?v=2'; bug.defer = true; document.head.append(bug);
+  const bug = document.createElement('script'); bug.src = '/bug.js?v=3'; bug.defer = true; document.head.append(bug);
 
   // The iPhone app keeps one page alive for days and has no pull-to-refresh. When you come back to it after
   // 30 s or more, fetch this page's HTML again; if it changed (a release bumps the ?v= of the scripts), reload.

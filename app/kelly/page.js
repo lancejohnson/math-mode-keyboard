@@ -3,7 +3,7 @@
 import { MathfieldElement } from '../vendor/mathlive.min.mjs';
 import { ComputeEngine } from '../vendor/compute/compute-engine.js';
 import { createKeyboard } from '../kb.js?v=1';
-import { mountWrite } from '../ink-answer.js?v=2';
+import { mountWrite } from '../ink-answer.js?v=3';
 import { PARTS } from './content.js?v=1';
 import { growth, kelly, growthInvest, kellyInvest, simulate, median, drawdown, readNumber, sameExpression, sameEquation, setup } from './kelly.js?v=1';
 
@@ -25,8 +25,21 @@ const keyboard = createKeyboard(kb, {
   getLayout: () => ws().layout || 'big',
   setLayout: l => { const s = ws(); s.layout = l; try { localStorage.setItem('mathmode-v1', JSON.stringify(s)); } catch { } },
   special: v => { if (v === '@next' || v === '@copyNext') { onEnter?.(); return true; } return false; },
-  afterRender: () => active?.closest('.block')?.scrollIntoView({ block: 'nearest' }),
+  afterRender: () => reveal(),
 });
+// The keyboard is fixed over the bottom of the page: room is made under the page for it, then the answer row and its
+// buttons are scrolled to sit just above it (scrollIntoView doesn't know the keyboard is there: bug 2026-10-27).
+function reveal() {
+  if (!active || kb.hidden) return;
+  document.body.style.paddingBottom = kb.offsetHeight + 24 + 'px';
+  const row = active.closest('.ansRow') || active, acts = row.parentElement?.querySelector(':scope > .acts');
+  const top = row.getBoundingClientRect().top, bottom = Math.max(row.getBoundingClientRect().bottom, acts?.getBoundingClientRect().bottom ?? 0);
+  const room = kb.getBoundingClientRect().top - 12, over = bottom - room;
+  if (over > 0) scrollBy(0, Math.min(over, top - 8));
+  else if (top < 8) scrollBy(0, top - 8);
+}
+// The keyboard's own ⌄ button hides it directly.
+new MutationObserver(() => { if (kb.hidden) document.body.style.paddingBottom = ''; }).observe(kb, { attributes: true, attributeFilter: ['hidden'] });
 const hideKb = () => { active?.blur(); active = null; kb.hidden = true; };
 // Tapping elsewhere closes the keyboard, but not the answer's own buttons: closing it there would shift the page mid-tap.
 document.addEventListener('pointerdown', e => { if (!kb.hidden && !e.target.closest('#kb, math-field, .acts, .switch')) hideKb(); });
@@ -102,7 +115,10 @@ function answerBox(el, label, submit) {
   const acts = document.createElement('div'); acts.className = 'acts'; acts.innerHTML = '<button class="act chk">Check</button><button class="act alt hint">Hint</button><button class="act alt show" hidden>Show me</button>';
   el.append(acts); const fb = document.createElement('div'); fb.className = 'fb'; fb.setAttribute('aria-live', 'polite'); el.append(fb);
   acts.querySelector('.chk').onclick = submit;
-  const write = mountWrite(row, { onLatex: l => { f.value = l; submit(); } });
+  // Write: converted math lands in the answer field (shown above the canvas) and you keep writing to extend it, like the
+  // workspace. Nothing is graded until Check, so a misread can be fixed with the keyboard first.
+  let before = '';
+  const write = mountWrite(row, { keepTyped: true, onLatex: l => { before = f.value; f.value = f.value ? f.value + l : l; }, onUndoConvert: () => { f.value = before; } });
   return { f, fb, acts, write };
 }
 const NOTE = { parse: 'I can\'t read that as maths yet. Check the brackets.', equation: 'Just the expression, please (no = sign).', noequals: 'This one needs an equation: something = something.', vars: v => `Use only the letters in the question (not ${v.join(', ')}).` };

@@ -62,7 +62,7 @@ try:
                                 page.click('#kb button[title="Hide keyboard"]')
                                 blk.locator('.switch button:has-text("Write")').click(); cv = blk.locator('canvas.writeInk'); cv.wait_for(); cv.scroll_into_view_if_needed(); time.sleep(.1)
                                 bb = cv.bounding_box(); page.mouse.move(bb['x'] + 30, bb['y'] + 60); page.mouse.down(); page.mouse.move(bb['x'] + 120, bb['y'] + 90, steps=6); page.mouse.up()
-                                shot('write'); blk.locator('.writePane [data-a=read]').click(); blk.locator('.fb .ok').wait_for()
+                                shot('write'); blk.locator('.writePane [data-a=read]').click(); page.wait_for_function("[...document.querySelectorAll('math-field')].some(f=>f.value.includes('pb'))"); blk.locator('.chk').click(); blk.locator('.fb .ok').wait_for()
                                 write_tried = True; assert blk.locator('.switch').is_hidden() and blk.locator('math-field').is_visible(), 'answered: shows the answer, not the canvas'
                                 page.evaluate("localStorage.setItem('mathmode-input','type')")
                             else:
