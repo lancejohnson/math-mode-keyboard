@@ -1,7 +1,7 @@
 import { MathfieldElement } from './vendor/mathlive.min.mjs';
 import { ComputeEngine } from './vendor/compute/compute-engine.js';
 import { evaluate, curveExpression, snapStroke } from './core.js?v=9';
-import { createInkRecognition, unlockRecognition } from './recognition.js?v=9';
+import { createInkRecognition, unlockRecognition } from './recognition.js?v=10';
 import { createKeyboard } from './kb.js?v=1';
 MathfieldElement.fontsDirectory = new URL('./vendor/fonts', import.meta.url).href;
 MathfieldElement.soundsDirectory = null;

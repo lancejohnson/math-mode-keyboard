@@ -147,6 +147,7 @@
 
   async function init() {
     try {
+      await window.mathModeSession;   // nav.js may be trading a #recognition= link for the owner cookie
       const status = await (await fetch('/api/status', { signal: AbortSignal.timeout?.(8000) })).json();
       if (!status.authorized) return;
     } catch { return; }

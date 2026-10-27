@@ -12,6 +12,7 @@ export async function unlockRecognition(){
   const match=location.hash.match(/^#recognition=([a-f0-9]{48})$/),note=document.querySelector('#inkPrivacy');
   try{
     if(match){history.replaceState(null,'',location.pathname+location.search);const r=await fetch('/api/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({invite:match[1]}),signal:AbortSignal.timeout(8000)});if(!r.ok)throw new Error();}
+    else if(window.mathModeSession&&!(await window.mathModeSession))throw new Error();   // nav.js took the link first
     const r=await fetch('/api/status',{signal:AbortSignal.timeout(8000)}),status=await r.json();
     note.dataset.careful=status.careful?(status.carefulProvider||'Anthropic'):'';
     note.textContent=status.authorized?'Cropped ink → '+(status.provider||'the recognition provider')+'. No confirmation.':'Conversion needs your private recognition link. Drawing stays local.';

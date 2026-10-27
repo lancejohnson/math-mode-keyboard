@@ -40,12 +40,12 @@ try:
         page.click('#kb button[title="Hide keyboard"]'); page.wait_for_selector('#siteNav', state='visible')
         page.click('.tabs button:has-text("Ink")'); assert page.locator('#siteNav').is_visible(), 'tabs stay in Ink'
         page.click('#siteNav >> text=Today'); page.wait_for_url(base + '/')
-        # The old private handwriting link (/#recognition=…) forwards to the workspace.
-        page.goto('about:blank'); page.goto(base + '/#recognition=' + 'a' * 48, wait_until='commit'); page.wait_for_function("location.pathname === '/workspace/'")
+        # The private link (/#recognition=…) is taken on any page now (the iPhone app opens with it): it stays on Today and the hash goes.
+        page.goto('about:blank'); page.goto(base + '/#recognition=' + 'a' * 48); page.wait_for_function("location.pathname === '/' && !location.hash")
         # Stays fixed at the bottom while scrolling.
         page.goto(base + '/trig/'); page.mouse.wheel(0, 2000); time.sleep(.3); bx = page.locator('#siteNav').bounding_box(); assert abs(bx['y'] + bx['height'] - 812) <= 1
         assert not errs, errs
         b.close()
-    print('PASS: navigation — bottom tabs Today/Course/Facts/Workspace on every page incl. workspace (current tab marked, full width, fixed), hide behind the keyboard, Today links every section + Continue, Course lists Trig and Kelly, old handwriting link forwards; 375 px Chromium, not iOS.')
+    print('PASS: navigation — bottom tabs Today/Course/Facts/Workspace on every page incl. workspace (current tab marked, full width, fixed), hide behind the keyboard, Today links every section + Continue, Course lists Trig and Kelly, private link taken on any page; 375 px Chromium, not iOS.')
 finally:
     srv.terminate()

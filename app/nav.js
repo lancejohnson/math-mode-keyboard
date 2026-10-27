@@ -3,6 +3,14 @@
 // It hides while the math keyboard is up and during a fact sitting ([data-hide-tabs]). It stays in the Ink view, so you can leave it.
 // Self-contained (own styles, colours from /tokens.css) so any page can load it with one <script defer>.
 (() => {
+  // The private link (#recognition=<invite>) works on any page: it sets the owner cookie that turns on handwriting
+  // conversion and the bug button. The iPhone app opens with it every launch (its cookie jar is not Safari's).
+  const invite = location.hash.match(/^#recognition=([a-f0-9]{48})$/);
+  if (invite) {
+    history.replaceState(null, '', location.pathname + location.search);
+    window.mathModeSession = fetch('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ invite: invite[1] }), signal: AbortSignal.timeout?.(8000) })
+      .then(r => r.ok, () => false);
+  }
   const TABS = [
     ['Today', '/', 'home', p => p === '/' || p === '/index.html'],
     ['Course', '/trig/', 'course', p => /^\/(trig\/(index\.html|unit1\.html|map\.html)?|kelly\/.*)$/.test(p) && !p.endsWith('facts.html')],
@@ -26,7 +34,7 @@
   const mount = () => { document.head.append(css); document.body.append(nav); };
   document.body ? mount() : addEventListener('DOMContentLoaded', mount);
   // The bug button and rolling recording (owner only; bug.js checks).
-  const bug = document.createElement('script'); bug.src = '/bug.js?v=1'; bug.defer = true; document.head.append(bug);
+  const bug = document.createElement('script'); bug.src = '/bug.js?v=2'; bug.defer = true; document.head.append(bug);
 
   // The iPhone app keeps one page alive for days and has no pull-to-refresh. When you come back to it after
   // 30 s or more, fetch this page's HTML again; if it changed (a release bumps the ?v= of the scripts), reload.

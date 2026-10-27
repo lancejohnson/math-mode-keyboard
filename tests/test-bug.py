@@ -57,6 +57,14 @@ try:
         page.evaluate("window.mathModeMarkBug('ink')")
         wait_for(lambda c: any(e.get('type') == 3 and e['data'].get('source') == 9 for r in c['recordings'] for e in r['events']), 'canvas frames in the recording')
         assert not errors, errors
+
+        # The iPhone app has its own cookie jar: it opens /#recognition=<invite> and must get the button without the workspace.
+        phone = browser.new_context(viewport={'width': 390, 'height': 844})
+        page = phone.new_page(); page.goto(base + '/#recognition=' + 'a' * 48)
+        page.get_by_role('button', name='Report a bug').wait_for()
+        assert '#recognition=' not in page.url, page.url
+        page.goto(base + '/trig/'); page.get_by_role('button', name='Report a bug').wait_for()   # the cookie stays
+        phone.close()
         browser.close()
     print('PASS test-bug')
 finally:

@@ -12,12 +12,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#0f1115">
-<script>
-// The private handwriting link used to be /#recognition=…; the workspace now lives at /workspace/.
-const toWorkspace = () => { if (/^#recognition=/.test(location.hash)) location.replace('/workspace/' + location.hash); };
-toWorkspace(); addEventListener('hashchange', toWorkspace);
-</script>
-<script src="/nav.js?v=5" defer></script>
+<script src="/nav.js?v=6" defer></script>
 <link rel="stylesheet" href="/trig/lesson.css?v=11">
 <style>
 .dial{grid-template-columns:minmax(0,1fr) 132px;margin-top:var(--space-lg);align-items:center}
