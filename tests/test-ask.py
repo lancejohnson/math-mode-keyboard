@@ -34,7 +34,7 @@ try:
             page.get_by_role('button', name='Ask about this').click()
             page.get_by_role('dialog', name='Chat about the lesson').wait_for()
             assert page.locator('#askLog blockquote').inner_text().strip() == quote
-            assert page.locator('#siteNav').is_hidden(), 'tabs hide under the chat'
+            assert page.evaluate("document.elementFromPoint(20, innerHeight - 20).closest('#askSheet') !== null"), 'the chat covers the tabs'
             page.get_by_label('Your question').fill('Why does betting more hurt?')
             page.get_by_label('Your question').press('Enter')
             page.locator('#askLog .tutor', has_text='Answer 1').wait_for()
