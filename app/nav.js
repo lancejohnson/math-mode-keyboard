@@ -35,6 +35,8 @@
   document.body ? mount() : addEventListener('DOMContentLoaded', mount);
   // The bug button and rolling recording (owner only; bug.js checks).
   const bug = document.createElement('script'); bug.src = '/bug.js?v=3'; bug.defer = true; document.head.append(bug);
+  // Lesson chat: highlight, Ask about this, Back to lesson (owner only; ask.js checks). Not in the workspace.
+  if (!inApp) { const ask = document.createElement('script'); ask.src = '/ask.js?v=1'; ask.defer = true; document.head.append(ask); }
 
   // The iPhone app keeps one page alive for days and has no pull-to-refresh. When you come back to it after
   // 30 s or more, fetch this page's HTML again; if it changed (a release bumps the ?v= of the scripts), reload.
@@ -45,7 +47,7 @@
     if (document.hidden) { hiddenAt = Date.now(); return; }
     if (Date.now() - hiddenAt < 30000) return;
     const [a, b] = await Promise.all([first, html()]);
-    const busy = document.querySelector('#kb:not([hidden]), [data-hide-tabs]:not([hidden])');
+    const busy = document.querySelector('#kb:not([hidden]), [data-hide-tabs]:not([hidden]), #askSheet:not([hidden])');
     if (a && b && a !== b && !busy) location.reload(); else if (!a && b) first = Promise.resolve(b);
   });
 })();

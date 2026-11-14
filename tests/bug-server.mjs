@@ -1,9 +1,9 @@
-// Test harness for tests/test-bug.py: Math Mode's server with a fake Relay daemon behind it.
+// Test harness for tests/test-bug.py and test-ask.py: Math Mode's server with a fake Relay daemon behind it.
 // Prints "ready <app port> <relay port>"; GET /captured on the relay port returns what Relay was sent.
 import http from 'node:http';
 import {gunzipSync} from 'node:zlib';
 import {createServer} from '../server/server.mjs';
-const captured={recordings:[],sessions:[],auth:[]};
+const captured={recordings:[],sessions:[],auth:[],asks:[]};
 const relay=http.createServer(async(req,res)=>{
   if(req.method==='GET'&&req.url==='/captured'){res.writeHead(200,{'content-type':'application/json'});return res.end(JSON.stringify(captured));}
   const chunks=[];for await(const c of req)chunks.push(c);let raw=Buffer.concat(chunks);captured.auth.push(req.headers.authorization);
@@ -13,6 +13,6 @@ const relay=http.createServer(async(req,res)=>{
   res.writeHead(404);res.end();
 });
 await new Promise(r=>relay.listen(0,'127.0.0.1',r));
-const app=createServer({token:'a'.repeat(48),recognize:async()=>({lines:[{latex:'x',uncertain:false}],warnings:[]}),secureCookies:false,relay:{base:'http://127.0.0.1:'+relay.address().port,token:async()=>'relay-test-token'}});
+const app=createServer({token:'a'.repeat(48),recognize:async()=>({lines:[{latex:'x',uncertain:false}],warnings:[]}),secureCookies:false,ask:async a=>{captured.asks.push(a);if(a.messages.at(-1).text==='fail')throw new Error('x');return {text:'Answer '+a.messages.length+': **one** turn.'};},relay:{base:'http://127.0.0.1:'+relay.address().port,token:async()=>'relay-test-token'}});
 await new Promise(r=>app.listen(0,'127.0.0.1',r));
 console.log('ready',app.address().port,relay.address().port);

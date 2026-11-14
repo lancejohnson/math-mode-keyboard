@@ -7,6 +7,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import {randomBytes,createHmac,timingSafeEqual} from 'node:crypto';
 import {createRecognizer,validateImage} from './recognizer.mjs';
 import {createLocalRecognizer} from './local-recognizer.mjs';
+import {createAsk,readAsk} from './ask.mjs';
 const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'../app');
 const MAX_BODY=2900000;
 // Bug reports go to the Relay daemon on this machine, which keeps the rolling recording (~/.relay/recordings)
@@ -22,9 +23,9 @@ export function bugPrompt({text,client,at,page,viewport,app}){
 const bugTitle=text=>{const line=text.trim().split('\n')[0].replace(/\s+/g,' ');return 'Math Mode bug: '+(line.length>48?line.slice(0,47)+'…':line);};
 const equal=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.webmanifest':'application/manifest+json','.woff2':'font/woff2','.txt':'text/plain; charset=utf-8'};
-export function createServer({token,recognize,careful,root=ROOT,secureCookies=true,perHour=600,relay=relayLink(),traceDir=process.env.MATH_MODE_TRACE_DIR||resolve(homedir(),'.local/share/math-mode/traces')}={}){
+export function createServer({token,recognize,careful,ask,root=ROOT,secureCookies=true,perHour=600,relay=relayLink(),traceDir=process.env.MATH_MODE_TRACE_DIR||resolve(homedir(),'.local/share/math-mode/traces')}={}){
   if(!token||!recognize)throw new Error('Recognition server needs private configuration');
-  let active=0,budget=[],traces=[],bugs=[];const attempts=new Map();
+  let active=0,budget=[],traces=[],bugs=[],asks=[];const attempts=new Map();
   const sign=s=>createHmac('sha256',token).update(s).digest('hex');
   function authorized(req){const raw=req.headers.cookie?.split(';').map(s=>s.trim()).find(s=>s.startsWith('mathModeAccess='))?.slice(15);if(!raw)return false;const parts=raw.split('.');return parts.length===3&&Number(parts[0])>Date.now()&&Number(parts[0])<Date.now()+31*86400000&&equal(parts[2],sign(parts.slice(0,2).join('.')));}
   function json(res,status,data,headers={}){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers});res.end(JSON.stringify(data));}
@@ -63,6 +64,16 @@ export function createServer({token,recognize,careful,root=ROOT,secureCookies=tr
           try{const r=await fetch(relay.base+'/api/sessions',{method:'POST',headers:{authorization:'Bearer '+await relay.token(),'content-type':'application/json'},body:JSON.stringify({harness:'pi',cwd:MATH_MODE_REPO,title:bugTitle(text),project:'Bugs',prompt}),signal:AbortSignal.timeout(20000)});
             if(!r.ok)return json(res,502,{error:'Relay did not start the session'});const out=await r.json();return json(res,200,{ok:true,session:out.session?.sessionId??null});}
           catch{return json(res,502,{error:'Relay unavailable'});}
+        }
+        // Lesson chat (app/ask.js): owner only, like recognition; a model call per message.
+        if(req.method==='POST'&&url.pathname==='/api/ask'){
+          if(!authorized(req))return json(res,401,{error:'Open your private Math Mode link to chat.'});
+          if(req.headers['x-math-mode']!=='1')return json(res,403,{error:'App request required'});
+          if(!ask)return json(res,503,{error:'Chat is not set up on this server.'});
+          const now=Date.now();asks=asks.filter(t=>now-t<3600000);if(asks.length>=150)return json(res,429,{error:'Chat limit reached for this hour.'});
+          const data=readAsk(await body(req));if(!data)return json(res,400,{error:'Bad question'});asks.push(now);
+          const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),60000);res.on('close',()=>{if(!res.writableEnded)controller.abort();});
+          try{return json(res,200,await ask(data,controller.signal));}catch{return json(res,503,{error:'No answer this time. Try again.'});}finally{clearTimeout(timeout);}
         }
         if(req.method==='POST'&&url.pathname==='/api/session'){
           const ip=req.socket.remoteAddress;const now=Date.now();const count=attempts.get(ip)||{count:0,time:now};if(now-count.time>60000){count.count=0;count.time=now;}if(++count.count>30)return json(res,429,{error:'Too many attempts'});attempts.set(ip,count);
@@ -108,7 +119,8 @@ if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.u
   if(local){recognize.provider=native.provider;recognize.close=()=>{native.close();restarting?.then(r=>r.close(),()=>{});};}
   let cloud;const careful=local?async(image,signal)=>{cloud??=createRecognizer();return (await cloud)(image,signal);}:undefined;
   if(careful){const provider=(process.env.MATH_MODE_MODEL||'anthropic/claude-sonnet-5-5').split('/')[0];careful.provider=provider==='anthropic'?'Anthropic':provider.startsWith('openai')?'OpenAI':provider;}
-  const server=createServer({token,recognize,careful});
+  let chat;const ask=async(data,signal)=>{chat??=createAsk();return (await chat)(data,signal);};
+  const server=createServer({token,recognize,careful,ask});
   server.listen(Number(process.env.PORT||8732),'127.0.0.1',()=>console.log('Math Mode static host + private handwriting recognition ready.'));
   for(const sig of ['SIGINT','SIGTERM'])process.on(sig,()=>{recognize.close?.();server.close(()=>process.exit(0));setTimeout(()=>process.exit(0),5000).unref();});
 }

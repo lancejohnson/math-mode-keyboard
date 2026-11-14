@@ -21,16 +21,17 @@ export function validateImage(image){
   if(!width||!height||width>1800||height>1800||width*height>2400000)throw new Error('Image is too large');
   return data.toString('base64');
 }
+// pi's model runtime (its logins); shared by the handwriting reader and lesson chat (ask.mjs).
+export async function modelRuntime(){
+  const pkg=process.env.PI_PACKAGE||'/usr/local/lib/node_modules/@earendil-works/pi-coding-agent';
+  const {ModelRuntime}=await import(pathToFileURL(pkg+'/dist/index.js').href);
+  return ModelRuntime.create({allowModelNetwork:false,refreshOnCreate:false});
+}
+export function pickModel(rt,ref='anthropic/claude-sonnet-5-5'){const slash=ref.indexOf('/');return rt.getModel(ref.slice(0,slash),ref.slice(slash+1));}
 // One fast reader, no reasoning pass or second-model wait on the interactive path.
 export async function createRecognizer({runtime,modelRef}={}){
-  let rt=runtime;
-  if(!rt){
-    const pkg=process.env.PI_PACKAGE||'/usr/local/lib/node_modules/@earendil-works/pi-coding-agent';
-    const {ModelRuntime}=await import(pathToFileURL(pkg+'/dist/index.js').href);
-    rt=await ModelRuntime.create({allowModelNetwork:false,refreshOnCreate:false});
-  }
-  const ref=modelRef||process.env.MATH_MODE_MODEL||'anthropic/claude-sonnet-5-5',slash=ref.indexOf('/');
-  const model=rt.getModel(ref.slice(0,slash),ref.slice(slash+1));
+  const rt=runtime||await modelRuntime();
+  const model=pickModel(rt,modelRef||process.env.MATH_MODE_MODEL);
   if(!model?.input.includes('image'))throw new Error('Vision model not available: '+ref);
   const recognize=async(image,signal)=>{
     const data=validateImage(image);
