@@ -10,12 +10,12 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch(); page = b.new_page(viewport={'width': 375, 'height': 812}, device_scale_factor=2)
         errs = []; page.on('pageerror', lambda e: errs.append(str(e)))
-        tabs = {'/': 'Today', '/trig/': 'Course', '/trig/unit1.html': 'Course', '/trig/map.html': 'Course', '/kelly/': 'Course',
+        tabs = {'/': 'Today', '/courses/': 'Courses', '/trig/': 'Courses', '/trig/unit1.html': 'Courses', '/trig/map.html': 'Courses', '/kelly/': 'Courses',
                 '/trig/facts.html': 'Facts', '/workspace/': 'Workspace'}
         for path, name in tabs.items():
             page.goto(base + path); page.wait_for_selector('#siteNav')
             assert page.inner_text('#siteNav a.on').strip() == name, (path, page.inner_text('#siteNav a.on'))
-            assert [t.strip() for t in page.locator('#siteNav a').all_inner_texts()] == ['Today', 'Course', 'Facts', 'Workspace']
+            assert [t.strip() for t in page.locator('#siteNav a').all_inner_texts()] == ['Today', 'Courses', 'Facts', 'Workspace']
             # The workspace opens its keyboard just after load (tabs hide behind it): close it before measuring, or this races it.
             if path == '/workspace/': page.wait_for_selector('#kb:not([hidden])'); page.click('#kb button[title="Hide keyboard"]'); page.wait_for_selector('#siteNav', state='visible')
             box = page.locator('#siteNav').bounding_box(); assert box['x'] <= 0.5 and box['width'] >= 374, (path, box)
@@ -29,12 +29,22 @@ try:
                           ('Graphing parabolas', '/lesson/'), ('How reviews read the clock', '/model/')]:
             page.goto(base + '/'); page.click(f'.list a:has-text("{text}")'); page.wait_for_url(base + url)
         page.goto(base + '/'); page.click('text=Practise facts'); page.wait_for_url(base + '/trig/facts.html')
-        # Course lists both courses.
-        page.goto(base + '/trig/'); assert page.locator('#kellyParts a').count() == 4
-        page.click('#kellyParts a >> nth=1'); page.wait_for_url(base + '/kelly/#derive')
+        # Courses tab: a chooser with each course's progress; a card opens that course. Trig page is Trig only.
+        page.evaluate("localStorage.setItem('kelly-v1', JSON.stringify({done:['intuition'],reached:{}}))")
+        page.click('#siteNav >> text=Courses'); page.wait_for_url(base + '/courses/')
+        assert page.locator('.course').count() == 2 and 'Not started' in page.inner_text('#c-trig')
+        assert '1 of 4 parts' in page.inner_text('#c-kelly') and page.locator('#c-kelly .progress i.ok').count() == 1
+        page.click('#c-kelly'); page.wait_for_url(base + '/kelly/#derive')
+        page.goto(base + '/courses/'); page.click('#c-trig'); page.wait_for_url(base + '/trig/')
+        assert page.locator('#kellyParts').count() == 0 and 'Kelly' not in page.inner_text('body')
+        page.click('.crumb a'); page.wait_for_url(base + '/courses/')
         # Progress shows on Today and Continue goes to the next topic.
         page.goto(base + '/'); page.evaluate("localStorage.setItem('trig-unit1-v2', JSON.stringify({done:['turns','thirty','negative'],pred:{}}))"); page.reload()
         assert '3 of 11' in page.inner_text('#u1progress') and 'Continue' in page.inner_text('#continue')
+        page.goto(base + '/courses/'); assert 'Unit 1 · 3 of 11 topics' in page.inner_text('#c-trig') and page.locator('#c-trig .progress i.ok').count() == 3
+        page.screenshot(path=str(OUT / 'courses.png'))
+        page.goto(base + '/trig/'); assert '3 of 11 topics' in page.inner_text('#u1sub')
+        page.goto(base + '/')
         page.click('#continue'); page.wait_for_url(base + '/trig/unit1.html#pi')
         # Workspace: tabs in the page flow, hidden while the math keyboard is up, back after it is hidden.
         page.click('#siteNav >> text=Workspace'); page.wait_for_url(base + '/workspace/')
@@ -48,6 +58,6 @@ try:
         page.goto(base + '/trig/'); page.mouse.wheel(0, 2000); time.sleep(.3); bx = page.locator('#siteNav').bounding_box(); assert abs(bx['y'] + bx['height'] - 812) <= 1
         assert not errs, errs
         b.close()
-    print('PASS: navigation — bottom tabs Today/Course/Facts/Workspace on every page incl. workspace (current tab marked, full width, fixed), hide behind the keyboard, Today links every section + Continue, Course lists Trig and Kelly, private link taken on any page; 375 px Chromium, not iOS.')
+    print('PASS: navigation — bottom tabs Today/Courses/Facts/Workspace on every page incl. workspace (current tab marked, full width, fixed), hide behind the keyboard, Today links every section + Continue, Courses tab is a chooser with progress (Trig, Kelly), private link taken on any page; 375 px Chromium, not iOS.')
 finally:
     srv.terminate()

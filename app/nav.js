@@ -1,5 +1,5 @@
-// Site-wide tab bar at the bottom: Today · Course · Facts · Workspace (v4 design).
-// Each tab has its own colour line: Today ink, Course blue, Facts pink, Workspace light blue.
+// Site-wide tab bar at the bottom: Today · Courses · Facts · Workspace (v4 design).
+// Each tab has its own colour line: Today ink, Courses blue, Facts pink, Workspace light blue.
 // It hides while the math keyboard is up and during a fact sitting ([data-hide-tabs]). It stays in the Ink view, so you can leave it.
 // Self-contained (own styles, colours from /tokens.css) so any page can load it with one <script defer>.
 (() => {
@@ -13,7 +13,7 @@
   }
   const TABS = [
     ['Today', '/', 'home', p => p === '/' || p === '/index.html'],
-    ['Course', '/trig/', 'course', p => /^\/(trig\/(index\.html|unit1\.html|map\.html)?|kelly\/.*)$/.test(p) && !p.endsWith('facts.html')],
+    ['Courses', '/courses/', 'course', p => /^\/(courses\/(index\.html)?|trig\/(index\.html|unit1\.html|map\.html)?|kelly\/.*)$/.test(p)],
     ['Facts', '/trig/facts.html', 'facts', p => p === '/trig/facts.html'],
     ['Workspace', '/workspace/', 'work', p => p.startsWith('/workspace')],
   ];

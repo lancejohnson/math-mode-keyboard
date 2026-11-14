@@ -8,7 +8,7 @@
 <link rel="icon" href="/icon.svg?v=2" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon-180.png?v=2">
 <meta name="apple-mobile-web-app-title" content="Math Mode">
-<script src="/nav.js?v=7" defer></script>
+<script src="/nav.js?v=8" defer></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="lesson.css?v=12">
 </head>
 <body>
-<header class="top"><b>Course</b><small>2 courses</small></header>
+<nav class="crumb"><a href="/courses/">‹ Courses</a></nav>
 <header>
   <small>Trigonometry · 12 units</small>
   <h1>Trigonometry, intuition first</h1>
@@ -25,7 +25,7 @@
 <a class="factsLink" href="facts.html"><b>Facts to know by heart</b><small>Degrees ↔ radians and exact sin, cos, tan values, in short timed rounds.</small></a>
 <a class="mapLink" href="map.html">See the Unit 1 knowledge map</a>
 <section class="units">
-  <a href="unit1.html"><b>1</b>Angles and radians<small>Angles as turning, radians as radius-lengths of string, converting, coterminal angles, arc length</small></a>
+  <a href="unit1.html"><b>1</b>Angles and radians<small id="u1sub">Angles as turning, radians as radius-lengths of string, converting, coterminal angles, arc length</small></a>
   <div><b>2</b>Right-triangle trigonometry<small>Next up</small></div>
   <div><b>3</b>Special triangles</div>
   <div><b>4</b>The unit circle</div>
@@ -38,16 +38,11 @@
   <div><b>11</b>General triangles: law of sines and law of cosines</div>
   <div><b>12</b>Polar coordinates</div>
 </section>
-<header>
-  <small>Probability · 4 parts</small>
-  <h1>The Kelly criterion</h1>
-  <p class="dim">How much of your money to put on a bet you expect to win: the intuition, the derivation in your own hand, investing, and the variants people really use.</p>
-</header>
-<section class="units" id="kellyParts">
-  <a href="/kelly/#intuition"><b>1</b>Why not bet it all?<small>Simulate repeated bets: growth versus ruin</small></a>
-  <a href="/kelly/#derive"><b>2</b>Derive it yourself<small>Write the growth rate G(f), set G′(f) = 0, solve for f*</small></a>
-  <a href="/kelly/#invest"><b>3</b>Kelly for investing<small>Fraction in stocks = (μ − r) / σ²</small></a>
-  <a href="/kelly/#variants"><b>4</b>Variants<small>Half Kelly, several bets at once, and an edge that is only a guess</small></a>
-</section>
+<script>
+// Unit 1 progress on its row (same key unit1.html writes).
+(() => { let d = []; try { d = JSON.parse(localStorage.getItem('trig-unit1-v2') || '{}').done || []; } catch {}
+  const n = ['turns','thirty','negative','pi','quarters','sixths','convert','by-heart','wrap','why-pi','arc'].filter(id => d.includes(id)).length;
+  document.querySelector('#u1sub').textContent = n === 11 ? 'Done · all 11 topics mastered' : n ? `${n} of 11 topics mastered` : document.querySelector('#u1sub').textContent; })();
+</script>
 </body>
 </html>

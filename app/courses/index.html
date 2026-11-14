@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Courses · Math Mode</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg?v=2" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-180.png?v=2">
+<meta name="apple-mobile-web-app-title" content="Math Mode">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#0f1115">
+<meta name="description" content="Your Math Mode courses and how far you are in each.">
+<script src="/nav.js?v=8" defer></script>
+<link rel="stylesheet" href="/trig/lesson.css?v=12">
+<style>
+/* Course chooser: one card per course with its progress; tap a card to open that course. */
+.courses{display:grid;gap:var(--space-sm);margin-top:var(--space-md)}
+html,body{overflow-x:clip}
+.course{display:block;background:var(--color-paper-2);border:1px solid var(--color-rule);border-radius:var(--radius-key);padding:var(--space-md);color:var(--ink);text-decoration:none}
+.course:focus-visible{outline:3px solid var(--color-focus);outline-offset:2px}
+.course:active{background:var(--color-paper-3)}
+.course small{display:block;color:var(--dim);font-size:13px;font-weight:600}
+.course h2{font-size:1.35rem;margin:2px 0 4px;text-transform:uppercase;text-wrap:balance}
+.course p{margin:0 0 var(--space-sm);color:var(--color-ink-2);font-size:15px}
+.course .progress{margin:0 0 var(--space-xs)}
+.course .st{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--dim)}
+.course .st b{color:var(--blue);white-space:nowrap}
+.course.done .st b{color:var(--green)}
+</style>
+</head>
+<body>
+<header class="top"><b>Courses</b><small id="count"></small></header>
+<main class="courses" id="courses"></main>
+<script>
+// Each course reads its own progress from localStorage (the same keys its pages write).
+const read = k => { try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch { return {}; } };
+const TRIG = ['turns', 'thirty', 'negative', 'pi', 'quarters', 'sixths', 'convert', 'by-heart', 'wrap', 'why-pi', 'arc'];
+const KELLY = [['intuition', 'Why not bet it all?'], ['derive', 'Derive it yourself'], ['invest', 'Kelly for investing'], ['variants', 'Variants']];
+const t = read('trig-unit1-v2').done || [], k = read('kelly-v1').done || [];
+const tn = TRIG.filter(id => t.includes(id)).length, kn = KELLY.filter(([id]) => k.includes(id)).length;
+const kNext = KELLY.find(([id]) => !k.includes(id));
+const COURSES = [
+  { id: 'trig', href: '/trig/', kind: 'Trigonometry · 12 units', title: 'Trigonometry, intuition first',
+    lead: 'Angles, the unit circle, sine waves and identities. Unit 1 is open.',
+    segs: TRIG.map(id => t.includes(id)), done: tn === TRIG.length,
+    status: tn === TRIG.length ? 'Unit 1 done · Unit 2 next' : tn ? `Unit 1 · ${tn} of ${TRIG.length} topics` : 'Not started',
+    action: tn === TRIG.length ? 'Review' : tn ? 'Continue' : 'Start' },
+  { id: 'kelly', href: '/kelly/' + (kNext && kn ? '#' + kNext[0] : ''), kind: 'Probability · 4 parts', title: 'The Kelly criterion',
+    lead: 'How much of your money to put on a bet you expect to win.',
+    segs: KELLY.map(([id]) => k.includes(id)), done: kn === KELLY.length,
+    status: kn === KELLY.length ? 'All 4 parts done' : kn ? `${kn} of 4 parts · next: ${kNext[1]}` : 'Not started',
+    action: kn === KELLY.length ? 'Review' : kn ? 'Continue' : 'Start' },
+];
+document.getElementById('count').textContent = `${COURSES.length} courses`;
+document.getElementById('courses').innerHTML = COURSES.map(c => `<a class="course${c.done ? ' done' : ''}" id="c-${c.id}" href="${c.href}">
+  <small>${c.kind}</small><h2>${c.title}</h2><p>${c.lead}</p>
+  <div class="progress" aria-hidden="true">${c.segs.map(d => `<i${d ? ' class="ok"' : ''}></i>`).join('')}</div>
+  <div class="st"><span>${c.status}</span><b>${c.action} →</b></div></a>`).join('');
+</script>
+</body>
+</html>
