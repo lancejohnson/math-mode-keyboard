@@ -37,6 +37,9 @@ import { CARDS, radOf, promptFor, record, status, loadFacts, saveFacts, target, 
 import { mountFactPad } from './factpad.js?v=1';
 import { mountWrite, latexToPlain } from '../ink-answer.js?v=3';
 import { startDrill, nextCard, answerCard, coldRecord, drillSummary, factOf } from './drill.js?v=2';
+import { ring } from '../ring.js?v=1';
+const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
+const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 
 export class Wheel {
   constructor(canvas) {
@@ -191,9 +194,9 @@ export function runUnit({ unit, topics, storeKey, nextHref }) {
     $('#topicView').hidden = true; $('#listView').hidden = false; cancelAnimationFrame(wheel.anim);
     $('#topicList').innerHTML = topics.map((t, i) => {
       const done = prog.done.includes(t.id), open = done || i === 0 || prog.done.includes(topics[i - 1].id);
-      return `<button class="topic ${done ? 'done' : ''}" data-i="${i}" ${open ? '' : 'disabled'}><b>${done ? '✓' : i + 1}</b>${t.title}<small>${done ? 'Mastered' : open ? 'Start →' : 'Locked'}</small></button>`;
+      return `<button class="topic ${done ? 'done' : open ? 'now' : ''}" data-i="${i}" ${open ? '' : 'disabled'}><b>${done ? TICK : open ? i + 1 : LOCK}</b>${t.title}<small>${done ? 'Mastered' : open ? 'Start' : ''}</small></button>`;
     }).join('');
-    const n = prog.done.length; $('#unitBar').innerHTML = topics.map(t => `<i class="${prog.done.includes(t.id) ? 'ok' : ''}"></i>`).join('');
+    const n = prog.done.length; $('#unitRing').innerHTML = ring(n / topics.length, 'var(--color-accent-hi)', 64, `${n}/${topics.length}`);
     $('#unitStatus').textContent = n === topics.length ? 'Unit complete.' : `${n} of ${topics.length} topics mastered`;
     fs = loadFacts(); const due = dueFacts().length, qf = $('#quickFacts');
     if (qf) { qf.hidden = !due; qf.innerHTML = `<b>⚡ Quick facts</b> ${Math.min(due, 8)} due, about ${Math.max(1, Math.round(Math.min(due, 8) * 4 / 60 * 2) / 2)} min<small>Keeps the angles you've learned automatic.</small>`; }

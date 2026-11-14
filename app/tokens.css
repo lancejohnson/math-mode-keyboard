@@ -16,5 +16,6 @@
   --font-display: "Jost", "Futura", sans-serif; --font-body: "Karla", -apple-system, system-ui, sans-serif; --font-math: "Times New Roman", serif;
   --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px; --space-lg: 24px; --space-xl: 40px;
   --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.2rem; --text-xl: 1.44rem; --text-2xl: 1.728rem; --text-3xl: 2.074rem;
+  --radius-card: 20px; --radius-row: 16px; --radius-pill: 999px;
   --tabs-h: 64px;
 }

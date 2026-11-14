@@ -1,4 +1,4 @@
-@import url("/tokens.css?v=1");
+@import url("/tokens.css?v=2");
 /* Course pages (v4): keyboard palette from /tokens.css, flat sections split by thin rules, panels only one level deep. */
 :root{color-scheme:dark;--bg:var(--color-paper);--card:var(--color-paper-2);--ink:var(--color-ink);--dim:var(--color-muted);--blue:var(--color-accent-hi);--pink:var(--color-accent-2);--green:var(--color-right);--amber:var(--color-slow);--violet:var(--color-violet);--line:var(--color-key)}
 *{box-sizing:border-box}
@@ -142,3 +142,44 @@ html,body{overflow-x:clip}
 h1,h2{text-wrap:balance}
 :where(a,button,input,summary,[tabindex]):focus-visible{outline:2px solid var(--color-accent-hi);outline-offset:2px}
 :where(button,.btn,.choice,.chip,.list a):active{filter:brightness(1.25)}
+
+/* Style A (2026-11): soft rounded cards, sentence-case Jost titles, pill buttons, progress rings. Matches the floating tab pill. */
+h1,.top b{text-transform:none}
+h1{font-size:2.1rem;line-height:1.05}
+.top{border-bottom:0;padding:20px 0 12px;align-items:baseline}
+.top b{font:700 var(--text-3xl)/1 var(--font-display)}
+nav.crumb a,nav.crumb button.link{font-size:15px;font-weight:700}
+button.act,.btn{border-radius:var(--radius-pill);box-shadow:none;padding:10px 22px}
+.btn{height:50px;font-weight:700}
+.card{display:block;background:var(--color-paper-2);border-radius:var(--radius-card);padding:18px;margin:0 0 12px;color:var(--ink);text-decoration:none}
+a.card:active{background:var(--color-paper-3)}
+.card h2{font-size:1.6rem;line-height:1.05;margin:6px 0}.card h3{font-size:18px;line-height:1.15;margin:0}
+.kick{display:block;color:var(--blue);font-size:13px;font-weight:700}
+.rowc{display:flex;align-items:center;gap:14px}.grow{flex:1;min-width:0}
+.ring{position:relative;flex:none;display:inline-block}.ring svg{display:block;transform:rotate(-90deg)}
+.ring b{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font:700 16px/1 var(--font-display);color:var(--ink)}
+.ring b small{font:600 10px/1 var(--font-body);color:var(--dim);margin-top:3px}
+.btn--small{height:38px;padding:0 16px;font-size:14px}
+.btn--pink{background:var(--color-wrong-bg);color:#ffd0e2}
+/* Lists of things to open become cards */
+.topics{display:grid;gap:8px}
+.topic{background:var(--color-paper-2);border:0;border-radius:var(--radius-row);padding:12px 14px;font-size:15px;min-height:54px}
+.topic b{width:28px;height:28px;border-radius:50%;box-shadow:none;background:var(--color-paper-3);color:var(--dim)}
+.topic b svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.topic.done b{background:var(--color-right-bg);color:var(--green)}
+.topic.now{box-shadow:inset 0 0 0 2px var(--color-accent)}.topic.now b{background:var(--color-accent);color:var(--color-accent-ink)}
+.topic.now small{background:var(--color-accent);color:var(--color-accent-ink);border-radius:var(--radius-pill);padding:5px 12px;font-weight:700}
+.topic:disabled{opacity:1;color:var(--dim)}
+.unitHd{display:flex;align-items:center;gap:14px}.unitHd h1{margin:2px 0 0}
+.units{display:grid;gap:8px;margin:12px 0}
+.units a,.units div{display:flex;align-items:center;gap:12px;border:0;background:var(--color-paper-2);border-radius:var(--radius-row);padding:12px 14px}
+.units div{background:none;padding:6px 14px}
+.units b{margin:0;min-width:22px;text-align:center}
+.units a .ring b{color:var(--ink);min-width:0}
+.factsLink,.quickFacts{border-left:0;border-radius:var(--radius-card);padding:16px 18px}
+.factsLink b,.quickFacts b{color:var(--pink)}
+#decks{border-top:0;display:block}
+.parts a{border-radius:12px}
+.list{background:var(--color-paper-2);border-radius:var(--radius-card);padding:4px 18px}
+.list h2{font:700 15px var(--font-display);letter-spacing:0;text-transform:none;color:var(--ink);margin:12px 0 4px}
+.list a:first-of-type{border-top:0}

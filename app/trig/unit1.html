@@ -8,21 +8,19 @@
 <link rel="icon" href="/icon.svg?v=2" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon-180.png?v=2">
 <meta name="apple-mobile-web-app-title" content="Math Mode">
-<script src="/nav.js?v=9" defer></script>
+<script src="/nav.js?v=10" defer></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#0f1115">
-<link rel="stylesheet" href="lesson.css?v=12">
+<link rel="stylesheet" href="lesson.css?v=13">
 </head>
 <body>
 <div id="listView">
-  <nav class="crumb"><a href="./">← Trigonometry</a></nav>
+  <nav class="crumb"><a href="./">‹ Trigonometry</a></nav>
   <header>
-    <small>Unit 1 of 12</small>
-    <h1>Angles and radians</h1>
+    <div class="unitHd"><span id="unitRing"></span><div><small>Unit 1 of 12</small><h1>Angles and radians</h1></div></div>
     <p class="dim">Small steps. Each topic: a short lesson with a worked example, a quick guess that stretches it, then practice until you get 4 right. Angles you've learned come back later as quick, timed facts.</p>
-    <div class="progress" id="unitBar"></div>
     <p class="dim" id="unitStatus"></p>
     <a class="mapLink" href="map.html">Knowledge map: prerequisites, knowledge types, progress →</a>
   </header>
@@ -32,7 +30,7 @@
 </div>
 
 <div id="topicView" hidden>
-  <nav class="crumb"><button class="link" id="back">← Unit 1 topics</button></nav>
+  <nav class="crumb"><button class="link" id="back">‹ Unit 1 topics</button></nav>
   <section>
     <small class="dim" id="topicNum"></small>
     <h2 id="topicTitle" style="margin-top:2px"></h2>
@@ -58,7 +56,7 @@
 
 <script type="module">
 import { angleIds } from './facts.js?v=4';
-import { runUnit, PI, TAU, D, C, deg, rad, piFrac, dec, options, pick } from './engine.js?v=17';
+import { runUnit, PI, TAU, D, C, deg, rad, piFrac, dec, options, pick } from './engine.js?v=18';
 
 const Q = ['', 'a quarter turn', 'two quarter turns (a half turn)', 'three quarter turns', 'a full turn'];
 const PART = { 0: '', 30: 'a third of a quarter turn', 45: 'half of a quarter turn', 60: 'two thirds of a quarter turn' };

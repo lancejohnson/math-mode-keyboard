@@ -12,67 +12,62 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#0f1115">
-<script src="/nav.js?v=9" defer></script>
-<link rel="stylesheet" href="/trig/lesson.css?v=12">
-<style>
-.dial{grid-template-columns:minmax(0,1fr) 132px;margin-top:var(--space-lg);align-items:center}
-.dial svg{width:100%;height:auto}
-.acts{display:grid;gap:var(--space-xs);margin-top:var(--space-lg)}
-h1{font-size:2.6rem}
-</style>
+<script src="/nav.js?v=10" defer></script>
+<link rel="stylesheet" href="/trig/lesson.css?v=13">
 </head>
 <body class="home">
-<header class="top"><b>Math Mode</b><small id="unitOf">Unit 1 of 12</small></header>
+<header class="top"><b>Today</b><small id="date"></small></header>
 <main>
-<small class="dim" id="nextKind" style="display:block;margin-top:var(--space-lg)">Next lesson</small>
-<h1 id="nextTitle">Angles are turns</h1>
-<p class="lead" id="nextLead">Read a little, make one guess, then get four right in a row.</p>
-<div class="cells dial">
-  <div><span class="fig" id="u1fig">0/11</span><span class="cap" id="u1progress">Unit 1 topics done</span></div>
-  <svg viewBox="0 0 150 150" aria-hidden="true"><g stroke="var(--color-key)" stroke-width="3" fill="none"><circle cx="75" cy="75" r="56"/><line x1="75" y1="75" x2="131" y2="75"/></g>
-    <path id="u1arc" d="" fill="none" stroke="var(--color-accent-hi)" stroke-width="6" stroke-linecap="round"/><line id="u1ray" x1="75" y1="75" x2="131" y2="75" stroke="var(--color-accent-hi)" stroke-width="5" stroke-linecap="round"/></svg>
-</div>
-<div class="cells" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-top:6px">
-  <a href="/trig/facts.html"><span class="fig" id="factsNew">32</span><span class="cap">degree and radian facts not seen yet</span></a>
-  <a href="/trig/facts.html"><span class="fig" id="factsDue">0</span><span class="cap">facts due for review</span></a>
-</div>
-<div class="acts"><a class="btn btn--primary" id="continue" href="/trig/unit1.html#turns">Start lesson</a><a class="btn" href="/trig/facts.html">Practise facts</a></div>
+<a class="card" id="hero" href="/trig/unit1.html#turns">
+  <small class="kick" id="nextKind">Next lesson · Trigonometry</small>
+  <h2 id="nextTitle">Angles are turns</h2>
+  <p class="lead" id="nextLead">Read a little, make one guess, then get four right in a row.</p>
+  <div class="rowc" style="margin:14px 0"><span id="u1ring"></span><span class="dim" id="u1progress">Unit 1 topics done</span></div>
+  <span class="btn btn--primary" id="continue">Start lesson</span>
+</a>
+<a class="card rowc" href="/trig/facts.html" id="factsCard"><span id="factsRing"></span><span class="grow"><h3>Facts to practice</h3><span class="dim" id="factsSub"></span></span><span class="btn btn--small btn--pink">Practice</span></a>
+<a class="card rowc" href="/kelly/" id="kellyCard"><span id="kellyRing"></span><span class="grow"><h3>The Kelly criterion</h3><span class="dim" id="kellySub">How much to bet</span></span></a>
 <nav class="list" aria-label="More">
   <h2>Courses</h2>
   <a href="/courses/">All courses <small>progress and choose</small></a>
   <a href="/trig/">Trigonometry <small>12 units</small></a>
   <a href="/kelly/">The Kelly criterion <small>how much to bet</small></a>
   <a href="/trig/map.html">Knowledge map <small>what leads to what</small></a>
-  <h2 style="margin-top:var(--space-lg)">Earlier prototypes</h2>
+  <h2>Earlier prototypes</h2>
   <a href="/lesson/">Graphing parabolas <small>first lesson</small></a>
   <a href="/model/">How reviews read the clock <small>fact timing</small></a>
 </nav>
 </main>
 <script type="module">
 import { DECKS, loadFacts, deckSummary } from '/trig/facts.js?v=4';
+import { ring } from '/ring.js?v=1';
 // Unit 1 topics in order (ids match trig/unit1.html).
 const TOPICS = [['turns', 'Angles are turns'], ['thirty', 'Steps of 30°'], ['negative', 'Negative angles turn clockwise'], ['pi', 'Radians: π is a half turn'],
   ['quarters', 'Steps of π/4'], ['sixths', 'Steps of π/6 and π/3'], ['convert', 'Switching degrees and radians'], ['by-heart', 'Know the 16 angles by heart'],
   ['wrap', 'More than a full turn'], ['why-pi', 'Where π comes from'], ['arc', 'Arc length']];
+const KELLY = [['intuition', 'Why not bet it all?'], ['derive', 'Derive it yourself'], ['invest', 'Kelly for investing'], ['variants', 'Variants']];
 const $ = s => document.querySelector(s);
-let done = []; try { done = JSON.parse(localStorage.getItem('trig-unit1-v2') || '{}').done || []; } catch {}
+const read = k => { try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch { return {}; } };
+$('#date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+const done = read('trig-unit1-v2').done || [];
 const n = TOPICS.filter(([id]) => done.includes(id)).length, next = TOPICS.find(([id]) => !done.includes(id));
-$('#u1fig').textContent = `${n}/11`;
+$('#u1ring').innerHTML = ring(n / 11, 'var(--color-accent-hi)', 56, `${n}/11`);
 if (next) {
-  $('#nextTitle').textContent = next[1]; $('#continue').href = '/trig/unit1.html#' + next[0];
+  $('#nextTitle').textContent = next[1]; $('#hero').href = '/trig/unit1.html#' + next[0];
   $('#continue').textContent = n ? 'Continue' : 'Start lesson'; $('#u1progress').textContent = n ? `${n} of 11 topics mastered` : 'Unit 1 topics done';
 } else {
   $('#nextKind').textContent = 'Unit 1 done'; $('#nextTitle').textContent = 'Angles and radians';
   $('#nextLead').textContent = 'All 11 topics mastered. Keep the facts sharp, or try the Kelly course.';
-  $('#continue').textContent = 'Review'; $('#continue').href = '/trig/unit1.html'; $('#u1progress').textContent = '11 of 11 topics mastered';
+  $('#continue').textContent = 'Review'; $('#hero').href = '/trig/unit1.html'; $('#u1progress').textContent = '11 of 11 topics mastered';
 }
-// The dial turns by the share of topics done, like the angles it teaches.
-const t = 2 * Math.PI * n / 11, x = 75 + 56 * Math.cos(t), y = 75 - 56 * Math.sin(t);
-$('#u1ray').setAttribute('x2', x.toFixed(1)); $('#u1ray').setAttribute('y2', y.toFixed(1));
-if (n) $('#u1arc').setAttribute('d', n >= 11 ? 'M131 75 A56 56 0 1 0 19 75 A56 56 0 1 0 131 75' : `M131 75 A56 56 0 ${t > Math.PI ? 1 : 0} 0 ${x.toFixed(1)} ${y.toFixed(1)}`);
 const fs = loadFacts(), deck = DECKS[0], sum = deckSummary(deck, fs), now = Date.now();
-$('#factsNew').textContent = sum.new;
-$('#factsDue').textContent = deck.cards.filter(c => fs[c.id] && (fs[c.id].due ?? 0) <= now).length;
+const due = deck.cards.filter(c => fs[c.id] && (fs[c.id].due ?? 0) <= now).length;
+$('#factsRing').innerHTML = ring(sum.automatic / deck.cards.length, 'var(--color-accent-2)', 56, String(due || sum.new));
+$('#factsSub').textContent = `${sum.new} new, ${due ? `${due} due for review` : 'none due for review'}`;
+const k = read('kelly-v1').done || [], kn = KELLY.filter(([id]) => k.includes(id)).length, kNext = KELLY.find(([id]) => !k.includes(id));
+$('#kellyRing').innerHTML = ring(kn / 4, 'var(--color-violet)', 56, `${kn}/4`);
+if (kn) $('#kellySub').textContent = kNext ? `Part ${kn + 1} next: ${kNext[1]}` : 'All 4 parts done';
+if (kn && kNext) $('#kellyCard').href = '/kelly/#' + kNext[0];
 </script>
 </body>
 </html>

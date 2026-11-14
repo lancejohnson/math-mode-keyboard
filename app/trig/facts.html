@@ -8,14 +8,14 @@
 <link rel="icon" href="/icon.svg?v=2" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon-180.png?v=2">
 <meta name="apple-mobile-web-app-title" content="Math Mode">
-<script src="/nav.js?v=9" defer></script>
+<script src="/nav.js?v=10" defer></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#0f1115">
-<link rel="stylesheet" href="lesson.css?v=12">
+<link rel="stylesheet" href="lesson.css?v=13">
 <style>
-.deck{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--color-rule);border-radius:0;padding:12px;margin:0;color:var(--ink);font:inherit;padding:14px 0}
+.deck{display:block;width:100%;text-align:left;background:var(--color-paper-2);border:0;border-radius:var(--radius-row);padding:14px 16px;margin:0 0 8px;color:var(--ink);font:inherit}
 .deck b{font-size:17px}.deck small{display:block;color:var(--dim);font-size:13px;margin-top:2px}
 .mix{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--color-paper-3);margin:8px 0 4px}
 .mix i{display:block;height:100%}
@@ -35,7 +35,7 @@ details.aid summary{color:var(--blue);cursor:pointer}
 </head>
 <body>
 <div id="home">
-  <nav class="crumb"><a href="./">← Trigonometry</a></nav>
+  <nav class="crumb"><a href="./">‹ Trigonometry</a></nav>
   <header>
     <small>Facts to know by heart</small>
     <h1>Make them automatic</h1>
@@ -46,7 +46,7 @@ details.aid summary{color:var(--blue);cursor:pointer}
 </div>
 
 <div id="drill" hidden>
-  <nav class="crumb"><button class="link" id="quit">← All decks</button></nav>
+  <nav class="crumb"><button class="link" id="quit">‹ All decks</button></nav>
   <section>
     <div class="counts"><span id="deckName"></span><span id="roundPos"></span></div>
     <div class="progress" id="roundBar"></div>
@@ -60,7 +60,7 @@ details.aid summary{color:var(--blue);cursor:pointer}
 </div>
 
 <div id="done" hidden>
-  <nav class="crumb"><button class="link" id="home2">← All decks</button></nav>
+  <nav class="crumb"><button class="link" id="home2">‹ All decks</button></nav>
   <section>
     <h2>Sitting done</h2>
     <p id="doneText"></p>
@@ -73,7 +73,7 @@ details.aid summary{color:var(--blue);cursor:pointer}
 import { DECKS, CARDS, KEY, radOf, promptFor, status, record, deckSummary, target, checkTyped, limitFor, wrongTyped, VALUES } from './facts.js?v=4';
 import { mountFactPad } from './factpad.js?v=1';
 import { mountWrite, latexToPlain } from '../ink-answer.js?v=3';
-import { WRITE_EXTRA } from './engine.js?v=17';
+import { WRITE_EXTRA } from './engine.js?v=18';
 import { startDrill, nextCard, answerCard, shown, coldRecord, drillSummary } from './drill.js?v=2';
 const $ = s => document.querySelector(s);
 let state = {}; try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { }

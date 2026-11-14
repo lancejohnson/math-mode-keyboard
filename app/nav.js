@@ -1,5 +1,5 @@
-// Site-wide tab bar at the bottom: Today · Courses · Facts · Workspace (v4 design).
-// Each tab has its own colour line: Today ink, Courses blue, Facts pink, Workspace light blue.
+// Site-wide tab bar: a floating pill at the bottom with Today · Courses · Facts · Workspace (style A, 2026-11).
+// Each tab is an icon over its name; the current tab is filled blue.
 // It hides while the math keyboard is up and during a fact sitting ([data-hide-tabs]). It stays in the Ink view, so you can leave it.
 // Self-contained (own styles, colours from /tokens.css) so any page can load it with one <script defer>.
 (() => {
@@ -11,6 +11,12 @@
     window.mathModeSession = fetch('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ invite: invite[1] }), signal: AbortSignal.timeout?.(8000) })
       .then(r => r.ok, () => false);
   }
+  const ICON = {
+    home: '<path d="M4 11l8-7 8 7v9h-5v-6h-6v6H4z"/>',
+    course: '<path d="M4 5h6a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h6z"/>',
+    facts: '<rect x="3" y="6" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v12"/>',
+    work: '<path d="M4 20l4-1 11-11-3-3L5 16zM14 7l3 3"/>',
+  };
   const TABS = [
     ['Today', '/', 'home', p => p === '/' || p === '/index.html'],
     ['Courses', '/courses/', 'course', p => /^\/(courses\/(index\.html)?|trig\/(index\.html|unit1\.html|map\.html)?|kelly\/.*)$/.test(p)],
@@ -18,19 +24,18 @@
     ['Workspace', '/workspace/', 'work', p => p.startsWith('/workspace')],
   ];
   const here = location.pathname, inApp = here.startsWith('/workspace');
-  if (!document.querySelector('link[href^="/tokens.css"]')) document.head.insertAdjacentHTML('afterbegin', '<link rel="stylesheet" href="/tokens.css?v=1">');
+  if (!document.querySelector('link[href^="/tokens.css"]')) document.head.insertAdjacentHTML('afterbegin', '<link rel="stylesheet" href="/tokens.css?v=2">');
   const css = document.createElement('style');
-  css.textContent = `#siteNav{${inApp ? 'flex:none;position:relative' : 'position:fixed;left:0;right:0;bottom:0'};z-index:40;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
-    background:var(--color-paper-2);border-top:1px solid var(--color-rule);padding-bottom:env(safe-area-inset-bottom);font:600 13px/1 var(--font-body)}
-  #siteNav a{display:flex;flex-direction:column;gap:10px;height:var(--tabs-h);padding:0 0 0 12px;color:var(--color-muted);text-decoration:none;white-space:nowrap;overflow:hidden}
-  #siteNav a+a{border-left:1px solid var(--color-rule)}
-  #siteNav a i{display:block;height:4px;margin-left:-12px}
-  #siteNav a.on{color:var(--color-ink);background:var(--color-paper-3)}
-  #siteNav .c-home{background:var(--color-ink)}#siteNav .c-course{background:var(--color-accent)}#siteNav .c-facts{background:var(--color-accent-2)}#siteNav .c-work{background:var(--color-accent-hi)}
+  css.textContent = `#siteNav{${inApp ? 'flex:none;position:relative;margin:6px 16px calc(8px + env(safe-area-inset-bottom))' : 'position:fixed;left:16px;right:16px;bottom:calc(12px + env(safe-area-inset-bottom))'};z-index:40;
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));height:var(--tabs-h);padding:6px;border-radius:calc(var(--tabs-h) / 2);
+    background:var(--color-paper-3);box-shadow:0 8px 24px #000a;font:600 11px/1 var(--font-body)}
+  #siteNav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:calc(var(--tabs-h) / 2 - 6px);color:var(--color-muted);text-decoration:none;white-space:nowrap;overflow:hidden}
+  #siteNav a.on{color:var(--color-accent-ink);background:var(--color-accent)}
+  #siteNav svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
   body:has(#kb:not([hidden])) #siteNav,body:has([data-hide-tabs]:not([hidden])) #siteNav{display:none}
-  ${inApp ? '' : 'body{padding-bottom:calc(var(--tabs-h) + 24px + env(safe-area-inset-bottom))}'}`;
+  ${inApp ? '' : 'body{padding-bottom:calc(var(--tabs-h) + 36px + env(safe-area-inset-bottom))}'}`;
   const nav = document.createElement('nav'); nav.id = 'siteNav'; nav.setAttribute('aria-label', 'Sections');
-  nav.innerHTML = TABS.map(([label, href, c, is]) => `<a href="${href}"${is(here) ? ' class="on" aria-current="page"' : ''}><i class="c-${c}"></i>${label}</a>`).join('');
+  nav.innerHTML = TABS.map(([label, href, c, is]) => `<a href="${href}"${is(here) ? ' class="on" aria-current="page"' : ''}><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[c]}</svg>${label}</a>`).join('');
   const mount = () => { document.head.append(css); document.body.append(nav); };
   document.body ? mount() : addEventListener('DOMContentLoaded', mount);
   // The bug button and rolling recording (owner only; bug.js checks).
